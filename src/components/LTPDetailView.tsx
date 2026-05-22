@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  ArrowLeft, Plus, Pencil, Trash2, Send, RotateCcw, Check,
+  ArrowLeft, Pencil, Trash2, Send, RotateCcw, Check,
   ChevronDown, ChevronUp, Sparkles, Loader2, AlertCircle, CheckCircle2, AlertTriangle,
   UserPlus, UserCircle2, ExternalLink,
 } from "lucide-react";
@@ -19,6 +19,7 @@ import { supabase } from "@/lib/supabase";
 import { StrandBadge, STRAND_COLORS } from "@/components/ltp/StrandBadge";
 import { StrandProgressBar } from "@/components/ltp/StrandProgressBar";
 import { LTPStatusBadge } from "@/components/ltp/LTPStatusBadge";
+import { TermGrid } from "@/components/ltp/TermGrid";
 
 interface Allocation {
   unitId: string;
@@ -42,8 +43,6 @@ interface LTPDetailViewProps {
   assignUnit: (unitId: string, teacherId: string | null) => Promise<void>;
   allLTPStandardIds: string[];
 }
-
-const TERMS = [1, 2, 3] as const;
 
 export function LTPDetailView({
   plan, isHod, standards, teachers, currentUserId, onBack, onOpenUnit,
@@ -318,60 +317,26 @@ export function LTPDetailView({
         )}
       </div>
 
-      {/* Three-column term grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {TERMS.map((term) => {
-          const units = (plan.units ?? [])
-            .filter((u) => u.term === term)
-            .sort((a, b) => a.sort_order - b.sort_order);
-          const termWeeks = units.reduce((sum, u) => sum + u.duration_weeks, 0);
-
-          return (
-            <div key={term} className="rounded-lg border bg-card overflow-hidden">
-              <div className="flex items-center justify-between px-3 py-2 bg-muted/40 border-b gap-2">
-                <div className="flex items-center gap-1.5 min-w-0">
-                  <span className="text-xs font-bold uppercase tracking-wide whitespace-nowrap">Term {term}</span>
-                  <span className="text-xs text-muted-foreground whitespace-nowrap">{units.length}u{termWeeks > 0 ? ` · ${termWeeks}w` : ""}</span>
-                </div>
-                {canEdit && (
-                  <Button size="sm" variant="ghost" className="h-6 w-6 p-0 shrink-0"
-                    onClick={() => { setUnitDialogState({ term }); setEditingUnit(null); }}>
-                    <Plus className="h-3 w-3" />
-                  </Button>
-                )}
-              </div>
-              <div className="p-2 space-y-2">
-                {units.length === 0 && (
-                  <p className="text-xs text-muted-foreground text-center py-4 italic">
-                    {canEdit ? "No units yet" : "No units"}
-                  </p>
-                )}
-                {units.map((unit) => (
-                  <UnitCard
-                    key={unit.id}
-                    unit={unit}
-                    canEdit={canEdit}
-                    isHod={isHod}
-                    currentUserId={currentUserId}
-                    onEdit={() => { setUnitDialogState({ term }); setEditingUnit(unit); }}
-                    onDelete={() => handleDeleteUnit(unit.id)}
-                    onOpen={() => onOpenUnit(unit.id)}
-                    onAssign={() => { setAssignUnitTarget(unit); setAssignUnitTeacherId(unit.assigned_to ?? ""); }}
-                  />
-                ))}
-                {canEdit && units.length > 0 && (
-                  <button
-                    className="w-full text-xs text-muted-foreground border border-dashed rounded-md py-1.5 hover:bg-muted/40 transition-colors"
-                    onClick={() => { setUnitDialogState({ term }); setEditingUnit(null); }}
-                  >
-                    + Add unit
-                  </button>
-                )}
-              </div>
-            </div>
-          );
-        })}
-      </div>
+      {/* Term grid — one row per unit slot across all three terms */}
+      <TermGrid
+        units={plan.units ?? []}
+        canEdit={canEdit}
+        isHod={isHod}
+        currentUserId={currentUserId}
+        onAddUnit={(term) => { setUnitDialogState({ term }); setEditingUnit(null); }}
+        renderUnitCard={(unit, term) => (
+          <UnitCard
+            unit={unit}
+            canEdit={canEdit}
+            isHod={isHod}
+            currentUserId={currentUserId}
+            onEdit={() => { setUnitDialogState({ term }); setEditingUnit(unit); }}
+            onDelete={() => handleDeleteUnit(unit.id)}
+            onOpen={() => onOpenUnit(unit.id)}
+            onAssign={() => { setAssignUnitTarget(unit); setAssignUnitTeacherId(unit.assigned_to ?? ""); }}
+          />
+        )}
+      />
 
       {/* Collapsible coverage map */}
       <div className="rounded-lg border bg-card overflow-hidden">
