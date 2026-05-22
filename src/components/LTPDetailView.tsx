@@ -10,9 +10,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  ArrowLeft, Pencil, Trash2, Send, RotateCcw, Check,
+  ArrowLeft, Trash2, Send, RotateCcw, Check,
   ChevronDown, ChevronUp, Sparkles, Loader2, AlertCircle, CheckCircle2, AlertTriangle,
-  UserPlus, UserCircle2, ExternalLink,
+  UserPlus, UserCircle2,
 } from "lucide-react";
 import { LongTermPlan, LTPUnit, LTPStatus, Standard, Profile } from "@/types";
 import { supabase } from "@/lib/supabase";
@@ -51,7 +51,6 @@ export function LTPDetailView({
   const canEdit = !isHod && (plan.status === "draft" || plan.status === "revision");
 
   const [unitDialogState, setUnitDialogState] = useState<{ term: number } | null>(null);
-  const [editingUnit, setEditingUnit] = useState<LTPUnit | null>(null);
 
   const [submitOpen, setSubmitOpen] = useState(false);
   const [revisionOpen, setRevisionOpen] = useState(false);
@@ -87,19 +86,12 @@ export function LTPDetailView({
   async function handleSaveUnit(data: {
     term: number; unit_number: number; title: string; big_idea?: string;
     start_week?: number; duration_weeks: number; assessment_type: string;
-    sort_order: number; standardIds: string[];
+    sort_order: number;
   }) {
-    const { standardIds, ...unitData } = data;
-    const typed = { ...unitData, assessment_type: unitData.assessment_type as "formative" | "summative" | "both" };
-    if (editingUnit) {
-      await updateUnit(editingUnit.id, typed);
-      await setUnitStandards(editingUnit.id, standardIds);
-    } else {
-      const unit = await addUnit(plan.id, typed);
-      if (unit) await setUnitStandards(unit.id, standardIds);
-    }
+    const typed = { ...data, assessment_type: data.assessment_type as "formative" | "summative" | "both" };
+    const unit = await addUnit(plan.id, typed);
     setUnitDialogState(null);
-    setEditingUnit(null);
+    if (unit) onOpenUnit(unit.id);
   }
 
   async function handleDeleteUnit(unitId: string) {
@@ -323,16 +315,15 @@ export function LTPDetailView({
         canEdit={canEdit}
         isHod={isHod}
         currentUserId={currentUserId}
-        onAddUnit={(term) => { setUnitDialogState({ term }); setEditingUnit(null); }}
-        renderUnitCard={(unit, term) => (
+        onAddUnit={(term) => { setUnitDialogState({ term }); }}
+        renderUnitCard={(unit) => (
           <UnitCard
             unit={unit}
             canEdit={canEdit}
             isHod={isHod}
             currentUserId={currentUserId}
-            onEdit={() => { setUnitDialogState({ term }); setEditingUnit(unit); }}
-            onDelete={() => handleDeleteUnit(unit.id)}
             onOpen={() => onOpenUnit(unit.id)}
+            onDelete={() => handleDeleteUnit(unit.id)}
             onAssign={() => { setAssignUnitTarget(unit); setAssignUnitTeacherId(unit.assigned_to ?? ""); }}
           />
         )}
@@ -351,10 +342,10 @@ export function LTPDetailView({
         {coverageMapOpen && (
           <div className="px-4 pb-4 border-t pt-3">
             <TooltipProvider>
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 {strands.map((strand) => (
                   <div key={strand} className="flex items-start gap-2">
-                    <span className="text-xs font-mono font-semibold text-muted-foreground w-6 shrink-0 mt-0.5">{strand}</span>
+                    <Badge variant="outline" className={`font-mono text-xs shrink-0 px-1.5 py-0 mt-0.5 ${STRAND_COLORS[strand] ?? "bg-muted text-muted-foreground border-muted"}`}>{strand}</Badge>
                     <div className="flex flex-wrap gap-1">
                       {standards.filter((s) => strandFromCode(s.code) === strand).map((s) => {
                         const unitsThatCover = plan.units?.filter((u) => u.standards?.some((us) => us.id === s.id)) ?? [];
@@ -366,14 +357,14 @@ export function LTPDetailView({
                         return (
                           <Tooltip key={s.id}>
                             <TooltipTrigger>
-                              <button type="button"
+                              <span
                                 onClick={() => { if (!isMapped && canEdit) { setAssignChip({ standardId: s.id, code: s.code }); setAssignTargetUnitId(""); } }}
-                                className={`focus:outline-none ${!isMapped && canEdit ? "cursor-pointer" : "cursor-default"}`}
+                                className={`inline-flex ${!isMapped && canEdit ? "cursor-pointer" : "cursor-default"}`}
                               >
                                 <Badge variant="outline" className={`font-mono text-xs px-1.5 py-0 transition-opacity ${badgeColor}`}>
                                   {s.code}
                                 </Badge>
-                              </button>
+                              </span>
                             </TooltipTrigger>
                             <TooltipContent>
                               <p className="font-medium">{s.code}</p>
@@ -502,30 +493,22 @@ export function LTPDetailView({
       {unitDialogState && (
         <LTPUnitDialog
           open
-          onClose={() => { setUnitDialogState(null); setEditingUnit(null); }}
+          onClose={() => setUnitDialogState(null)}
           onSave={handleSaveUnit}
-          standards={standards}
           term={unitDialogState.term}
-          nextUnitNumber={
-            (plan.units?.filter((u) => u.term === unitDialogState.term).length ?? 0) + 1
-          }
-          nextSortOrder={
-            plan.units?.filter((u) => u.term === unitDialogState.term).length ?? 0
-          }
-          editing={editingUnit}
-          allLTPStandardIds={allLTPStandardIds}
+          nextUnitNumber={(plan.units?.filter((u) => u.term === unitDialogState.term).length ?? 0) + 1}
+          nextSortOrder={plan.units?.filter((u) => u.term === unitDialogState.term).length ?? 0}
         />
       )}
     </div>
   );
 }
 
-function UnitCard({ unit, canEdit, isHod, currentUserId, onEdit, onDelete, onOpen, onAssign }: {
+function UnitCard({ unit, canEdit, isHod, currentUserId, onDelete, onOpen, onAssign }: {
   unit: LTPUnit;
   canEdit: boolean;
   isHod: boolean;
   currentUserId: string;
-  onEdit: () => void;
   onDelete: () => void;
   onOpen: () => void;
   onAssign: () => void;
@@ -537,10 +520,10 @@ function UnitCard({ unit, canEdit, isHod, currentUserId, onEdit, onDelete, onOpe
     <div className={`rounded-md border bg-background p-3 space-y-2 ${isAssignedToMe ? "ring-2 ring-blue-300 ring-offset-1" : ""}`}>
       {/* Unit header */}
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
+        <button type="button" className="min-w-0 text-left flex-1 group" onClick={onOpen}>
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-xs font-semibold text-muted-foreground">U{unit.unit_number}</span>
-            <span className="text-sm font-semibold leading-tight">{unit.title}</span>
+            <span className="text-sm font-semibold leading-tight group-hover:text-blue-600 transition-colors">{unit.title}</span>
             {isAssignedToMe && (
               <Badge className="text-xs py-0 h-4 bg-blue-100 text-blue-700">Your unit</Badge>
             )}
@@ -551,25 +534,17 @@ function UnitCard({ unit, canEdit, isHod, currentUserId, onEdit, onDelete, onOpe
               <span className="text-xs text-muted-foreground">{unit.duration_weeks}w</span>
             )}
           </div>
-        </div>
+        </button>
         <div className="flex items-center gap-0.5 shrink-0">
-          <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-muted-foreground" title="Open unit plan" onClick={onOpen}>
-            <ExternalLink className="h-3 w-3" />
-          </Button>
           {isHod && (
             <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-muted-foreground" title="Assign to teacher" onClick={onAssign}>
               <UserPlus className="h-3 w-3" />
             </Button>
           )}
           {canEdit && (
-            <>
-              <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-muted-foreground" onClick={onEdit}>
-                <Pencil className="h-3 w-3" />
-              </Button>
-              <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-muted-foreground hover:text-rose-600" onClick={onDelete}>
-                <Trash2 className="h-3 w-3" />
-              </Button>
-            </>
+            <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-muted-foreground hover:text-rose-600" onClick={onDelete}>
+              <Trash2 className="h-3 w-3" />
+            </Button>
           )}
         </div>
       </div>
