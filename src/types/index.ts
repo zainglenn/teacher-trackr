@@ -59,9 +59,18 @@ export interface LongTermPlan {
   teacher?: Profile;
 }
 
+export interface Class {
+  id: string;
+  teacher_id: string;
+  name: string;
+  school_year: string;
+  created_at: string;
+}
+
 export interface Student {
   id: string;
   teacher_id: string;
+  class_id: string | null;
   full_name: string;
   student_number: string | null;
   created_at: string;

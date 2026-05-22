@@ -6,50 +6,83 @@ import { supabase } from "@/lib/supabase";
 export interface SkillCoverageLog {
   id: string;
   teacher_id: string;
+  class_id: string | null;
   skill_id: string;
   taught_date: string;
   notes: string | null;
 }
 
-export function useSkillCoverage(teacherId: string) {
+export function useSkillCoverage(teacherId: string, classId?: string | null) {
   const [logs, setLogs] = useState<SkillCoverageLog[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetch = useCallback(async () => {
-    const { data } = await supabase
+    let query = supabase
       .from("skill_coverage")
       .select("*")
       .eq("teacher_id", teacherId);
+
+    if (classId) {
+      query = query.eq("class_id", classId);
+    } else {
+      query = query.is("class_id", null);
+    }
+
+    const { data } = await query;
     setLogs(data ?? []);
     setLoading(false);
-  }, [teacherId]);
+  }, [teacherId, classId]);
 
   useEffect(() => { fetch(); }, [fetch]);
 
   async function markSkill(skillId: string, taughtDate: string, notes?: string) {
-    const { data } = await supabase
-      .from("skill_coverage")
-      .upsert(
-        { teacher_id: teacherId, skill_id: skillId, taught_date: taughtDate, notes: notes ?? null },
-        { onConflict: "teacher_id,skill_id" }
-      )
-      .select()
-      .single();
-    if (data) {
+    const existing = logs.find((l) => l.skill_id === skillId);
+    let result;
+    if (existing) {
+      const { data } = await supabase
+        .from("skill_coverage")
+        .update({ taught_date: taughtDate, notes: notes ?? null })
+        .eq("id", existing.id)
+        .select()
+        .single();
+      result = data;
+    } else {
+      const { data } = await supabase
+        .from("skill_coverage")
+        .insert({
+          teacher_id: teacherId,
+          class_id: classId ?? null,
+          skill_id: skillId,
+          taught_date: taughtDate,
+          notes: notes ?? null,
+        })
+        .select()
+        .single();
+      result = data;
+    }
+    if (result) {
       setLogs((prev) => {
         const idx = prev.findIndex((l) => l.skill_id === skillId);
-        if (idx >= 0) { const next = [...prev]; next[idx] = data; return next; }
-        return [...prev, data];
+        if (idx >= 0) { const next = [...prev]; next[idx] = result; return next; }
+        return [...prev, result];
       });
     }
   }
 
   async function unmarkSkill(skillId: string) {
-    await supabase
+    let query = supabase
       .from("skill_coverage")
       .delete()
       .eq("teacher_id", teacherId)
       .eq("skill_id", skillId);
+
+    if (classId) {
+      query = query.eq("class_id", classId);
+    } else {
+      query = query.is("class_id", null);
+    }
+
+    await query;
     setLogs((prev) => prev.filter((l) => l.skill_id !== skillId));
   }
 

@@ -9,10 +9,11 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Users } from "lucide-react";
+import { Plus, Trash2, Users, GraduationCap } from "lucide-react";
 import { Standard, Student, Attainment } from "@/types";
 import { useStudents } from "@/hooks/useStudents";
 import { useStudentProgress } from "@/hooks/useStudentProgress";
+import { useClasses } from "@/hooks/useClasses";
 
 const ATTAINMENT_CONFIG: Record<Attainment, { label: string; className: string }> = {
   not_assessed: { label: "Not Assessed", className: "bg-muted text-muted-foreground" },
@@ -29,7 +30,112 @@ interface StudentProgressViewProps {
 }
 
 export function StudentProgressView({ teacherId, standards, byStrand }: StudentProgressViewProps) {
-  const { students, loading: studentsLoading, addStudent, removeStudent } = useStudents(teacherId);
+  const { classes, loading: classesLoading, addClass } = useClasses(teacherId);
+  const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
+  const [addClassDialog, setAddClassDialog] = useState(false);
+  const [newClassName, setNewClassName] = useState("");
+  const [savingClass, setSavingClass] = useState(false);
+
+  async function handleAddClass() {
+    if (!newClassName.trim()) return;
+    setSavingClass(true);
+    const created = await addClass(newClassName.trim());
+    setSavingClass(false);
+    setAddClassDialog(false);
+    setNewClassName("");
+    if (created) setSelectedClassId(created.id);
+  }
+
+  if (classesLoading) return null;
+
+  return (
+    <PageContainer
+      title="Student Progress"
+      description="Track attainment per student across all standards"
+    >
+      {/* Class selector */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <button
+          onClick={() => setSelectedClassId(null)}
+          className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+            selectedClassId === null
+              ? "bg-primary text-primary-foreground border-primary"
+              : "bg-background border-border hover:bg-muted"
+          }`}
+        >
+          All
+        </button>
+        {classes.map((cls) => (
+          <button
+            key={cls.id}
+            onClick={() => setSelectedClassId(cls.id)}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+              selectedClassId === cls.id
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-background border-border hover:bg-muted"
+            }`}
+          >
+            {cls.name}
+          </button>
+        ))}
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-8 text-muted-foreground"
+          onClick={() => setAddClassDialog(true)}
+        >
+          <Plus className="h-3.5 w-3.5 mr-1" />
+          Add Class
+        </Button>
+      </div>
+
+      <StudentList
+        key={selectedClassId ?? "all"}
+        teacherId={teacherId}
+        classId={selectedClassId}
+        standards={standards}
+        byStrand={byStrand}
+      />
+
+      <Dialog open={addClassDialog} onOpenChange={(o) => !o && setAddClassDialog(false)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Add Class</DialogTitle></DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="space-y-1.5">
+              <Label>Class Name</Label>
+              <Input
+                placeholder="e.g. 6A, Period 3, Grade 6 Blue"
+                value={newClassName}
+                onChange={(e) => setNewClassName(e.target.value)}
+                autoFocus
+                onKeyDown={(e) => { if (e.key === "Enter" && newClassName.trim()) handleAddClass(); }}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddClassDialog(false)}>Cancel</Button>
+            <Button onClick={handleAddClass} disabled={savingClass || !newClassName.trim()}>
+              {savingClass ? "Adding..." : "Add Class"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </PageContainer>
+  );
+}
+
+function StudentList({
+  teacherId,
+  classId,
+  standards,
+  byStrand,
+}: {
+  teacherId: string;
+  classId: string | null;
+  standards: Standard[];
+  byStrand: Record<string, Standard[]>;
+}) {
+  const { students, loading, addStudent, removeStudent } = useStudents(teacherId, classId ?? undefined);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [addDialog, setAddDialog] = useState(false);
   const [newName, setNewName] = useState("");
@@ -48,19 +154,21 @@ export function StudentProgressView({ teacherId, standards, byStrand }: StudentP
     setNewNumber("");
   }
 
-  if (studentsLoading) return null;
+  if (loading) return null;
 
   return (
-    <PageContainer
-      title="Student Progress"
-      description={`${students.length} student${students.length !== 1 ? "s" : ""} enrolled`}
-      action={
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <GraduationCap className="h-4 w-4" />
+          <span>{students.length} student{students.length !== 1 ? "s" : ""}</span>
+        </div>
         <Button size="sm" onClick={() => setAddDialog(true)}>
           <Plus className="h-4 w-4 mr-1" />
           Add Student
         </Button>
-      }
-    >
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
         <div className="lg:col-span-1 space-y-2">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1">Students</p>
@@ -137,7 +245,7 @@ export function StudentProgressView({ teacherId, standards, byStrand }: StudentP
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </PageContainer>
+    </div>
   );
 }
 

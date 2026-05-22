@@ -5,11 +5,15 @@ import { PageContainer } from "@/components/PageContainer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Circle, ChevronDown, ChevronRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { CheckCircle2, Circle, ChevronDown, ChevronRight, Plus, GraduationCap } from "lucide-react";
 import { Standard } from "@/types";
 import { useSkillCoverage } from "@/hooks/useSkillCoverage";
 import { useAllSkills } from "@/hooks/useAllSkills";
-import { StandardSkill } from "@/hooks/useStandardSkills";
+import { useClasses } from "@/hooks/useClasses";
 import { StandardDetailView } from "@/components/StandardDetailView";
 
 interface CoverageViewProps {
@@ -19,16 +23,126 @@ interface CoverageViewProps {
 }
 
 export function CoverageView({ standards, byStrand, teacherId }: CoverageViewProps) {
-  const { coveredSkillIds } = useSkillCoverage(teacherId);
+  const { classes, loading: classesLoading, addClass } = useClasses(teacherId);
+  const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
+  const [addClassDialog, setAddClassDialog] = useState(false);
+  const [newClassName, setNewClassName] = useState("");
+  const [savingClass, setSavingClass] = useState(false);
+
+  async function handleAddClass() {
+    if (!newClassName.trim()) return;
+    setSavingClass(true);
+    const created = await addClass(newClassName.trim());
+    setSavingClass(false);
+    setAddClassDialog(false);
+    setNewClassName("");
+    if (created) setSelectedClassId(created.id);
+  }
+
+  if (classesLoading) return null;
+
+  return (
+    <PageContainer title="Standards Coverage" description="Track skill coverage by class">
+    <div className="space-y-4">
+      {/* Class selector bar */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <button
+          onClick={() => setSelectedClassId(null)}
+          className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+            selectedClassId === null
+              ? "bg-primary text-primary-foreground border-primary"
+              : "bg-background border-border hover:bg-muted"
+          }`}
+        >
+          All Classes
+        </button>
+        {classes.map((cls) => (
+          <button
+            key={cls.id}
+            onClick={() => setSelectedClassId(cls.id)}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+              selectedClassId === cls.id
+                ? "bg-primary text-primary-foreground border-primary"
+                : "bg-background border-border hover:bg-muted"
+            }`}
+          >
+            {cls.name}
+          </button>
+        ))}
+        <Button
+          size="sm"
+          variant="ghost"
+          className="h-8 text-muted-foreground"
+          onClick={() => setAddClassDialog(true)}
+        >
+          <Plus className="h-3.5 w-3.5 mr-1" />
+          Add Class
+        </Button>
+      </div>
+
+      <CoverageGrid
+        key={selectedClassId ?? "all"}
+        standards={standards}
+        byStrand={byStrand}
+        teacherId={teacherId}
+        classId={selectedClassId}
+        className={selectedClassId ? (classes.find((c) => c.id === selectedClassId)?.name ?? "") : "All Classes"}
+      />
+
+      <Dialog open={addClassDialog} onOpenChange={(o) => !o && setAddClassDialog(false)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Add Class</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="space-y-1.5">
+              <Label>Class Name</Label>
+              <Input
+                placeholder="e.g. 6A, Period 3, Grade 6 Blue"
+                value={newClassName}
+                onChange={(e) => setNewClassName(e.target.value)}
+                autoFocus
+                onKeyDown={(e) => { if (e.key === "Enter" && newClassName.trim()) handleAddClass(); }}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddClassDialog(false)}>Cancel</Button>
+            <Button onClick={handleAddClass} disabled={savingClass || !newClassName.trim()}>
+              {savingClass ? "Adding..." : "Add Class"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+    </PageContainer>
+  );
+}
+
+function CoverageGrid({
+  standards,
+  byStrand,
+  teacherId,
+  classId,
+  className: classLabel,
+}: {
+  standards: Standard[];
+  byStrand: Record<string, Standard[]>;
+  teacherId: string;
+  classId: string | null;
+  className: string;
+}) {
+  const { coveredSkillIds } = useSkillCoverage(teacherId, classId);
   const { byStandardId, loading: skillsLoading } = useAllSkills();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-  const [selectedStandard, setSelectedStandard] = useState<Standard | null>(null);
+  const [selectedStandard, setSelectedStandard] = useState<(typeof standards)[0] | null>(null);
 
   if (selectedStandard) {
     return (
       <StandardDetailView
         standard={selectedStandard}
         teacherId={teacherId}
+        classId={classId}
         onBack={() => setSelectedStandard(null)}
         preloadedSkills={byStandardId[selectedStandard.id] ?? []}
         coveredSkillIds={coveredSkillIds}
@@ -48,10 +162,15 @@ export function CoverageView({ standards, byStrand, teacherId }: CoverageViewPro
   }
 
   return (
-    <PageContainer
-      title="Standards Coverage"
-      description={`${totalCovered} of ${totalSkills} skills covered (${overallPct}%)`}
-    >
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <GraduationCap className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm font-medium">{classLabel}</span>
+          <span className="text-sm text-muted-foreground">— {totalCovered} of {totalSkills} skills covered ({overallPct}%)</span>
+        </div>
+      </div>
+
       <Progress value={overallPct} className="h-2" />
 
       {Object.entries(byStrand).map(([strand, items]) => {
@@ -126,6 +245,6 @@ export function CoverageView({ standards, byStrand, teacherId }: CoverageViewPro
           </Card>
         );
       })}
-    </PageContainer>
+    </div>
   );
 }

@@ -31,12 +31,13 @@ const GENRE_COLOURS: Record<string, string> = {
 interface StandardDetailViewProps {
   standard: Standard;
   teacherId: string;
+  classId?: string | null;
   onBack: () => void;
   preloadedSkills?: StandardSkill[];
   coveredSkillIds?: Set<string>;
 }
 
-export function StandardDetailView({ standard, teacherId, onBack, preloadedSkills, coveredSkillIds: externalCovered }: StandardDetailViewProps) {
+export function StandardDetailView({ standard, teacherId, classId, onBack, preloadedSkills, coveredSkillIds: externalCovered }: StandardDetailViewProps) {
   const { skills: fetchedSkills, byGenre: fetchedByGenre, hasGenres: fetchedHasGenres, loading } = useStandardSkills(
     preloadedSkills ? null : standard.id
   );
@@ -51,7 +52,7 @@ export function StandardDetailView({ standard, teacherId, onBack, preloadedSkill
   const hasGenres = skills.some((s) => s.genre !== null);
   void fetchedByGenre; void fetchedHasGenres;
 
-  const { isCovered: fetchedIsCovered, markSkill, unmarkSkill } = useSkillCoverage(teacherId);
+  const { isCovered: fetchedIsCovered, markSkill, unmarkSkill } = useSkillCoverage(teacherId, classId);
   const isCovered = externalCovered
     ? (skillId: string) => externalCovered.has(skillId)
     : fetchedIsCovered;

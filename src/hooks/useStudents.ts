@@ -4,26 +4,36 @@ import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import { Student } from "@/types";
 
-export function useStudents(teacherId: string) {
+export function useStudents(teacherId: string, classId?: string | null) {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase
+    let query = supabase
       .from("students")
       .select("*")
       .eq("teacher_id", teacherId)
-      .order("full_name")
-      .then(({ data }: { data: Student[] | null }) => {
-        setStudents(data ?? []);
-        setLoading(false);
-      });
-  }, [teacherId]);
+      .order("full_name");
 
-  async function addStudent(fullName: string, studentNumber?: string) {
+    if (classId) {
+      query = query.eq("class_id", classId);
+    }
+
+    query.then(({ data }: { data: Student[] | null }) => {
+      setStudents(data ?? []);
+      setLoading(false);
+    });
+  }, [teacherId, classId]);
+
+  async function addStudent(fullName: string, studentNumber?: string, targetClassId?: string) {
     const { data } = await supabase
       .from("students")
-      .insert({ teacher_id: teacherId, full_name: fullName, student_number: studentNumber ?? null })
+      .insert({
+        teacher_id: teacherId,
+        class_id: targetClassId ?? classId ?? null,
+        full_name: fullName,
+        student_number: studentNumber ?? null,
+      })
       .select()
       .single();
     if (data) setStudents((prev) => [...prev, data].sort((a, b) => a.full_name.localeCompare(b.full_name)));
