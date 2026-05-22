@@ -7,10 +7,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Sparkles, Loader2, Save, UserCircle2, ChevronDown, ChevronUp, Plus, X } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  ArrowLeft, Sparkles, Loader2, Save, UserCircle2, ChevronDown, ChevronUp, Plus, X,
+  AlertTriangle, Send, Check, RotateCcw,
+} from "lucide-react";
 import { LongTermPlan, LTPUnit, Standard } from "@/types";
 import { supabase } from "@/lib/supabase";
 import { StrandBadge, STRAND_COLORS, strandFromCode } from "@/components/ltp/StrandBadge";
+import { UNIT_STATUS_CONFIG } from "@/lib/ltpStatus";
 
 interface SuggestedStandard { code: string; standardId: string; reason: string; }
 
@@ -23,6 +28,11 @@ interface UnitPlanViewProps {
   onBack: () => void;
   updateUnit: (unitId: string, updates: Partial<Omit<LTPUnit, "id" | "ltp_id" | "created_at" | "standards">>) => Promise<void>;
   setUnitStandards: (unitId: string, standardIds: string[]) => Promise<void>;
+  submitUnit?: (unitId: string, planId: string) => Promise<void>;
+  withdrawUnit?: (unitId: string, planId: string) => Promise<void>;
+  approveUnit?: (unitId: string, planId: string) => Promise<void>;
+  requestUnitRevision?: (unitId: string, planId: string, feedback: string) => Promise<void>;
+  reopenUnit?: (unitId: string, planId: string) => Promise<void>;
 }
 
 const ASSESSMENT_OPTIONS = [
@@ -45,8 +55,10 @@ const STRAND_THEME_DEFAULT = { item: "bg-muted/30 border-muted", text: "text-mut
 export function UnitPlanView({
   plan, unit, standards, currentUserId, isHod,
   onBack, updateUnit, setUnitStandards,
+  submitUnit, withdrawUnit, approveUnit, requestUnitRevision, reopenUnit,
 }: UnitPlanViewProps) {
-  const canEdit = !isHod && (plan.status === "draft" || plan.status === "revision");
+  const isOwner = unit.assigned_to === currentUserId;
+  const canEdit = !isHod && isOwner && (unit.status === "draft" || unit.status === "revision");
   const isAssigned = unit.assigned_to === currentUserId;
 
   const [title, setTitle] = useState(unit.title);
@@ -66,6 +78,12 @@ export function UnitPlanView({
 
   const [pickerOpen, setPickerOpen] = useState(true);
   const [collapsedStrands, setCollapsedStrands] = useState<Set<string>>(new Set());
+
+  const [submitDialogOpen, setSubmitDialogOpen] = useState(false);
+  const [withdrawConfirmOpen, setWithdrawConfirmOpen] = useState(false);
+  const [hodRevisionDialogOpen, setHodRevisionDialogOpen] = useState(false);
+  const [hodRevisionFeedback, setHodRevisionFeedback] = useState("");
+  const [actionSaving, setActionSaving] = useState(false);
 
   useEffect(() => {
     setTitle(unit.title);
@@ -105,6 +123,45 @@ export function UnitPlanView({
     await setUnitStandards(unit.id, [...selectedIds]);
     setSaving(false);
     setDirty(false);
+  }
+
+  async function handleSubmitUnit() {
+    if (!submitUnit) return;
+    setActionSaving(true);
+    await submitUnit(unit.id, plan.id);
+    setActionSaving(false);
+    setSubmitDialogOpen(false);
+  }
+
+  async function handleWithdrawUnit() {
+    if (!withdrawUnit) return;
+    setActionSaving(true);
+    await withdrawUnit(unit.id, plan.id);
+    setActionSaving(false);
+    setWithdrawConfirmOpen(false);
+  }
+
+  async function handleApprove() {
+    if (!approveUnit) return;
+    setActionSaving(true);
+    await approveUnit(unit.id, plan.id);
+    setActionSaving(false);
+  }
+
+  async function handleReopen() {
+    if (!reopenUnit) return;
+    setActionSaving(true);
+    await reopenUnit(unit.id, plan.id);
+    setActionSaving(false);
+  }
+
+  async function handleHodRevision() {
+    if (!requestUnitRevision || !hodRevisionFeedback.trim()) return;
+    setActionSaving(true);
+    await requestUnitRevision(unit.id, plan.id, hodRevisionFeedback.trim());
+    setActionSaving(false);
+    setHodRevisionDialogOpen(false);
+    setHodRevisionFeedback("");
   }
 
   async function handleSuggest() {
@@ -156,6 +213,7 @@ export function UnitPlanView({
     markDirty();
   }
 
+  const statusCfg = UNIT_STATUS_CONFIG[unit.status];
   const strands = [...new Set(standards.map(s => s.strand))];
 
   const selectedStandards = standards
@@ -166,8 +224,22 @@ export function UnitPlanView({
       return ai !== bi ? ai - bi : a.code.localeCompare(b.code);
     });
 
+  const canSubmitUnit = !isHod && isOwner && (unit.status === "draft" || unit.status === "revision") && !!submitUnit;
+  const canWithdraw = !isHod && isOwner && unit.status === "submitted" && unit.reviewed_at === null && !!withdrawUnit;
+
   return (
     <div className="space-y-4">
+
+      {/* HOD feedback banner */}
+      {unit.status === "revision" && unit.hod_feedback && (
+        <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-3 flex items-start gap-2">
+          <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-amber-700">Revision requested by HOD</p>
+            <p className="text-sm text-amber-800 mt-1">{unit.hod_feedback}</p>
+          </div>
+        </div>
+      )}
 
       {/* Nav bar */}
       <div className="flex items-center justify-between gap-4">
@@ -179,12 +251,40 @@ export function UnitPlanView({
             {plan.title} · Term {unit.term}
           </span>
         </div>
-        {canEdit && (
-          <Button size="sm" className="h-8 text-xs shrink-0" onClick={handleSave} disabled={saving || !dirty || !title.trim()}>
-            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Save className="h-3.5 w-3.5 mr-1" />}
-            {saving ? "Saving…" : "Save Changes"}
-          </Button>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {canEdit && (
+            <Button size="sm" className="h-8 text-xs" onClick={handleSave} disabled={saving || !dirty || !title.trim()}>
+              {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Save className="h-3.5 w-3.5 mr-1" />}
+              {saving ? "Saving…" : "Save Changes"}
+            </Button>
+          )}
+          {canSubmitUnit && (
+            <Button size="sm" className="h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white" onClick={() => setSubmitDialogOpen(true)}>
+              <Send className="h-3.5 w-3.5 mr-1" />
+              {unit.status === "revision" ? "Resubmit" : "Submit Unit"}
+            </Button>
+          )}
+          {canWithdraw && (
+            <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => setWithdrawConfirmOpen(true)}>
+              <RotateCcw className="h-3.5 w-3.5 mr-1" /> Withdraw
+            </Button>
+          )}
+          {isHod && unit.status === "submitted" && approveUnit && (
+            <Button size="sm" className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white" onClick={handleApprove} disabled={actionSaving}>
+              <Check className="h-3.5 w-3.5 mr-1" /> Approve
+            </Button>
+          )}
+          {isHod && unit.status === "submitted" && requestUnitRevision && (
+            <Button size="sm" variant="outline" className="h-8 text-xs border-rose-200 text-rose-600 hover:bg-rose-50" onClick={() => setHodRevisionDialogOpen(true)} disabled={actionSaving}>
+              <RotateCcw className="h-3.5 w-3.5 mr-1" /> Request Revision
+            </Button>
+          )}
+          {isHod && unit.status === "approved" && reopenUnit && (
+            <Button size="sm" variant="outline" className="h-8 text-xs" onClick={handleReopen} disabled={actionSaving}>
+              Re-open
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Unit title */}
@@ -202,6 +302,7 @@ export function UnitPlanView({
         <div className="flex items-center gap-1.5 px-1 flex-wrap">
           <Badge variant="outline" className="text-xs py-0">Unit {unit.unit_number}</Badge>
           <Badge variant="outline" className="text-xs py-0">Term {unit.term}</Badge>
+          <Badge variant="outline" className={`text-xs py-0 ${statusCfg.className}`}>{statusCfg.label}</Badge>
           {isAssigned && <Badge className="text-xs py-0 bg-blue-100 text-blue-700 border-blue-200">Your unit</Badge>}
           {unit.assignedTeacher && !isAssigned && (
             <span className="text-xs text-muted-foreground flex items-center gap-1">
@@ -212,7 +313,7 @@ export function UnitPlanView({
         </div>
       </div>
 
-      {/* Unit header card — mirrors the reference top section */}
+      {/* Unit header card */}
       <div className="rounded-lg border overflow-hidden">
         <div className="grid grid-cols-3 divide-x">
           {/* Essential Question */}
@@ -277,7 +378,7 @@ export function UnitPlanView({
         </div>
       </div>
 
-      {/* Standards table — mirrors the lesson plan table in the reference */}
+      {/* Standards table */}
       <div className="rounded-lg border overflow-hidden">
         <table className="w-full text-sm border-collapse">
           <thead>
@@ -351,7 +452,6 @@ export function UnitPlanView({
 
             {pickerOpen && (
               <div className="border-t">
-                {/* AI error */}
                 {suggestError && (
                   <div className="border-b border-rose-200 bg-rose-50 px-4 py-2.5 flex items-center justify-between gap-2">
                     <p className="text-xs text-rose-700">{suggestError}</p>
@@ -359,7 +459,6 @@ export function UnitPlanView({
                   </div>
                 )}
 
-                {/* AI suggestions panel */}
                 {suggestions.length > 0 && (
                   <div className="border-b border-violet-200 bg-violet-50 px-4 py-3 space-y-2.5">
                     <div className="flex items-center justify-between">
@@ -395,7 +494,6 @@ export function UnitPlanView({
                   </div>
                 )}
 
-                {/* Strand-grouped checklist */}
                 <div className="divide-y">
                   {strands.map(strand => {
                     const strandStandards = standards.filter(s => s.strand === strand);
@@ -448,6 +546,67 @@ export function UnitPlanView({
           </div>
         )}
       </div>
+
+      {/* Submit confirm dialog */}
+      <Dialog open={submitDialogOpen} onOpenChange={(o) => !o && setSubmitDialogOpen(false)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>{unit.status === "revision" ? "Resubmit Unit" : "Submit Unit for Review"}</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground py-2">
+            Submit <strong>{unit.title}</strong> for HOD review? The unit will be locked until the HOD responds.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSubmitDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleSubmitUnit} disabled={actionSaving} className="bg-blue-600 hover:bg-blue-700 text-white">
+              {actionSaving ? "Submitting..." : "Submit"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Withdraw confirm dialog */}
+      <Dialog open={withdrawConfirmOpen} onOpenChange={(o) => !o && setWithdrawConfirmOpen(false)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Withdraw Unit</DialogTitle></DialogHeader>
+          <p className="text-sm text-muted-foreground py-2">
+            Return <strong>{unit.title}</strong> to draft? You can edit and resubmit it.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setWithdrawConfirmOpen(false)}>Cancel</Button>
+            <Button onClick={handleWithdrawUnit} disabled={actionSaving}>
+              {actionSaving ? "Withdrawing..." : "Withdraw"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* HOD revision dialog */}
+      <Dialog open={hodRevisionDialogOpen} onOpenChange={(o) => !o && setHodRevisionDialogOpen(false)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Request Revision</DialogTitle></DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="bg-muted rounded-lg p-2.5 text-xs">
+              <p className="font-medium">{unit.title}</p>
+              <p className="text-muted-foreground">Term {unit.term} · Unit {unit.unit_number}</p>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Feedback for teacher</Label>
+              <Textarea
+                placeholder="Explain what needs to be revised..."
+                value={hodRevisionFeedback}
+                onChange={(e) => setHodRevisionFeedback(e.target.value)}
+                rows={4}
+                autoFocus
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setHodRevisionDialogOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleHodRevision} disabled={actionSaving || !hodRevisionFeedback.trim()}>
+              {actionSaving ? "Sending..." : "Request Revision"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

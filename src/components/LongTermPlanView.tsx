@@ -11,11 +11,12 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, ClipboardList, Eye, Pencil, Sparkles, Loader2, Wand2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Standard } from "@/types";
 import { useLongTermPlans } from "@/hooks/useLongTermPlans";
 import { useTeachers } from "@/hooks/useTeachers";
 import { supabase } from "@/lib/supabase";
-import { LTPStatusBadge } from "@/components/ltp/LTPStatusBadge";
+import { ltpAggregateStatus, COMPUTED_LTP_STATUS_CONFIG } from "@/lib/ltpStatus";
 
 interface LongTermPlanViewProps {
   teacherId: string;
@@ -24,7 +25,7 @@ interface LongTermPlanViewProps {
 }
 
 export function LongTermPlanView({ teacherId, isHod, standards }: LongTermPlanViewProps) {
-  const { plans, loading, createLTP, updateLTP, setStatus, deleteLTP, addUnit, updateUnit, deleteUnit, setUnitStandards, batchAddUnits, assignUnit } =
+  const { plans, loading, createLTP, updateLTP, setStatus, deleteLTP, addUnit, updateUnit, deleteUnit, setUnitStandards, batchAddUnits, assignUnit, submitUnit, withdrawUnit, approveUnit, requestUnitRevision, reopenUnit } =
     useLongTermPlans(teacherId, isHod);
   const { teachers } = useTeachers();
 
@@ -58,6 +59,11 @@ export function LongTermPlanView({ teacherId, isHod, standards }: LongTermPlanVi
         onBack={() => setSelectedUnitId(null)}
         updateUnit={updateUnit}
         setUnitStandards={setUnitStandards}
+        submitUnit={submitUnit}
+        withdrawUnit={withdrawUnit}
+        approveUnit={isHod ? approveUnit : undefined}
+        requestUnitRevision={isHod ? requestUnitRevision : undefined}
+        reopenUnit={isHod ? reopenUnit : undefined}
       />
     );
   }
@@ -150,9 +156,11 @@ export function LongTermPlanView({ teacherId, isHod, standards }: LongTermPlanVi
 
       <div className="space-y-2">
         {myPlans.map((plan) => {
-          const canEdit = !isHod && (plan.status === "draft" || plan.status === "revision");
           const totalUnits = plan.units?.length ?? 0;
           const mappedIds = new Set(plan.units?.flatMap((u) => u.standards?.map((s) => s.id) ?? []) ?? []);
+          const { computed } = ltpAggregateStatus((plan.units ?? []).map((u) => ({ status: u.status ?? "draft" })));
+          const statusCfg = COMPUTED_LTP_STATUS_CONFIG[computed];
+          const hasRevisions = (plan.units ?? []).filter((u) => u.status === "revision" && u.hod_feedback);
 
           return (
             <Card key={plan.id}>
@@ -160,30 +168,24 @@ export function LongTermPlanView({ teacherId, isHod, standards }: LongTermPlanVi
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-sm font-semibold">{plan.title}</p>
-                    <LTPStatusBadge status={plan.status} />
+                    <Badge variant="outline" className={`text-xs ${statusCfg.className}`}>{statusCfg.label}</Badge>
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {plan.school_year} · {totalUnits} unit{totalUnits !== 1 ? "s" : ""} · {mappedIds.size}/{standards.length} standards mapped
                     {isHod && plan.teacher && ` · ${plan.teacher.full_name ?? plan.teacher.email}`}
                   </p>
-                  {plan.status === "revision" && plan.hod_feedback && (
-                    <p className="text-xs text-rose-600 italic mt-0.5 truncate max-w-md">"{plan.hod_feedback}"</p>
+                  {hasRevisions.length > 0 && (
+                    <p className="text-xs text-rose-600 italic mt-0.5 truncate max-w-md">
+                      {hasRevisions.length} unit{hasRevisions.length !== 1 ? "s" : ""} need revision
+                    </p>
                   )}
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  {canEdit && (
-                    <Button size="sm" variant="outline" className="h-8 text-xs gap-1"
-                      onClick={() => setSelectedPlanId(plan.id)}>
-                      <Pencil className="h-3 w-3" /> Edit
-                    </Button>
-                  )}
-                  {(!canEdit || isHod) && (
-                    <Button size="sm" variant="outline" className="h-8 text-xs gap-1"
-                      onClick={() => setSelectedPlanId(plan.id)}>
-                      <Eye className="h-3 w-3" /> View
-                    </Button>
-                  )}
-                  {canEdit && (
+                  <Button size="sm" variant="outline" className="h-8 text-xs gap-1"
+                    onClick={() => setSelectedPlanId(plan.id)}>
+                    {isHod ? <><Eye className="h-3 w-3" /> View</> : <><Pencil className="h-3 w-3" /> Open</>}
+                  </Button>
+                  {!isHod && (
                     <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-rose-600"
                       onClick={() => { if (confirm("Delete this LTP and all its units?")) deleteLTP(plan.id); }}>
                       ×

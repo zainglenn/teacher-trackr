@@ -5,21 +5,20 @@ import { LTPUnitDialog } from "@/components/LTPUnitDialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
-  ArrowLeft, Trash2, Send, RotateCcw, Check,
-  ChevronDown, ChevronUp, Sparkles, Loader2, AlertCircle, CheckCircle2, AlertTriangle,
+  ArrowLeft, Trash2,
+  ChevronDown, ChevronUp, Sparkles, Loader2, AlertCircle, CheckCircle2,
   UserPlus, UserCircle2,
 } from "lucide-react";
 import { LongTermPlan, LTPUnit, LTPStatus, Standard, Profile } from "@/types";
 import { supabase } from "@/lib/supabase";
 import { StrandBadge, STRAND_COLORS, strandFromCode } from "@/components/ltp/StrandBadge";
 import { StrandProgressBar } from "@/components/ltp/StrandProgressBar";
-import { LTPStatusBadge } from "@/components/ltp/LTPStatusBadge";
 import { TermGrid } from "@/components/ltp/TermGrid";
+import { ltpAggregateStatus, COMPUTED_LTP_STATUS_CONFIG, UNIT_STATUS_CONFIG } from "@/lib/ltpStatus";
 
 interface Allocation {
   unitId: string;
@@ -48,14 +47,9 @@ export function LTPDetailView({
   plan, isHod, standards, teachers, currentUserId, onBack, onOpenUnit,
   addUnit, updateUnit, deleteUnit, setUnitStandards, setStatus, assignUnit, allLTPStandardIds,
 }: LTPDetailViewProps) {
-  const canEdit = !isHod && (plan.status === "draft" || plan.status === "revision");
+  const canEdit = !isHod;
 
   const [unitDialogState, setUnitDialogState] = useState<{ term: number } | null>(null);
-
-  const [submitOpen, setSubmitOpen] = useState(false);
-  const [revisionOpen, setRevisionOpen] = useState(false);
-  const [revisionFeedback, setRevisionFeedback] = useState("");
-  const [actionSaving, setActionSaving] = useState(false);
 
   const [coverageMapOpen, setCoverageMapOpen] = useState(false);
   const [fillGapsLoading, setFillGapsLoading] = useState(false);
@@ -74,8 +68,10 @@ export function LTPDetailView({
   const planMappedIds = new Set(plan.units?.flatMap((u) => u.standards?.map((s) => s.id) ?? []) ?? []);
   const unmapped = standards.filter((s) => !planMappedIds.has(s.id));
   const allMapped = unmapped.length === 0;
-  const canSubmit = canEdit && (plan.units?.length ?? 0) > 0 && allMapped;
   const strands = [...new Set(standards.map((s) => strandFromCode(s.code)))];
+
+  const { computed: computedStatus } = ltpAggregateStatus((plan.units ?? []).map((u) => ({ status: u.status ?? "draft" })));
+  const computedCfg = COMPUTED_LTP_STATUS_CONFIG[computedStatus];
 
   const strandCoverage = strands.map((strand) => {
     const all = standards.filter((s) => strandFromCode(s.code) === strand);
@@ -97,28 +93,6 @@ export function LTPDetailView({
   async function handleDeleteUnit(unitId: string) {
     if (!confirm("Delete this unit?")) return;
     await deleteUnit(unitId);
-  }
-
-  async function handleSubmit() {
-    setActionSaving(true);
-    await setStatus(plan.id, "submitted");
-    setActionSaving(false);
-    setSubmitOpen(false);
-  }
-
-  async function handleApprove() {
-    setActionSaving(true);
-    await setStatus(plan.id, "approved");
-    setActionSaving(false);
-  }
-
-  async function handleRevision() {
-    if (!revisionFeedback.trim()) return;
-    setActionSaving(true);
-    await setStatus(plan.id, "revision", revisionFeedback.trim());
-    setActionSaving(false);
-    setRevisionOpen(false);
-    setRevisionFeedback("");
   }
 
   async function handleFillGaps() {
@@ -201,7 +175,7 @@ export function LTPDetailView({
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-lg font-semibold truncate">{plan.title}</h1>
-              <LTPStatusBadge status={plan.status} />
+              <Badge variant="outline" className={`text-xs ${computedCfg.className}`}>{computedCfg.label}</Badge>
             </div>
             <p className="text-xs text-muted-foreground mt-0.5 truncate">
               {plan.school_year} · {plan.units?.length ?? 0} units · {planMappedIds.size}/{standards.length} standards mapped
@@ -209,35 +183,8 @@ export function LTPDetailView({
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          {canSubmit && (
-            <Button size="sm" className="h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white" onClick={() => setSubmitOpen(true)}>
-              <Send className="h-3 w-3 mr-1" /> Submit for Review
-            </Button>
-          )}
-          {isHod && plan.status === "submitted" && (
-            <>
-              <Button size="sm" className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white" onClick={handleApprove} disabled={actionSaving}>
-                <Check className="h-3 w-3 mr-1" /> Approve
-              </Button>
-              <Button size="sm" variant="outline" className="h-8 text-xs border-rose-200 text-rose-600 hover:bg-rose-50" onClick={() => { setRevisionOpen(true); setRevisionFeedback(""); }}>
-                <RotateCcw className="h-3 w-3 mr-1" /> Request Revision
-              </Button>
-            </>
-          )}
-        </div>
+        <div className="flex items-center gap-2 shrink-0" />
       </div>
-
-      {/* Revision feedback banner */}
-      {plan.status === "revision" && plan.hod_feedback && (
-        <div className="rounded-lg bg-amber-50 border border-amber-200 px-4 py-2.5 flex items-start gap-2">
-          <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-          <div>
-            <p className="text-xs font-semibold text-amber-700">Revision requested</p>
-            <p className="text-xs text-amber-700 mt-0.5">"{plan.hod_feedback}"</p>
-          </div>
-        </div>
-      )}
 
       {/* Coverage summary bar */}
       <div className="rounded-lg border bg-card px-4 py-3">
@@ -254,7 +201,7 @@ export function LTPDetailView({
         </div>
 
         {/* Coverage gate */}
-        {canEdit && (
+        {!isHod && (
           <div className={`mt-3 pt-3 border-t flex items-center justify-between gap-3 ${allMapped ? "border-emerald-100" : "border-rose-100"}`}>
             <div className="flex items-center gap-1.5 min-w-0">
               {allMapped
@@ -391,46 +338,6 @@ export function LTPDetailView({
         )}
       </div>
 
-      {/* Submit dialog */}
-      <Dialog open={submitOpen} onOpenChange={(o) => !o && setSubmitOpen(false)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Submit for HOD Review</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground py-2">
-            Submit <strong>{plan.title}</strong> for review? You won't be able to edit it until the HOD responds.
-          </p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setSubmitOpen(false)}>Cancel</Button>
-            <Button onClick={handleSubmit} disabled={actionSaving} className="bg-blue-600 hover:bg-blue-700 text-white">
-              {actionSaving ? "Submitting..." : "Submit"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Revision dialog */}
-      <Dialog open={revisionOpen} onOpenChange={(o) => !o && setRevisionOpen(false)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Request Revision</DialogTitle></DialogHeader>
-          <div className="space-y-3 py-2">
-            <div className="bg-muted rounded-lg p-2.5 text-xs">
-              <p className="font-medium">{plan.title}</p>
-              <p className="text-muted-foreground">{plan.school_year} · {plan.teacher?.full_name ?? plan.teacher?.email}</p>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Feedback for teacher</Label>
-              <Textarea placeholder="Explain what needs to be revised..."
-                value={revisionFeedback} onChange={(e) => setRevisionFeedback(e.target.value)} rows={4} autoFocus />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRevisionOpen(false)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleRevision} disabled={actionSaving || !revisionFeedback.trim()}>
-              {actionSaving ? "Sending..." : "Request Revision"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Assign chip dialog */}
       <Dialog open={!!assignChip} onOpenChange={(o) => !o && setAssignChip(null)}>
         <DialogContent className="max-w-sm">
@@ -515,9 +422,18 @@ function UnitCard({ unit, canEdit, isHod, currentUserId, onDelete, onOpen, onAss
 }) {
   const ASSESSMENT_LABELS: Record<string, string> = { formative: "Formative", summative: "Summative", both: "Both" };
   const isAssignedToMe = unit.assigned_to === currentUserId;
+  const unitStatus = unit.status ?? "draft";
+  const statusCfg = UNIT_STATUS_CONFIG[unitStatus];
+  const canDelete = unit.status === "draft" && (isHod || isAssignedToMe);
+
+  const borderClass = isAssignedToMe
+    ? "ring-2 ring-blue-300 ring-offset-1"
+    : unit.assigned_to !== null
+      ? "opacity-80"
+      : "border-dashed";
 
   return (
-    <div className={`rounded-md border bg-background p-3 space-y-2 ${isAssignedToMe ? "ring-2 ring-blue-300 ring-offset-1" : ""}`}>
+    <div className={`rounded-md border bg-background p-3 space-y-2 ${borderClass}`}>
       {/* Unit header */}
       <div className="flex items-start justify-between gap-2">
         <button type="button" className="min-w-0 text-left flex-1 group" onClick={onOpen}>
@@ -527,9 +443,13 @@ function UnitCard({ unit, canEdit, isHod, currentUserId, onDelete, onOpen, onAss
             {isAssignedToMe && (
               <Badge className="text-xs py-0 h-4 bg-blue-100 text-blue-700">Your unit</Badge>
             )}
+            {unit.assigned_to === null && (
+              <span className="text-xs text-muted-foreground italic">Unassigned</span>
+            )}
           </div>
           <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
             <Badge variant="outline" className="text-xs py-0">{ASSESSMENT_LABELS[unit.assessment_type]}</Badge>
+            <Badge variant="outline" className={`text-xs py-0 ${statusCfg.className}`}>{statusCfg.label}</Badge>
             {unit.duration_weeks > 0 && (
               <span className="text-xs text-muted-foreground">{unit.duration_weeks}w</span>
             )}
@@ -541,7 +461,7 @@ function UnitCard({ unit, canEdit, isHod, currentUserId, onDelete, onOpen, onAss
               <UserPlus className="h-3 w-3" />
             </Button>
           )}
-          {canEdit && (
+          {canDelete && (
             <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-muted-foreground hover:text-rose-600" onClick={onDelete}>
               <Trash2 className="h-3 w-3" />
             </Button>

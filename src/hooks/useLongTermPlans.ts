@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { LongTermPlan, LTPStatus, LTPUnit, Standard } from "@/types";
+import { ltpAggregateStatus } from "@/lib/ltpStatus";
 
 export function useLongTermPlans(teacherId: string, isHod: boolean) {
   const [plans, setPlans] = useState<LongTermPlan[]>([]);
@@ -109,5 +110,69 @@ export function useLongTermPlans(teacherId: string, isHod: boolean) {
     await fetch();
   }
 
-  return { plans, loading, createLTP, updateLTP, setStatus, deleteLTP, addUnit, updateUnit, deleteUnit, setUnitStandards, batchAddUnits, assignUnit };
+  async function syncPlanStatus(planId: string) {
+    const { data } = await supabase.from("ltp_units").select("status").eq("ltp_id", planId);
+    if (!data) return;
+    const { stored } = ltpAggregateStatus(data as { status: "draft" | "submitted" | "approved" | "revision" }[]);
+    await supabase.from("long_term_plans").update({ status: stored, updated_at: new Date().toISOString() }).eq("id", planId);
+  }
+
+  async function submitUnit(unitId: string, planId: string) {
+    await supabase.from("ltp_units").update({
+      status: "submitted",
+      submitted_at: new Date().toISOString(),
+      hod_feedback: null,
+      reviewed_at: null,
+    }).eq("id", unitId);
+    await fetch();
+    await syncPlanStatus(planId);
+    await fetch();
+  }
+
+  async function withdrawUnit(unitId: string, planId: string) {
+    await supabase.from("ltp_units").update({
+      status: "draft",
+      submitted_at: null,
+    }).eq("id", unitId);
+    await fetch();
+    await syncPlanStatus(planId);
+    await fetch();
+  }
+
+  async function approveUnit(unitId: string, planId: string) {
+    await supabase.from("ltp_units").update({
+      status: "approved",
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: teacherId,
+    }).eq("id", unitId);
+    await fetch();
+    await syncPlanStatus(planId);
+    await fetch();
+  }
+
+  async function requestUnitRevision(unitId: string, planId: string, hodFeedback: string) {
+    await supabase.from("ltp_units").update({
+      status: "revision",
+      hod_feedback: hodFeedback,
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: teacherId,
+    }).eq("id", unitId);
+    await fetch();
+    await syncPlanStatus(planId);
+    await fetch();
+  }
+
+  async function reopenUnit(unitId: string, planId: string) {
+    await supabase.from("ltp_units").update({
+      status: "draft",
+      reviewed_at: null,
+      reviewed_by: null,
+      hod_feedback: null,
+    }).eq("id", unitId);
+    await fetch();
+    await syncPlanStatus(planId);
+    await fetch();
+  }
+
+  return { plans, loading, createLTP, updateLTP, setStatus, deleteLTP, addUnit, updateUnit, deleteUnit, setUnitStandards, batchAddUnits, assignUnit, submitUnit, withdrawUnit, approveUnit, requestUnitRevision, reopenUnit };
 }

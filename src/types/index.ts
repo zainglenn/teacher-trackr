@@ -26,6 +26,7 @@ export interface CoverageLog {
 }
 
 export type LTPStatus = "draft" | "submitted" | "approved" | "revision";
+export type { UnitStatus, ComputedLTPStatus } from "@/lib/ltpStatus";
 
 export interface LTPUnit {
   id: string;
@@ -40,6 +41,11 @@ export interface LTPUnit {
   sort_order: number;
   assigned_to: string | null;
   created_at: string;
+  status: import("@/lib/ltpStatus").UnitStatus;
+  hod_feedback: string | null;
+  submitted_at: string | null;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
   standards?: Standard[];
   assignedTeacher?: Profile | null;
 }
@@ -50,6 +56,7 @@ export interface LongTermPlan {
   title: string;
   school_year: string;
   status: LTPStatus;
+  class_id: string | null;
   hod_feedback: string | null;
   reviewed_by: string | null;
   reviewed_at: string | null;

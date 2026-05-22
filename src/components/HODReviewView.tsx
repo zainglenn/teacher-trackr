@@ -8,108 +8,232 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Check, RotateCcw, ClipboardCheck, BookOpen, ChevronDown, ChevronUp } from "lucide-react";
-import { LongTermPlan, Standard } from "@/types";
+import { Check, RotateCcw, ClipboardCheck } from "lucide-react";
+import { LongTermPlan, LTPUnit, Standard } from "@/types";
+import { UnitPlanView } from "@/components/ltp/UnitPlanView";
 import { useLongTermPlans } from "@/hooks/useLongTermPlans";
+import { UNIT_STATUS_CONFIG, ltpAggregateStatus, COMPUTED_LTP_STATUS_CONFIG } from "@/lib/ltpStatus";
+import { strandFromCode } from "@/components/ltp/StrandBadge";
 
 interface HODReviewViewProps {
   teacherId: string;
   standards: Standard[];
 }
 
-export function HODReviewView({ teacherId, standards: _standards }: HODReviewViewProps) {
-  const { plans, loading, setStatus } = useLongTermPlans(teacherId, true);
-  const [revisionPlan, setRevisionPlan] = useState<LongTermPlan | null>(null);
+type UnitWithPlan = { unit: LTPUnit; plan: LongTermPlan };
+
+function daysAgo(iso: string | null): string {
+  if (!iso) return "";
+  const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+  if (diff === 0) return "today";
+  if (diff === 1) return "1 day ago";
+  return `${diff} days ago`;
+}
+
+function strandCounts(unit: LTPUnit): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const s of unit.standards ?? []) {
+    const sc = strandFromCode(s.code);
+    counts[sc] = (counts[sc] ?? 0) + 1;
+  }
+  return counts;
+}
+
+export function HODReviewView({ teacherId, standards }: HODReviewViewProps) {
+  const { plans, loading, approveUnit, requestUnitRevision, reopenUnit } = useLongTermPlans(teacherId, true);
+
+  const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
+  const [revisionUnit, setRevisionUnit] = useState<UnitWithPlan | null>(null);
   const [feedback, setFeedback] = useState("");
   const [saving, setSaving] = useState(false);
-  const [expandedPlans, setExpandedPlans] = useState<Set<string>>(new Set());
 
   if (loading) return null;
 
-  const submitted = plans.filter((p) => p.status === "submitted");
-  const reviewed = plans.filter((p) => p.status === "approved" || p.status === "revision");
-
-  function toggleExpand(id: string) {
-    setExpandedPlans((prev) => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  // Navigate into UnitPlanView (HOD read-only + approve/revise/reopen)
+  if (selectedUnitId && selectedPlanId) {
+    const plan = plans.find((p) => p.id === selectedPlanId);
+    const unit = plan?.units?.find((u) => u.id === selectedUnitId);
+    if (plan && unit) {
+      return (
+        <UnitPlanView
+          plan={plan}
+          unit={unit}
+          standards={standards}
+          currentUserId={teacherId}
+          isHod={true}
+          onBack={() => { setSelectedUnitId(null); setSelectedPlanId(null); }}
+          updateUnit={async () => {}}
+          setUnitStandards={async () => {}}
+          approveUnit={approveUnit}
+          requestUnitRevision={requestUnitRevision}
+          reopenUnit={reopenUnit}
+        />
+      );
+    }
   }
 
+  // Collect submitted units sorted FIFO
+  const pending: UnitWithPlan[] = plans
+    .flatMap((p) => (p.units ?? []).filter((u) => u.status === "submitted").map((u) => ({ unit: u, plan: p })))
+    .sort((a, b) => (a.unit.submitted_at ?? "").localeCompare(b.unit.submitted_at ?? ""));
+
+  // Group by plan for display
+  const pendingByPlan: { plan: LongTermPlan; units: LTPUnit[] }[] = [];
+  for (const { unit, plan } of pending) {
+    const existing = pendingByPlan.find((g) => g.plan.id === plan.id);
+    if (existing) existing.units.push(unit);
+    else pendingByPlan.push({ plan, units: [unit] });
+  }
+
+  // Recently reviewed (approved or revision)
+  const reviewed: UnitWithPlan[] = plans
+    .flatMap((p) => (p.units ?? []).filter((u) => u.status === "approved" || u.status === "revision").map((u) => ({ unit: u, plan: p })))
+    .sort((a, b) => (b.unit.reviewed_at ?? "").localeCompare(a.unit.reviewed_at ?? ""))
+    .slice(0, 20);
+
   async function handleRevision() {
-    if (!revisionPlan) return;
+    if (!revisionUnit || !feedback.trim()) return;
     setSaving(true);
-    await setStatus(revisionPlan.id, "revision", feedback);
+    await requestUnitRevision(revisionUnit.unit.id, revisionUnit.plan.id, feedback.trim());
     setSaving(false);
-    setRevisionPlan(null);
+    setRevisionUnit(null);
     setFeedback("");
   }
 
   return (
     <PageContainer
       title="HOD Review"
-      description={`${submitted.length} long term plan${submitted.length !== 1 ? "s" : ""} awaiting review`}
+      description={`${pending.length} unit${pending.length !== 1 ? "s" : ""} awaiting review`}
     >
-      {submitted.length > 0 && (
-        <div className="space-y-3">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Awaiting Review</h2>
-          {submitted.map((plan) => (
-            <LTPReviewCard
-              key={plan.id}
-              plan={plan}
-              expanded={expandedPlans.has(plan.id)}
-              onToggleExpand={() => toggleExpand(plan.id)}
-              onApprove={async () => { await setStatus(plan.id, "approved"); }}
-              onRequestRevision={() => { setRevisionPlan(plan); setFeedback(""); }}
-            />
-          ))}
+      {pending.length === 0 && (
+        <div className="flex flex-col items-center justify-center py-12 text-center">
+          <ClipboardCheck className="h-10 w-10 text-emerald-500/40 mb-3" />
+          <p className="text-muted-foreground text-sm">All caught up — no units pending review.</p>
         </div>
       )}
 
-      {submitted.length === 0 && (
-        <div className="flex flex-col items-center justify-center py-12 text-center">
-          <ClipboardCheck className="h-10 w-10 text-emerald-500/40 mb-3" />
-          <p className="text-muted-foreground text-sm">All caught up — no plans pending review.</p>
+      {pendingByPlan.length > 0 && (
+        <div className="space-y-4">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Awaiting Review</h2>
+          {pendingByPlan.map(({ plan, units }) => {
+            const { computed } = ltpAggregateStatus((plan.units ?? []).map((u) => ({ status: u.status ?? "draft" })));
+            const cfg = COMPUTED_LTP_STATUS_CONFIG[computed];
+            return (
+              <Card key={plan.id} className="border-amber-200">
+                <CardContent className="p-4 space-y-3">
+                  {/* Plan header */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-sm font-semibold">{plan.title}</p>
+                    <Badge variant="outline" className={`text-xs ${cfg.className}`}>{cfg.label}</Badge>
+                    <span className="text-xs text-muted-foreground ml-auto">
+                      {plan.teacher?.full_name ?? plan.teacher?.email} · {plan.school_year}
+                    </span>
+                  </div>
+
+                  {/* Unit rows */}
+                  <div className="space-y-2">
+                    {units.map((unit) => {
+                      const counts = strandCounts(unit);
+                      return (
+                        <div key={unit.id} className="flex items-start gap-3 p-3 rounded-lg border bg-muted/20">
+                          <div className="flex-1 min-w-0 space-y-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-xs text-muted-foreground">T{unit.term} · U{unit.unit_number}</span>
+                              <span className="text-sm font-medium">{unit.title}</span>
+                            </div>
+                            {unit.big_idea && (
+                              <p className="text-xs text-muted-foreground line-clamp-1">{unit.big_idea}</p>
+                            )}
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {Object.entries(counts).map(([sc, n]) => (
+                                <Badge key={sc} variant="outline" className="text-xs py-0 font-mono">{sc} ×{n}</Badge>
+                              ))}
+                              {unit.duration_weeks > 0 && (
+                                <span className="text-xs text-muted-foreground">{unit.duration_weeks}w</span>
+                              )}
+                              <span className="text-xs text-muted-foreground capitalize">{unit.assessment_type}</span>
+                              {unit.submitted_at && (
+                                <span className="text-xs text-muted-foreground">Submitted {daysAgo(unit.submitted_at)}</span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex flex-col gap-1.5 shrink-0">
+                            <Button size="sm" variant="outline" className="h-7 text-xs"
+                              onClick={() => { setSelectedUnitId(unit.id); setSelectedPlanId(plan.id); }}>
+                              Open Unit
+                            </Button>
+                            <Button size="sm" className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
+                              onClick={() => approveUnit(unit.id, plan.id)}>
+                              <Check className="h-3 w-3 mr-1" /> Approve
+                            </Button>
+                            <Button size="sm" variant="outline" className="h-7 text-xs border-rose-200 text-rose-600 hover:bg-rose-50"
+                              onClick={() => { setRevisionUnit({ unit, plan }); setFeedback(""); }}>
+                              <RotateCcw className="h-3 w-3 mr-1" /> Revise
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
 
       {reviewed.length > 0 && (
-        <div className="space-y-3 mt-2">
+        <div className="space-y-2 mt-4">
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Recently Reviewed</h2>
-          {reviewed.slice(0, 10).map((plan) => (
-            <Card key={plan.id} className="opacity-75">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium">{plan.title}</p>
-                      <Badge
-                        className={`text-xs ${plan.status === "approved" ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}
-                      >
-                        {plan.status === "approved" ? "Approved" : "Needs Revision"}
-                      </Badge>
+          {reviewed.map(({ unit, plan }) => {
+            const statusCfg = UNIT_STATUS_CONFIG[unit.status];
+            return (
+              <Card key={unit.id} className="opacity-80">
+                <CardContent className="p-3 flex items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-medium">{unit.title}</span>
+                      <Badge variant="outline" className={`text-xs ${statusCfg.className}`}>{statusCfg.label}</Badge>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      {plan.teacher?.full_name ?? plan.teacher?.email} · {plan.school_year}
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {plan.title} · {plan.teacher?.full_name ?? plan.teacher?.email}
+                      {unit.reviewed_at && ` · ${daysAgo(unit.reviewed_at)}`}
                     </p>
-                    {plan.hod_feedback && (
-                      <p className="text-xs text-muted-foreground mt-1 italic">"{plan.hod_feedback}"</p>
+                    {unit.hod_feedback && (
+                      <p className="text-xs text-muted-foreground italic mt-0.5 truncate">"{unit.hod_feedback}"</p>
                     )}
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  <div className="flex gap-1.5 shrink-0">
+                    <Button size="sm" variant="ghost" className="h-7 text-xs"
+                      onClick={() => { setSelectedUnitId(unit.id); setSelectedPlanId(plan.id); }}>
+                      Open
+                    </Button>
+                    {unit.status === "approved" && (
+                      <Button size="sm" variant="outline" className="h-7 text-xs"
+                        onClick={() => reopenUnit(unit.id, plan.id)}>
+                        Re-open
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
 
-      <Dialog open={!!revisionPlan} onOpenChange={(o) => !o && setRevisionPlan(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Request Revision</DialogTitle>
-          </DialogHeader>
+      {/* Revision dialog */}
+      <Dialog open={!!revisionUnit} onOpenChange={(o) => !o && setRevisionUnit(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader><DialogTitle>Request Revision</DialogTitle></DialogHeader>
           <div className="space-y-3 py-2">
-            {revisionPlan && (
-              <div className="bg-muted rounded-lg p-3 text-sm">
-                <p className="font-medium">{revisionPlan.title}</p>
-                <p className="text-muted-foreground text-xs mt-0.5">{revisionPlan.school_year} · {revisionPlan.teacher?.full_name ?? revisionPlan.teacher?.email}</p>
+            {revisionUnit && (
+              <div className="bg-muted rounded-lg p-2.5 text-xs">
+                <p className="font-medium">{revisionUnit.unit.title}</p>
+                <p className="text-muted-foreground mt-0.5">
+                  {revisionUnit.plan.title} · Term {revisionUnit.unit.term} · {revisionUnit.plan.teacher?.full_name ?? revisionUnit.plan.teacher?.email}
+                </p>
               </div>
             )}
             <div className="space-y-1.5">
@@ -124,106 +248,13 @@ export function HODReviewView({ teacherId, standards: _standards }: HODReviewVie
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setRevisionPlan(null)}>Cancel</Button>
-            <Button
-              variant="destructive"
-              onClick={handleRevision}
-              disabled={saving || !feedback.trim()}
-            >
+            <Button variant="outline" onClick={() => setRevisionUnit(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleRevision} disabled={saving || !feedback.trim()}>
               {saving ? "Sending..." : "Request Revision"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </PageContainer>
-  );
-}
-
-function LTPReviewCard({
-  plan,
-  expanded,
-  onToggleExpand,
-  onApprove,
-  onRequestRevision,
-}: {
-  plan: LongTermPlan;
-  expanded: boolean;
-  onToggleExpand: () => void;
-  onApprove: () => void;
-  onRequestRevision: () => void;
-}) {
-  const totalUnits = plan.units?.length ?? 0;
-  const totalStandards = new Set(plan.units?.flatMap((u) => u.standards?.map((s) => s.id) ?? []) ?? []).size;
-
-  return (
-    <Card className="border-amber-200">
-      <CardContent className="p-4 space-y-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <p className="font-medium text-sm">{plan.title}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              {plan.teacher?.full_name ?? plan.teacher?.email} · {plan.school_year} · {totalUnits} unit{totalUnits !== 1 ? "s" : ""} · {totalStandards} standard{totalStandards !== 1 ? "s" : ""}
-            </p>
-          </div>
-          <div className="flex flex-col gap-2 shrink-0">
-            <Button
-              size="sm"
-              className="bg-emerald-600 hover:bg-emerald-700 text-white h-8 text-xs"
-              onClick={onApprove}
-            >
-              <Check className="h-3 w-3 mr-1" />
-              Approve
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 text-xs border-rose-200 text-rose-600 hover:bg-rose-50"
-              onClick={onRequestRevision}
-            >
-              <RotateCcw className="h-3 w-3 mr-1" />
-              Revise
-            </Button>
-          </div>
-        </div>
-
-        {totalUnits > 0 && (
-          <button
-            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-            onClick={onToggleExpand}
-          >
-            <BookOpen className="h-3 w-3" />
-            {expanded ? "Hide" : "Show"} unit breakdown
-            {expanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-          </button>
-        )}
-
-        {expanded && plan.units && (
-          <div className="space-y-2 pl-1">
-            {[1, 2, 3].map((term) => {
-              const units = plan.units!.filter((u) => u.term === term).sort((a, b) => a.sort_order - b.sort_order);
-              if (units.length === 0) return null;
-              return (
-                <div key={term}>
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">Term {term}</p>
-                  {units.map((unit) => (
-                    <div key={unit.id} className="pl-2 border-l-2 border-muted mb-1.5">
-                      <p className="text-xs font-medium">Unit {unit.unit_number}: {unit.title}</p>
-                      {unit.big_idea && <p className="text-xs text-muted-foreground italic">{unit.big_idea}</p>}
-                      {unit.standards && unit.standards.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {unit.standards.map((s) => (
-                            <Badge key={s.id} variant="outline" className="font-mono text-xs px-1.5 py-0">{s.code}</Badge>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </CardContent>
-    </Card>
   );
 }

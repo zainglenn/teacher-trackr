@@ -6,8 +6,8 @@ import { Loader2, BookMarked, ChevronRight } from "lucide-react";
 import { Standard } from "@/types";
 import { useAssignedUnits } from "@/hooks/useAssignedUnits";
 import { UnitPlanView } from "@/components/ltp/UnitPlanView";
-import { LTPStatusBadge } from "@/components/ltp/LTPStatusBadge";
 import { StrandBadge } from "@/components/ltp/StrandBadge";
+import { UNIT_STATUS_CONFIG } from "@/lib/ltpStatus";
 
 const TERM_LABEL = ["", "Term 1", "Term 2", "Term 3"];
 
@@ -17,7 +17,7 @@ interface MyUnitsViewProps {
 }
 
 export function MyUnitsView({ teacherId, standards }: MyUnitsViewProps) {
-  const { plans, assignedUnitIds, loading, updateUnit, setUnitStandards } = useAssignedUnits(teacherId);
+  const { plans, assignedUnitIds, loading, updateUnit, setUnitStandards, submitUnit, withdrawUnit } = useAssignedUnits(teacherId);
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
 
   if (loading) {
@@ -47,6 +47,8 @@ export function MyUnitsView({ teacherId, standards }: MyUnitsViewProps) {
           onBack={() => setSelectedUnitId(null)}
           updateUnit={updateUnit}
           setUnitStandards={setUnitStandards}
+          submitUnit={submitUnit}
+          withdrawUnit={withdrawUnit}
         />
       );
     }
@@ -92,7 +94,9 @@ export function MyUnitsView({ teacherId, standards }: MyUnitsViewProps) {
                 <div className="min-w-0 flex-1 space-y-1.5">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="text-xs text-muted-foreground">{plan.title}</span>
-                    <LTPStatusBadge status={plan.status} />
+                    <Badge variant="outline" className={`text-xs py-0 ${UNIT_STATUS_CONFIG[unit.status ?? "draft"].className}`}>
+                      {UNIT_STATUS_CONFIG[unit.status ?? "draft"].label}
+                    </Badge>
                     <Badge variant="outline" className="text-xs py-0">{TERM_LABEL[unit.term]}</Badge>
                   </div>
                   <p className="font-medium text-sm leading-snug">{unit.title}</p>
