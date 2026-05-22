@@ -28,6 +28,22 @@ export interface CoverageLog {
 export type LTPStatus = "draft" | "submitted" | "approved" | "revision";
 export type { UnitStatus, ComputedLTPStatus } from "@/lib/ltpStatus";
 
+export interface AssessmentRow {
+  id: string;
+  type: string;
+  when: string;
+  assessment: string;
+  purpose: string;
+  tool: string;
+}
+
+export interface LessonWeek {
+  week: number;
+  focus: string;
+  activities: string;
+  standards: string[];
+}
+
 export interface LTPUnit {
   id: string;
   ltp_id: string;
@@ -46,6 +62,25 @@ export interface LTPUnit {
   submitted_at: string | null;
   reviewed_at: string | null;
   reviewed_by: string | null;
+  // rich content fields
+  big_ideas: string[] | null;
+  enduring_understandings: string[] | null;
+  real_world_connections: string | null;
+  learning_outcomes: string[] | null;
+  success_criteria: string[] | null;
+  assessment_plan: AssessmentRow[] | null;
+  lesson_sequence: LessonWeek[] | null;
+  anchor_texts: string[] | null;
+  mentor_texts: string[] | null;
+  multimedia: string[] | null;
+  vocabulary: string[] | null;
+  diff_ell: string[] | null;
+  diff_intervention: string[] | null;
+  diff_enrichment: string[] | null;
+  diff_accessibility: string[] | null;
+  final_product: string | null;
+  teacher_reflection: string | null;
+  student_self_assessment: string | null;
   standards?: Standard[];
   assignedTeacher?: Profile | null;
 }

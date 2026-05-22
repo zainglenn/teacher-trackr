@@ -12,11 +12,13 @@ import { HODReviewView } from "@/components/HODReviewView";
 import { ManageUsersView } from "@/components/ManageUsersView";
 import { ManageClassesView } from "@/components/ManageClassesView";
 import { MyUnitsView } from "@/components/MyUnitsView";
+import { UnitAssignmentsView } from "@/components/UnitAssignmentsView";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useStandards } from "@/hooks/useStandards";
 import { useCoverage } from "@/hooks/useCoverage";
 import { useLongTermPlans } from "@/hooks/useLongTermPlans";
+import { useTeachers } from "@/hooks/useTeachers";
 import { useStudents } from "@/hooks/useStudents";
 import { useClassProgress } from "@/hooks/useClassProgress";
 import { Loader2 } from "lucide-react";
@@ -27,9 +29,16 @@ function CurriculumApp({ userId, email }: { userId: string; email: string }) {
   const isHod = role === "hod";
   const { standards, byStrand, loading: standardsLoading } = useStandards();
   const { logs: coverageLogs } = useCoverage(userId);
-  const { plans: ltps } = useLongTermPlans(userId, isHod);
+  const { plans: ltps, assignUnit } = useLongTermPlans(userId, isHod);
+  const { teachers } = useTeachers();
   const { students } = useStudents(userId);
   const { progress: classProgress } = useClassProgress(userId);
+
+  const resubmittedCount = isHod
+    ? ltps.flatMap((p) => p.units ?? []).filter(
+        (u) => u.status === "submitted" && u.reviewed_at && u.submitted_at && u.submitted_at > u.reviewed_at
+      ).length
+    : 0;
 
   if (standardsLoading) {
     return (
@@ -41,7 +50,7 @@ function CurriculumApp({ userId, email }: { userId: string; email: string }) {
 
   return (
     <SidebarProvider>
-      <AppSidebar view={view} onViewChange={setView} role={role} email={email} />
+      <AppSidebar view={view} onViewChange={setView} role={role} email={email} resubmittedCount={resubmittedCount} />
       <SidebarInset className="flex flex-col min-h-svh bg-muted/30">
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
           {view === "dashboard" && (
@@ -75,6 +84,9 @@ function CurriculumApp({ userId, email }: { userId: string; email: string }) {
           )}
           {view === "my-units" && !isHod && (
             <MyUnitsView teacherId={userId} standards={standards} />
+          )}
+          {view === "unit-assignments" && isHod && (
+            <UnitAssignmentsView plans={ltps} teachers={teachers} assignUnit={assignUnit} />
           )}
         </main>
       </SidebarInset>

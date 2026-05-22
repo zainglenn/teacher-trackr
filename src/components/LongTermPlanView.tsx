@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Modal, ModalFooter, ModalCancel } from "@/components/ui/modal";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, ClipboardList, Eye, Pencil, Sparkles, Loader2, Wand2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +17,7 @@ import { useLongTermPlans } from "@/hooks/useLongTermPlans";
 import { useTeachers } from "@/hooks/useTeachers";
 import { supabase } from "@/lib/supabase";
 import { ltpAggregateStatus, COMPUTED_LTP_STATUS_CONFIG } from "@/lib/ltpStatus";
+import { schoolYears } from "@/lib/utils";
 
 interface LongTermPlanViewProps {
   teacherId: string;
@@ -35,7 +36,7 @@ export function LongTermPlanView({ teacherId, isHod, standards }: LongTermPlanVi
   // New LTP dialog state
   const [newLTPOpen, setNewLTPOpen] = useState(false);
   const [newTitle, setNewTitle] = useState("");
-  const [newYear, setNewYear] = useState("2025-2026");
+  const [newYear, setNewYear] = useState(() => schoolYears()[0]);
   const [newUnitCount, setNewUnitCount] = useState("9");
   const [creating, setCreating] = useState(false);
   const [drafting, setDrafting] = useState(false);
@@ -202,55 +203,51 @@ export function LongTermPlanView({ teacherId, isHod, standards }: LongTermPlanVi
         })}
       </div>
 
-      {/* New LTP dialog */}
-      <Dialog open={newLTPOpen} onOpenChange={(o) => !o && setNewLTPOpen(false)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>New Long Term Plan</DialogTitle></DialogHeader>
-          <div className="space-y-3 py-2">
-            <div className="space-y-1.5">
-              <Label>Title</Label>
-              <Input placeholder="e.g. Grade 6 English 2025–2026"
-                value={newTitle} onChange={(e) => setNewTitle(e.target.value)}
-                autoFocus onKeyDown={(e) => e.key === "Enter" && handleCreate()} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Academic Year</Label>
-              <Select value={newYear} onValueChange={(v) => v && setNewYear(v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="2024-2025">2024–2025</SelectItem>
-                  <SelectItem value="2025-2026">2025–2026</SelectItem>
-                  <SelectItem value="2026-2027">2026–2027</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Number of units <span className="text-muted-foreground text-xs">(for AI draft)</span></Label>
-              <Input type="number" min={6} max={15} value={newUnitCount} onChange={(e) => setNewUnitCount(e.target.value)} />
-            </div>
-            <div className="rounded-lg bg-violet-50 border border-violet-200 p-3 space-y-2">
-              <div className="flex items-start gap-2">
-                <Wand2 className="h-4 w-4 text-violet-600 shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-xs font-semibold text-violet-700">AI Draft Full Year</p>
-                  <p className="text-xs text-violet-600">Generate a complete plan with all {standards.length} standards across {newUnitCount} units. ~10 seconds.</p>
-                </div>
-              </div>
-              <Button className="w-full h-8 text-xs bg-violet-600 hover:bg-violet-700 text-white gap-1"
-                onClick={handleDraftFullYear} disabled={drafting || !newTitle.trim()}>
-                {drafting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-                {drafting ? `Drafting ${newUnitCount} units...` : "AI Draft Full Year"}
-              </Button>
-            </div>
+      <Modal open={newLTPOpen} onClose={() => setNewLTPOpen(false)} title="New Long Term Plan">
+        <div className="space-y-3 py-2">
+          <div className="space-y-1.5">
+            <Label>Title</Label>
+            <Input placeholder="e.g. Grade 6 English 2025–2026"
+              value={newTitle} onChange={(e) => setNewTitle(e.target.value)}
+              autoFocus onKeyDown={(e) => e.key === "Enter" && handleCreate()} />
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setNewLTPOpen(false)}>Cancel</Button>
-            <Button onClick={handleCreate} disabled={creating || !newTitle.trim()}>
-              {creating ? "Creating..." : "Create Empty"}
+          <div className="space-y-1.5">
+            <Label>Academic Year</Label>
+            <Select value={newYear} onValueChange={(v) => v && setNewYear(v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {schoolYears().map((y) => (
+                  <SelectItem key={y} value={y}>{y}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Number of units <span className="text-muted-foreground text-xs">(for AI draft)</span></Label>
+            <Input type="number" min={6} max={15} value={newUnitCount} onChange={(e) => setNewUnitCount(e.target.value)} />
+          </div>
+          <div className="rounded-lg bg-violet-50 border border-violet-200 p-3 space-y-2">
+            <div className="flex items-start gap-2">
+              <Wand2 className="h-4 w-4 text-violet-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs font-semibold text-violet-700">AI Draft Full Year</p>
+                <p className="text-xs text-violet-600">Generate a complete plan with all {standards.length} standards across {newUnitCount} units. ~10 seconds.</p>
+              </div>
+            </div>
+            <Button className="w-full h-8 text-xs bg-violet-600 hover:bg-violet-700 text-white gap-1"
+              onClick={handleDraftFullYear} disabled={drafting || !newTitle.trim()}>
+              {drafting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+              {drafting ? `Drafting ${newUnitCount} units...` : "AI Draft Full Year"}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+        </div>
+        <ModalFooter>
+          <ModalCancel onClick={() => setNewLTPOpen(false)} />
+          <Button onClick={handleCreate} disabled={creating || !newTitle.trim()}>
+            {creating ? "Creating..." : "Create Empty"}
+          </Button>
+        </ModalFooter>
+      </Modal>
     </PageContainer>
   );
 }

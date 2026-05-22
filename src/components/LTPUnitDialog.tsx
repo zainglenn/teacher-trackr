@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Modal, ModalFooter, ModalCancel } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,59 +51,52 @@ export function LTPUnitDialog({ open, onClose, onSave, term, nextUnitNumber, nex
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>New Unit — Term {term}</DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-4 py-2">
-          <div className="space-y-1.5">
-            <Label>Title</Label>
-            <Input
-              placeholder="e.g. Identity & Narrative"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              autoFocus
-              onKeyDown={(e) => { if (e.key === "Enter" && title.trim()) handleSave(); }}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Big Idea <span className="text-muted-foreground text-xs font-normal">(optional)</span></Label>
-            <Textarea
-              placeholder="What overarching question drives this unit?"
-              value={bigIdea}
-              onChange={(e) => setBigIdea(e.target.value)}
-              rows={2}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label>Duration (weeks)</Label>
-              <Input type="number" min={1} max={20} value={durationWeeks} onChange={(e) => setDurationWeeks(e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Assessment</Label>
-              <Select value={assessmentType} onValueChange={(v) => v && setAssessmentType(v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="formative">Formative</SelectItem>
-                  <SelectItem value="summative">Summative</SelectItem>
-                  <SelectItem value="both">Both</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <p className="text-xs text-muted-foreground">Standards are added in the unit plan view after creation.</p>
+    <Modal open={open} onClose={onClose} title={`New Unit — Term ${term}`} size="md">
+      <div className="space-y-4 py-2">
+        <div className="space-y-1.5">
+          <Label>Title</Label>
+          <Input
+            placeholder="e.g. Identity & Narrative"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            autoFocus
+            onKeyDown={(e) => { if (e.key === "Enter" && title.trim()) handleSave(); }}
+          />
         </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={handleSave} disabled={saving || !title.trim()}>
-            {saving ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />Creating...</> : "Create Unit"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        <div className="space-y-1.5">
+          <Label>Big Idea <span className="text-muted-foreground text-xs font-normal">(optional)</span></Label>
+          <Textarea
+            placeholder="What overarching question drives this unit?"
+            value={bigIdea}
+            onChange={(e) => setBigIdea(e.target.value)}
+            rows={2}
+          />
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label>Duration (weeks)</Label>
+            <Input type="number" min={1} max={20} value={durationWeeks} onChange={(e) => setDurationWeeks(e.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Assessment</Label>
+            <Select value={assessmentType} onValueChange={(v) => v && setAssessmentType(v)}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="formative">Formative</SelectItem>
+                <SelectItem value="summative">Summative</SelectItem>
+                <SelectItem value="both">Both</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <p className="text-xs text-muted-foreground">Standards are added in the unit plan view after creation.</p>
+      </div>
+      <ModalFooter>
+        <ModalCancel onClick={onClose} />
+        <Button onClick={handleSave} disabled={saving || !title.trim()}>
+          {saving ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1" />Creating...</> : "Create Unit"}
+        </Button>
+      </ModalFooter>
+    </Modal>
   );
 }

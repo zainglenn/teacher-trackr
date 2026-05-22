@@ -13,11 +13,16 @@ export function useAllClasses() {
   const [loading, setLoading] = useState(true);
 
   const fetch = useCallback(async () => {
-    const { data } = await supabase
-      .from("classes")
-      .select("*, teacher:profiles!teacher_id(id, full_name, email)")
-      .order("name");
-    setClasses((data as ClassWithTeacher[]) ?? []);
+    const { data: rows } = await supabase.from("classes").select("*").order("name");
+    if (!rows) { setLoading(false); return; }
+
+    const teacherIds = [...new Set(rows.map((r) => r.teacher_id).filter(Boolean))];
+    const { data: profiles } = teacherIds.length
+      ? await supabase.from("profiles").select("id, full_name, email").in("id", teacherIds)
+      : { data: [] };
+
+    const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]));
+    setClasses(rows.map((r) => ({ ...r, teacher: profileMap.get(r.teacher_id) ?? null })));
     setLoading(false);
   }, []);
 
@@ -27,10 +32,10 @@ export function useAllClasses() {
     const { data } = await supabase
       .from("classes")
       .insert({ name: name.trim(), teacher_id: teacherId, school_year: schoolYear ?? "2024-25" })
-      .select("*, teacher:profiles!teacher_id(id, full_name, email)")
+      .select("*")
       .single();
-    if (data) setClasses((prev) => [...prev, data as ClassWithTeacher].sort((a, b) => a.name.localeCompare(b.name)));
-    return data as ClassWithTeacher | null;
+    if (data) await fetch();
+    return data as Class | null;
   }
 
   async function deleteClass(id: string) {
@@ -39,13 +44,8 @@ export function useAllClasses() {
   }
 
   async function reassignClass(id: string, teacherId: string) {
-    const { data } = await supabase
-      .from("classes")
-      .update({ teacher_id: teacherId })
-      .eq("id", id)
-      .select("*, teacher:profiles!teacher_id(id, full_name, email)")
-      .single();
-    if (data) setClasses((prev) => prev.map((c) => c.id === id ? data as ClassWithTeacher : c));
+    await supabase.from("classes").update({ teacher_id: teacherId }).eq("id", id);
+    await fetch();
   }
 
   return { classes, loading, createClass, deleteClass, reassignClass, refresh: fetch };

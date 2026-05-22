@@ -15,7 +15,7 @@ import { BookOpen, LayoutDashboard, CheckSquare, ClipboardList, Users, Clipboard
 import { Role } from "@/types";
 import { useAuth } from "@/hooks/useAuth";
 
-export type AppView = "dashboard" | "coverage" | "long-term-plan" | "student-progress" | "hod-review" | "manage-users" | "manage-classes" | "my-units";
+export type AppView = "dashboard" | "coverage" | "long-term-plan" | "student-progress" | "hod-review" | "manage-users" | "manage-classes" | "my-units" | "unit-assignments";
 
 const NAV_ITEMS: { key: AppView; label: string; icon: React.ElementType; hodOnly?: boolean; teacherOnly?: boolean }[] = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -24,6 +24,7 @@ const NAV_ITEMS: { key: AppView; label: string; icon: React.ElementType; hodOnly
   { key: "my-units", label: "My Units", icon: BookMarked, teacherOnly: true },
   { key: "student-progress", label: "Student Progress", icon: Users },
   { key: "hod-review", label: "HOD Review", icon: ClipboardCheck, hodOnly: true },
+  { key: "unit-assignments", label: "Unit Assignments", icon: BookMarked, hodOnly: true },
   { key: "manage-classes", label: "Manage Classes", icon: GraduationCap, hodOnly: true },
   { key: "manage-users", label: "Manage Users", icon: UserCog, hodOnly: true },
 ];
@@ -33,9 +34,10 @@ interface AppSidebarProps {
   onViewChange: (v: AppView) => void;
   role: Role;
   email: string;
+  resubmittedCount?: number;
 }
 
-export function AppSidebar({ view, onViewChange, role, email }: AppSidebarProps) {
+export function AppSidebar({ view, onViewChange, role, email, resubmittedCount = 0 }: AppSidebarProps) {
   const { signOut } = useAuth();
 
   const items = NAV_ITEMS.filter((item) =>
@@ -69,6 +71,11 @@ export function AppSidebar({ view, onViewChange, role, email }: AppSidebarProps)
                   >
                     <item.icon className="h-4 w-4" />
                     <span>{item.label}</span>
+                    {item.key === "hod-review" && resubmittedCount > 0 && (
+                      <span className="ml-auto flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white">
+                        {resubmittedCount > 9 ? "9+" : resubmittedCount}
+                      </span>
+                    )}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}

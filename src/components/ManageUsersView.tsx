@@ -5,7 +5,7 @@ import { PageContainer } from "@/components/PageContainer";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Modal, ModalFooter, ModalCancel, ConfirmModal } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -107,86 +107,68 @@ export function ManageUsersView({ currentUserId }: { currentUserId: string }) {
         })}
       </div>
 
-      {/* Add User Dialog */}
-      <Dialog open={addDialog} onOpenChange={(o) => { if (!o) { setAddDialog(false); resetForm(); } }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add User</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            <div className="space-y-1.5">
-              <Label>Full Name</Label>
-              <Input
-                placeholder="e.g. Sarah Al Mansoori"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                autoFocus
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Email</Label>
-              <Input
-                type="email"
-                placeholder="teacher@dubaischools.ae"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Temporary Password</Label>
-              <Input
-                type="password"
-                placeholder="They can change this after login"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Role</Label>
-              <Select value={role} onValueChange={(v) => setRole(v as Role)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="teacher">Teacher</SelectItem>
-                  <SelectItem value="hod">Head of Department</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {error && (
-              <p className="text-sm text-rose-600 bg-rose-50 px-3 py-2 rounded-lg">{error}</p>
-            )}
+      <Modal open={addDialog} onClose={() => { setAddDialog(false); resetForm(); }} title="Add User">
+        <div className="space-y-3 py-2">
+          <div className="space-y-1.5">
+            <Label>Full Name</Label>
+            <Input
+              placeholder="e.g. Sarah Al Mansoori"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              autoFocus
+            />
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { setAddDialog(false); resetForm(); }}>Cancel</Button>
-            <Button onClick={handleAdd} disabled={saving || !email || !password}>
-              {saving ? "Creating..." : "Create User"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          <div className="space-y-1.5">
+            <Label>Email</Label>
+            <Input
+              type="email"
+              placeholder="teacher@dubaischools.ae"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Temporary Password</Label>
+            <Input
+              type="password"
+              placeholder="They can change this after login"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Role</Label>
+            <Select value={role} onValueChange={(v) => setRole(v as Role)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="teacher">Teacher</SelectItem>
+                <SelectItem value="hod">Head of Department</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {error && (
+            <p className="text-sm text-rose-600 bg-rose-50 px-3 py-2 rounded-lg">{error}</p>
+          )}
+        </div>
+        <ModalFooter>
+          <ModalCancel onClick={() => { setAddDialog(false); resetForm(); }} />
+          <Button onClick={handleAdd} disabled={saving || !email || !password}>
+            {saving ? "Creating..." : "Create User"}
+          </Button>
+        </ModalFooter>
+      </Modal>
 
-      {/* Delete Confirm */}
-      <Dialog open={!!confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(null)}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Remove user?</DialogTitle></DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            This will permanently delete their account and all associated data.
-          </p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setConfirmDelete(null)}>Cancel</Button>
-            <Button
-              variant="destructive"
-              onClick={async () => {
-                await deleteUser(confirmDelete!);
-                setConfirmDelete(null);
-              }}
-            >
-              Remove
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ConfirmModal
+        open={!!confirmDelete}
+        onClose={() => setConfirmDelete(null)}
+        title="Remove user?"
+        description="This will permanently delete their account and all associated data."
+        confirmLabel="Remove"
+        variant="destructive"
+        onConfirm={async () => { await deleteUser(confirmDelete!); setConfirmDelete(null); }}
+      />
     </PageContainer>
   );
 }

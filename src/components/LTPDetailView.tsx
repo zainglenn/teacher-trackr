@@ -4,7 +4,7 @@ import { useState } from "react";
 import { LTPUnitDialog } from "@/components/LTPUnitDialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Modal, ModalFooter, ModalCancel } from "@/components/ui/modal";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -338,63 +338,55 @@ export function LTPDetailView({
         )}
       </div>
 
-      {/* Assign chip dialog */}
-      <Dialog open={!!assignChip} onOpenChange={(o) => !o && setAssignChip(null)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Assign {assignChip?.code} to a unit</DialogTitle></DialogHeader>
-          <div className="space-y-3 py-2">
-            <p className="text-xs text-muted-foreground">
-              {standards.find((s) => s.id === assignChip?.standardId)?.description}
-            </p>
-            <div className="space-y-1.5">
-              <Label>Add to unit</Label>
-              <Select value={assignTargetUnitId} onValueChange={(v) => v && setAssignTargetUnitId(v)}>
-                <SelectTrigger><SelectValue placeholder="Select a unit..." /></SelectTrigger>
-                <SelectContent>
-                  {plan.units?.map((u) => (
-                    <SelectItem key={u.id} value={u.id}>T{u.term} · Unit {u.unit_number}: {u.title}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+      <Modal open={!!assignChip} onClose={() => setAssignChip(null)} title={`Assign ${assignChip?.code} to a unit`}>
+        <div className="space-y-3 py-2">
+          <p className="text-xs text-muted-foreground">
+            {standards.find((s) => s.id === assignChip?.standardId)?.description}
+          </p>
+          <div className="space-y-1.5">
+            <Label>Add to unit</Label>
+            <Select value={assignTargetUnitId} onValueChange={(v) => v && setAssignTargetUnitId(v)}>
+              <SelectTrigger><SelectValue placeholder="Select a unit..." /></SelectTrigger>
+              <SelectContent>
+                {plan.units?.map((u) => (
+                  <SelectItem key={u.id} value={u.id}>T{u.term} · Unit {u.unit_number}: {u.title}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAssignChip(null)}>Cancel</Button>
-            <Button onClick={handleAssignChip} disabled={!assignTargetUnitId}>Add to Unit</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </div>
+        <ModalFooter>
+          <ModalCancel onClick={() => setAssignChip(null)} />
+          <Button onClick={handleAssignChip} disabled={!assignTargetUnitId}>Add to Unit</Button>
+        </ModalFooter>
+      </Modal>
 
-      {/* Assign unit to teacher dialog */}
-      <Dialog open={!!assignUnitTarget} onOpenChange={(o) => !o && setAssignUnitTarget(null)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Assign Unit to Teacher</DialogTitle></DialogHeader>
-          <div className="space-y-3 py-2">
-            <div className="bg-muted rounded-lg p-2.5 text-xs">
-              <p className="font-medium">Unit {assignUnitTarget?.unit_number}: {assignUnitTarget?.title}</p>
-              <p className="text-muted-foreground">Term {assignUnitTarget?.term}</p>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Assign to</Label>
-              <Select value={assignUnitTeacherId} onValueChange={(v) => setAssignUnitTeacherId(v ?? "")}>
-                <SelectTrigger><SelectValue placeholder="Select a teacher..." /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Unassigned</SelectItem>
-                  {teachers.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>{t.full_name ?? t.email}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+      <Modal open={!!assignUnitTarget} onClose={() => setAssignUnitTarget(null)} title="Assign Unit to Teacher">
+        <div className="space-y-3 py-2">
+          <div className="bg-muted rounded-lg p-2.5 text-xs">
+            <p className="font-medium">Unit {assignUnitTarget?.unit_number}: {assignUnitTarget?.title}</p>
+            <p className="text-muted-foreground">Term {assignUnitTarget?.term}</p>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAssignUnitTarget(null)}>Cancel</Button>
-            <Button onClick={handleAssignUnit} disabled={assignUnitSaving}>
-              {assignUnitSaving ? "Saving..." : "Assign"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          <div className="space-y-1.5">
+            <Label>Assign to</Label>
+            <Select value={assignUnitTeacherId} onValueChange={(v) => setAssignUnitTeacherId(v ?? "")}>
+              <SelectTrigger><SelectValue placeholder="Select a teacher..." /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Unassigned</SelectItem>
+                {teachers.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>{t.full_name ?? t.email}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <ModalFooter>
+          <ModalCancel onClick={() => setAssignUnitTarget(null)} />
+          <Button onClick={handleAssignUnit} disabled={assignUnitSaving}>
+            {assignUnitSaving ? "Saving..." : "Assign"}
+          </Button>
+        </ModalFooter>
+      </Modal>
 
       {/* Unit dialog */}
       {unitDialogState && (

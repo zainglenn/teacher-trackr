@@ -14,7 +14,7 @@ export async function DELETE(req: NextRequest) {
   );
 
   const authHeader = req.headers.get("authorization");
-  const token = authHeader?.replace("Bearer ", "");
+  const token = authHeader?.replace(/^[Bb]earer /, "");
   if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { data: { user: caller }, error: callerErr } = await admin.auth.getUser(token);

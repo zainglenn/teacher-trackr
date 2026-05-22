@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Modal, ModalFooter, ModalCancel } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -164,46 +164,40 @@ export function StandardDetailView({ standard, teacherId, classId, onBack, prelo
         </Card>
       )}
 
-      {/* Mark skill dialog */}
-      <Dialog open={!!markingSkill} onOpenChange={(o) => !o && setMarkingSkill(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Mark Skill as Taught</DialogTitle>
-          </DialogHeader>
-          {markingSkill && (
-            <div className="space-y-4 py-2">
-              <div className="bg-muted rounded-lg p-3 text-sm">
-                <Badge variant="outline" className="font-mono mb-1">{markingSkill.code}</Badge>
-                {markingSkill.genre && (
-                  <Badge className={`ml-1 mb-1 text-xs border ${GENRE_COLOURS[markingSkill.genre] ?? ""}`}>
-                    {markingSkill.genre}
-                  </Badge>
-                )}
-                <p className="text-muted-foreground mt-1">{markingSkill.description}</p>
-              </div>
-              <div className="space-y-1.5">
-                <Label>Date Taught</Label>
-                <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Notes (optional)</Label>
-                <Textarea
-                  placeholder="How was this skill taught? Any observations..."
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows={3}
-                />
-              </div>
+      <Modal open={!!markingSkill} onClose={() => setMarkingSkill(null)} title="Mark Skill as Taught" size="md">
+        {markingSkill && (
+          <div className="space-y-4 py-2">
+            <div className="bg-muted rounded-lg p-3 text-sm">
+              <Badge variant="outline" className="font-mono mb-1">{markingSkill.code}</Badge>
+              {markingSkill.genre && (
+                <Badge className={`ml-1 mb-1 text-xs border ${GENRE_COLOURS[markingSkill.genre] ?? ""}`}>
+                  {markingSkill.genre}
+                </Badge>
+              )}
+              <p className="text-muted-foreground mt-1">{markingSkill.description}</p>
             </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setMarkingSkill(null)}>Cancel</Button>
-            <Button onClick={handleMark} disabled={saving}>
-              {saving ? "Saving..." : "Mark as Taught"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            <div className="space-y-1.5">
+              <Label>Date Taught</Label>
+              <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Notes (optional)</Label>
+              <Textarea
+                placeholder="How was this skill taught? Any observations..."
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                rows={3}
+              />
+            </div>
+          </div>
+        )}
+        <ModalFooter>
+          <ModalCancel onClick={() => setMarkingSkill(null)} />
+          <Button onClick={handleMark} disabled={saving}>
+            {saving ? "Saving..." : "Mark as Taught"}
+          </Button>
+        </ModalFooter>
+      </Modal>
     </div>
   );
 }

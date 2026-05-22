@@ -5,15 +5,15 @@ import { PageContainer } from "@/components/PageContainer";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Modal, ModalFooter, ModalCancel } from "@/components/ui/modal";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Check, RotateCcw, ClipboardCheck } from "lucide-react";
+import { Check, RotateCcw, ClipboardCheck, ChevronDown, ChevronRight } from "lucide-react";
 import { LongTermPlan, LTPUnit, Standard } from "@/types";
 import { UnitPlanView } from "@/components/ltp/UnitPlanView";
 import { useLongTermPlans } from "@/hooks/useLongTermPlans";
 import { UNIT_STATUS_CONFIG, ltpAggregateStatus, COMPUTED_LTP_STATUS_CONFIG } from "@/lib/ltpStatus";
-import { strandFromCode } from "@/components/ltp/StrandBadge";
+import { strandFromCode, StrandBadge, STRAND_COLORS } from "@/components/ltp/StrandBadge";
 
 interface HODReviewViewProps {
   teacherId: string;
@@ -21,6 +21,64 @@ interface HODReviewViewProps {
 }
 
 type UnitWithPlan = { unit: LTPUnit; plan: LongTermPlan };
+
+const STRAND_ORDER = ["RL", "RI", "W", "SL", "L"];
+
+function computeGapReport(plan: LongTermPlan, allStandards: Standard[]) {
+  const mappedIds = new Set(
+    (plan.units ?? []).flatMap((u) => (u.standards ?? []).map((s) => s.id))
+  );
+  const missing = allStandards.filter((s) => !mappedIds.has(s.id));
+  const byStrand: Record<string, Standard[]> = {};
+  for (const s of missing) {
+    const sc = strandFromCode(s.code);
+    if (!byStrand[sc]) byStrand[sc] = [];
+    byStrand[sc].push(s);
+  }
+  return { mappedCount: mappedIds.size, total: allStandards.length, missing, byStrand };
+}
+
+function StandardsGapReport({ plan, standards }: { plan: LongTermPlan; standards: Standard[] }) {
+  const [open, setOpen] = useState(false);
+  const { mappedCount, total, missing, byStrand } = computeGapReport(plan, standards);
+  if (total === 0) return null;
+  const missingCount = missing.length;
+  const allMapped = missingCount === 0;
+
+  return (
+    <div className="rounded-lg border overflow-hidden text-xs">
+      <button
+        className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-muted/40 transition-colors"
+        onClick={() => setOpen((o) => !o)}
+      >
+        {open ? <ChevronDown className="h-3 w-3 text-muted-foreground shrink-0" /> : <ChevronRight className="h-3 w-3 text-muted-foreground shrink-0" />}
+        <span className="font-medium text-muted-foreground">Standards Coverage</span>
+        <span className={`ml-auto font-mono ${allMapped ? "text-emerald-600" : "text-amber-600"}`}>
+          {mappedCount}/{total} mapped{missingCount > 0 ? ` · ${missingCount} missing` : ""}
+        </span>
+      </button>
+      {open && (
+        <div className="border-t px-3 py-2.5">
+          {allMapped ? (
+            <p className="text-emerald-600">All {total} standards are mapped across this plan.</p>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-muted-foreground mb-1">Standards not mapped to any unit:</p>
+              {STRAND_ORDER.filter((sc) => byStrand[sc]?.length).map((sc) => (
+                <div key={sc} className="flex flex-wrap gap-1 items-center">
+                  <span className={`inline-flex items-center px-1.5 py-0.5 rounded font-mono font-semibold shrink-0 ${STRAND_COLORS[sc] ?? ""}`}>{sc}</span>
+                  {byStrand[sc].map((s) => (
+                    <StrandBadge key={s.id} code={s.code} />
+                  ))}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function daysAgo(iso: string | null): string {
   if (!iso) return "";
@@ -131,6 +189,9 @@ export function HODReviewView({ teacherId, standards }: HODReviewViewProps) {
                     </span>
                   </div>
 
+                  {/* Standards gap report */}
+                  <StandardsGapReport plan={plan} standards={standards} />
+
                   {/* Unit rows */}
                   <div className="space-y-2">
                     {units.map((unit) => {
@@ -223,38 +284,34 @@ export function HODReviewView({ teacherId, standards }: HODReviewViewProps) {
         </div>
       )}
 
-      {/* Revision dialog */}
-      <Dialog open={!!revisionUnit} onOpenChange={(o) => !o && setRevisionUnit(null)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Request Revision</DialogTitle></DialogHeader>
-          <div className="space-y-3 py-2">
-            {revisionUnit && (
-              <div className="bg-muted rounded-lg p-2.5 text-xs">
-                <p className="font-medium">{revisionUnit.unit.title}</p>
-                <p className="text-muted-foreground mt-0.5">
-                  {revisionUnit.plan.title} · Term {revisionUnit.unit.term} · {revisionUnit.plan.teacher?.full_name ?? revisionUnit.plan.teacher?.email}
-                </p>
-              </div>
-            )}
-            <div className="space-y-1.5">
-              <Label>Feedback for teacher</Label>
-              <Textarea
-                placeholder="Explain what needs to be revised..."
-                value={feedback}
-                onChange={(e) => setFeedback(e.target.value)}
-                rows={4}
-                autoFocus
-              />
+      <Modal open={!!revisionUnit} onClose={() => setRevisionUnit(null)} title="Request Revision">
+        <div className="space-y-3 py-2">
+          {revisionUnit && (
+            <div className="bg-muted rounded-lg p-2.5 text-xs">
+              <p className="font-medium">{revisionUnit.unit.title}</p>
+              <p className="text-muted-foreground mt-0.5">
+                {revisionUnit.plan.title} · Term {revisionUnit.unit.term} · {revisionUnit.plan.teacher?.full_name ?? revisionUnit.plan.teacher?.email}
+              </p>
             </div>
+          )}
+          <div className="space-y-1.5">
+            <Label>Feedback for teacher</Label>
+            <Textarea
+              placeholder="Explain what needs to be revised..."
+              value={feedback}
+              onChange={(e) => setFeedback(e.target.value)}
+              rows={4}
+              autoFocus
+            />
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRevisionUnit(null)}>Cancel</Button>
-            <Button variant="destructive" onClick={handleRevision} disabled={saving || !feedback.trim()}>
-              {saving ? "Sending..." : "Request Revision"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </div>
+        <ModalFooter>
+          <ModalCancel onClick={() => setRevisionUnit(null)} />
+          <Button variant="destructive" onClick={handleRevision} disabled={saving || !feedback.trim()}>
+            {saving ? "Sending..." : "Request Revision"}
+          </Button>
+        </ModalFooter>
+      </Modal>
     </PageContainer>
   );
 }

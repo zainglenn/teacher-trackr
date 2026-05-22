@@ -14,8 +14,8 @@ export async function GET(req: NextRequest) {
   );
 
   const authHeader = req.headers.get("authorization");
-  const token = authHeader?.replace("Bearer ", "");
-  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const token = authHeader?.replace(/^[Bb]earer /, "");
+  if (!token) return NextResponse.json({ error: "Unauthorized: missing token" }, { status: 401 });
 
   const { data: { user: caller }, error: callerErr } = await admin.auth.getUser(token);
   if (callerErr || !caller) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

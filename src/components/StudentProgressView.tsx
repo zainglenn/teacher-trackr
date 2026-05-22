@@ -5,7 +5,7 @@ import { PageContainer } from "@/components/PageContainer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Modal, ModalFooter, ModalCancel } from "@/components/ui/modal";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -15,6 +15,7 @@ import { Standard, Student, Attainment } from "@/types";
 import { useStudents } from "@/hooks/useStudents";
 import { useStudentProgress } from "@/hooks/useStudentProgress";
 import { useClasses } from "@/hooks/useClasses";
+import { useTeachers } from "@/hooks/useTeachers";
 
 const ATTAINMENT_CONFIG: Record<Attainment, { label: string; className: string }> = {
   not_assessed: { label: "Not Assessed", className: "bg-muted text-muted-foreground" },
@@ -32,51 +33,86 @@ interface StudentProgressViewProps {
 }
 
 export function StudentProgressView({ teacherId, standards, byStrand, isHod }: StudentProgressViewProps) {
-  const { classes, loading: classesLoading } = useClasses(teacherId);
+  const { teachers, loading: teachersLoading } = useTeachers();
+  const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(null);
+
+  // For HOD, use selected teacher; for teacher, use own ID
+  const effectiveTeacherId = isHod ? selectedTeacherId : teacherId;
+  const { classes, loading: classesLoading } = useClasses(effectiveTeacherId ?? "");
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
 
-  if (classesLoading) return null;
+  if (classesLoading || (isHod && teachersLoading)) return null;
 
   return (
     <PageContainer
       title="Student Progress"
-      description="Track attainment per student across all standards"
+      description={isHod ? "View student attainment across all teachers" : "Track attainment per student across all standards"}
     >
-      {/* Class selector */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <button
-          onClick={() => setSelectedClassId(null)}
-          className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-            selectedClassId === null
-              ? "bg-primary text-primary-foreground border-primary"
-              : "bg-background border-border hover:bg-muted"
-          }`}
-        >
-          All
-        </button>
-        {classes.map((cls) => (
-          <button
-            key={cls.id}
-            onClick={() => setSelectedClassId(cls.id)}
-            className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-              selectedClassId === cls.id
-                ? "bg-primary text-primary-foreground border-primary"
-                : "bg-background border-border hover:bg-muted"
-            }`}
+      {/* HOD teacher selector */}
+      {isHod && (
+        <div className="flex items-center gap-2">
+          <Select
+            value={selectedTeacherId ?? ""}
+            onValueChange={(v) => { setSelectedTeacherId(v || null); setSelectedClassId(null); }}
           >
-            {cls.name}
-          </button>
-        ))}
-      </div>
+            <SelectTrigger className="w-56 h-8 text-sm">
+              <SelectValue placeholder="Select a teacher…" />
+            </SelectTrigger>
+            <SelectContent>
+              {teachers.map((t) => (
+                <SelectItem key={t.id} value={t.id}>
+                  {t.full_name ?? t.email}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
-      <StudentList
-        key={selectedClassId ?? "all"}
-        teacherId={teacherId}
-        classId={selectedClassId}
-        standards={standards}
-        byStrand={byStrand}
-      />
+      {isHod && !selectedTeacherId ? (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <GraduationCap className="h-10 w-10 text-muted-foreground/30 mb-3" />
+          <p className="text-muted-foreground text-sm">Select a teacher to view their students</p>
+        </div>
+      ) : (
+        <>
+          {/* Class selector */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => setSelectedClassId(null)}
+              className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                selectedClassId === null
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-background border-border hover:bg-muted"
+              }`}
+            >
+              All
+            </button>
+            {classes.map((cls) => (
+              <button
+                key={cls.id}
+                onClick={() => setSelectedClassId(cls.id)}
+                className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+                  selectedClassId === cls.id
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-background border-border hover:bg-muted"
+                }`}
+              >
+                {cls.name}
+              </button>
+            ))}
+          </div>
 
+          <StudentList
+            key={`${effectiveTeacherId}-${selectedClassId ?? "all"}`}
+            teacherId={effectiveTeacherId!}
+            classId={selectedClassId}
+            standards={standards}
+            byStrand={byStrand}
+            isHod={!!isHod}
+          />
+        </>
+      )}
     </PageContainer>
   );
 }
@@ -86,11 +122,13 @@ function StudentList({
   classId,
   standards,
   byStrand,
+  isHod,
 }: {
   teacherId: string;
   classId: string | null;
   standards: Standard[];
   byStrand: Record<string, Standard[]>;
+  isHod: boolean;
 }) {
   const { students, loading, addStudent, removeStudent } = useStudents(teacherId, classId ?? undefined);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
@@ -120,10 +158,12 @@ function StudentList({
           <GraduationCap className="h-4 w-4" />
           <span>{students.length} student{students.length !== 1 ? "s" : ""}</span>
         </div>
-        <Button size="sm" onClick={() => setAddDialog(true)}>
-          <Plus className="h-4 w-4 mr-1" />
-          Add Student
-        </Button>
+        {!isHod && (
+          <Button size="sm" onClick={() => setAddDialog(true)}>
+            <Plus className="h-4 w-4 mr-1" />
+            Add Student
+          </Button>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
@@ -167,41 +207,39 @@ function StudentList({
               standards={standards}
               byStrand={byStrand}
               onRemove={() => { removeStudent(selectedStudent.id); setSelectedStudentId(null); }}
+              isHod={isHod}
             />
           )}
         </div>
       </div>
 
-      <Dialog open={addDialog} onOpenChange={(o) => !o && setAddDialog(false)}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Add Student</DialogTitle></DialogHeader>
-          <div className="space-y-3 py-2">
-            <div className="space-y-1.5">
-              <Label>Full Name</Label>
-              <Input
-                placeholder="Student full name"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                autoFocus
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Student Number (optional)</Label>
-              <Input
-                placeholder="e.g. 2024001"
-                value={newNumber}
-                onChange={(e) => setNewNumber(e.target.value)}
-              />
-            </div>
+      <Modal open={addDialog} onClose={() => setAddDialog(false)} title="Add Student">
+        <div className="space-y-3 py-2">
+          <div className="space-y-1.5">
+            <Label>Full Name</Label>
+            <Input
+              placeholder="Student full name"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              autoFocus
+            />
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAddDialog(false)}>Cancel</Button>
-            <Button onClick={handleAdd} disabled={saving || !newName.trim()}>
-              {saving ? "Adding..." : "Add Student"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          <div className="space-y-1.5">
+            <Label>Student Number (optional)</Label>
+            <Input
+              placeholder="e.g. 2024001"
+              value={newNumber}
+              onChange={(e) => setNewNumber(e.target.value)}
+            />
+          </div>
+        </div>
+        <ModalFooter>
+          <ModalCancel onClick={() => setAddDialog(false)} />
+          <Button onClick={handleAdd} disabled={saving || !newName.trim()}>
+            {saving ? "Adding..." : "Add Student"}
+          </Button>
+        </ModalFooter>
+      </Modal>
     </div>
   );
 }
@@ -211,11 +249,13 @@ function ProgressGrid({
   standards,
   byStrand,
   onRemove,
+  isHod,
 }: {
   student: Student;
   standards: Standard[];
   byStrand: Record<string, Standard[]>;
   onRemove: () => void;
+  isHod: boolean;
 }) {
   const { getAttainment, upsertProgress } = useStudentProgress(student.id);
 
@@ -232,15 +272,17 @@ function ProgressGrid({
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <CardTitle className="text-base">{student.full_name}</CardTitle>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-7 text-xs text-muted-foreground hover:text-rose-600"
-              onClick={onRemove}
-            >
-              <Trash2 className="h-3 w-3 mr-1" />
-              Remove
-            </Button>
+            {!isHod && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 text-xs text-muted-foreground hover:text-rose-600"
+                onClick={onRemove}
+              >
+                <Trash2 className="h-3 w-3 mr-1" />
+                Remove
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent>
@@ -270,7 +312,8 @@ function ProgressGrid({
                   </p>
                   <Select
                     value={attainment}
-                    onValueChange={(v) => upsertProgress(standard.id, v as Attainment)}
+                    onValueChange={(v) => { if (!isHod) upsertProgress(standard.id, v as Attainment); }}
+                    disabled={isHod}
                   >
                     <SelectTrigger className={`h-7 w-36 text-xs ${config.className}`}>
                       <SelectValue />
