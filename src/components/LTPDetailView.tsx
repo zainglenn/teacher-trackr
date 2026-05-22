@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { LongTermPlan, LTPUnit, LTPStatus, Standard, Profile } from "@/types";
 import { supabase } from "@/lib/supabase";
-import { StrandBadge, STRAND_COLORS } from "@/components/ltp/StrandBadge";
+import { StrandBadge, STRAND_COLORS, strandFromCode } from "@/components/ltp/StrandBadge";
 import { StrandProgressBar } from "@/components/ltp/StrandProgressBar";
 import { LTPStatusBadge } from "@/components/ltp/LTPStatusBadge";
 import { TermGrid } from "@/components/ltp/TermGrid";
@@ -76,10 +76,10 @@ export function LTPDetailView({
   const unmapped = standards.filter((s) => !planMappedIds.has(s.id));
   const allMapped = unmapped.length === 0;
   const canSubmit = canEdit && (plan.units?.length ?? 0) > 0 && allMapped;
-  const strands = [...new Set(standards.map((s) => s.strand))];
+  const strands = [...new Set(standards.map((s) => strandFromCode(s.code)))];
 
   const strandCoverage = strands.map((strand) => {
-    const all = standards.filter((s) => s.strand === strand);
+    const all = standards.filter((s) => strandFromCode(s.code) === strand);
     const mapped = all.filter((s) => planMappedIds.has(s.id));
     return { strand, total: all.length, mapped: mapped.length };
   });
@@ -356,7 +356,7 @@ export function LTPDetailView({
                   <div key={strand} className="flex items-start gap-2">
                     <span className="text-xs font-mono font-semibold text-muted-foreground w-6 shrink-0 mt-0.5">{strand}</span>
                     <div className="flex flex-wrap gap-1">
-                      {standards.filter((s) => s.strand === strand).map((s) => {
+                      {standards.filter((s) => strandFromCode(s.code) === strand).map((s) => {
                         const unitsThatCover = plan.units?.filter((u) => u.standards?.some((us) => us.id === s.id)) ?? [];
                         const isMapped = unitsThatCover.length > 0;
                         const isRisky = unitsThatCover.length === 1;

@@ -10,6 +10,7 @@ import { LongTermPlanView } from "@/components/LongTermPlanView";
 import { StudentProgressView } from "@/components/StudentProgressView";
 import { HODReviewView } from "@/components/HODReviewView";
 import { ManageUsersView } from "@/components/ManageUsersView";
+import { MyUnitsView } from "@/components/MyUnitsView";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useStandards } from "@/hooks/useStandards";
@@ -67,6 +68,9 @@ function CurriculumApp({ userId, email }: { userId: string; email: string }) {
           )}
           {view === "manage-users" && isHod && (
             <ManageUsersView currentUserId={userId} />
+          )}
+          {view === "my-units" && !isHod && (
+            <MyUnitsView teacherId={userId} standards={standards} />
           )}
         </main>
       </SidebarInset>

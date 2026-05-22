@@ -11,16 +11,17 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { BookOpen, LayoutDashboard, CheckSquare, ClipboardList, Users, ClipboardCheck, LogOut, UserCog } from "lucide-react";
+import { BookOpen, LayoutDashboard, CheckSquare, ClipboardList, Users, ClipboardCheck, LogOut, UserCog, BookMarked } from "lucide-react";
 import { Role } from "@/types";
 import { useAuth } from "@/hooks/useAuth";
 
-export type AppView = "dashboard" | "coverage" | "long-term-plan" | "student-progress" | "hod-review" | "manage-users";
+export type AppView = "dashboard" | "coverage" | "long-term-plan" | "student-progress" | "hod-review" | "manage-users" | "my-units";
 
-const NAV_ITEMS: { key: AppView; label: string; icon: React.ElementType; hodOnly?: boolean }[] = [
+const NAV_ITEMS: { key: AppView; label: string; icon: React.ElementType; hodOnly?: boolean; teacherOnly?: boolean }[] = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { key: "coverage", label: "Standards Coverage", icon: CheckSquare },
   { key: "long-term-plan", label: "Long Term Plan", icon: ClipboardList },
+  { key: "my-units", label: "My Units", icon: BookMarked, teacherOnly: true },
   { key: "student-progress", label: "Student Progress", icon: Users },
   { key: "hod-review", label: "HOD Review", icon: ClipboardCheck, hodOnly: true },
   { key: "manage-users", label: "Manage Users", icon: UserCog, hodOnly: true },
@@ -36,7 +37,9 @@ interface AppSidebarProps {
 export function AppSidebar({ view, onViewChange, role, email }: AppSidebarProps) {
   const { signOut } = useAuth();
 
-  const items = NAV_ITEMS.filter((item) => !item.hodOnly || role === "hod");
+  const items = NAV_ITEMS.filter((item) =>
+    (!item.hodOnly || role === "hod") && (!item.teacherOnly || role === "teacher")
+  );
 
   return (
     <Sidebar>
