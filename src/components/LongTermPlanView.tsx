@@ -135,7 +135,7 @@ export function LongTermPlanView({ teacherId, isHod, standards }: LongTermPlanVi
       title="Long Term Plan"
       description="Year-long curriculum overview organised by term and unit"
       action={
-        !isHod && (
+        isHod && (
           <Button size="sm" onClick={() => setNewLTPOpen(true)}>
             <Plus className="h-4 w-4 mr-1" /> New LTP
           </Button>
@@ -146,10 +146,14 @@ export function LongTermPlanView({ teacherId, isHod, standards }: LongTermPlanVi
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <ClipboardList className="h-10 w-10 text-muted-foreground/30 mb-3" />
           <p className="text-sm font-medium text-muted-foreground">No long term plans yet</p>
-          {!isHod && (
+          {isHod ? (
             <Button size="sm" className="mt-4" onClick={() => setNewLTPOpen(true)}>
-              <Plus className="h-4 w-4 mr-1" /> Create your first LTP
+              <Plus className="h-4 w-4 mr-1" /> Create first LTP
             </Button>
+          ) : (
+            <p className="text-xs text-muted-foreground/70 mt-1 max-w-xs">
+              Your HOD will create and assign an LTP to your class. Check back soon.
+            </p>
           )}
         </div>
       )}
@@ -185,7 +189,7 @@ export function LongTermPlanView({ teacherId, isHod, standards }: LongTermPlanVi
                     onClick={() => setSelectedPlanId(plan.id)}>
                     {isHod ? <><Eye className="h-3 w-3" /> View</> : <><Pencil className="h-3 w-3" /> Open</>}
                   </Button>
-                  {!isHod && (
+                  {isHod && (
                     <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-rose-600"
                       onClick={() => { if (confirm("Delete this LTP and all its units?")) deleteLTP(plan.id); }}>
                       ×
