@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2, Users, GraduationCap } from "lucide-react";
+
 import { Standard, Student, Attainment } from "@/types";
 import { useStudents } from "@/hooks/useStudents";
 import { useStudentProgress } from "@/hooks/useStudentProgress";
@@ -27,24 +28,12 @@ interface StudentProgressViewProps {
   teacherId: string;
   standards: Standard[];
   byStrand: Record<string, Standard[]>;
+  isHod?: boolean;
 }
 
-export function StudentProgressView({ teacherId, standards, byStrand }: StudentProgressViewProps) {
-  const { classes, loading: classesLoading, addClass } = useClasses(teacherId);
+export function StudentProgressView({ teacherId, standards, byStrand, isHod }: StudentProgressViewProps) {
+  const { classes, loading: classesLoading } = useClasses(teacherId);
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
-  const [addClassDialog, setAddClassDialog] = useState(false);
-  const [newClassName, setNewClassName] = useState("");
-  const [savingClass, setSavingClass] = useState(false);
-
-  async function handleAddClass() {
-    if (!newClassName.trim()) return;
-    setSavingClass(true);
-    const created = await addClass(newClassName.trim());
-    setSavingClass(false);
-    setAddClassDialog(false);
-    setNewClassName("");
-    if (created) setSelectedClassId(created.id);
-  }
 
   if (classesLoading) return null;
 
@@ -78,15 +67,6 @@ export function StudentProgressView({ teacherId, standards, byStrand }: StudentP
             {cls.name}
           </button>
         ))}
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-8 text-muted-foreground"
-          onClick={() => setAddClassDialog(true)}
-        >
-          <Plus className="h-3.5 w-3.5 mr-1" />
-          Add Class
-        </Button>
       </div>
 
       <StudentList
@@ -97,29 +77,6 @@ export function StudentProgressView({ teacherId, standards, byStrand }: StudentP
         byStrand={byStrand}
       />
 
-      <Dialog open={addClassDialog} onOpenChange={(o) => !o && setAddClassDialog(false)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader><DialogTitle>Add Class</DialogTitle></DialogHeader>
-          <div className="space-y-3 py-2">
-            <div className="space-y-1.5">
-              <Label>Class Name</Label>
-              <Input
-                placeholder="e.g. 6A, Period 3, Grade 6 Blue"
-                value={newClassName}
-                onChange={(e) => setNewClassName(e.target.value)}
-                autoFocus
-                onKeyDown={(e) => { if (e.key === "Enter" && newClassName.trim()) handleAddClass(); }}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAddClassDialog(false)}>Cancel</Button>
-            <Button onClick={handleAddClass} disabled={savingClass || !newClassName.trim()}>
-              {savingClass ? "Adding..." : "Add Class"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </PageContainer>
   );
 }

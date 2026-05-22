@@ -10,6 +10,7 @@ import { LongTermPlanView } from "@/components/LongTermPlanView";
 import { StudentProgressView } from "@/components/StudentProgressView";
 import { HODReviewView } from "@/components/HODReviewView";
 import { ManageUsersView } from "@/components/ManageUsersView";
+import { ManageClassesView } from "@/components/ManageClassesView";
 import { MyUnitsView } from "@/components/MyUnitsView";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
@@ -55,19 +56,22 @@ function CurriculumApp({ userId, email }: { userId: string; email: string }) {
             />
           )}
           {view === "coverage" && (
-            <CoverageView standards={standards} byStrand={byStrand} teacherId={userId} />
+            <CoverageView standards={standards} byStrand={byStrand} teacherId={userId} isHod={isHod} />
           )}
           {view === "long-term-plan" && (
             <LongTermPlanView teacherId={userId} isHod={isHod} standards={standards} />
           )}
           {view === "student-progress" && (
-            <StudentProgressView teacherId={userId} standards={standards} byStrand={byStrand} />
+            <StudentProgressView teacherId={userId} standards={standards} byStrand={byStrand} isHod={isHod} />
           )}
           {view === "hod-review" && isHod && (
             <HODReviewView teacherId={userId} standards={standards} />
           )}
           {view === "manage-users" && isHod && (
             <ManageUsersView currentUserId={userId} />
+          )}
+          {view === "manage-classes" && isHod && (
+            <ManageClassesView />
           )}
           {view === "my-units" && !isHod && (
             <MyUnitsView teacherId={userId} standards={standards} />

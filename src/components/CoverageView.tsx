@@ -5,11 +5,7 @@ import { PageContainer } from "@/components/PageContainer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { CheckCircle2, Circle, ChevronDown, ChevronRight, Plus, GraduationCap } from "lucide-react";
+import { CheckCircle2, Circle, ChevronDown, ChevronRight, GraduationCap } from "lucide-react";
 import { Standard } from "@/types";
 import { useSkillCoverage } from "@/hooks/useSkillCoverage";
 import { useAllSkills } from "@/hooks/useAllSkills";
@@ -20,25 +16,12 @@ interface CoverageViewProps {
   standards: Standard[];
   byStrand: Record<string, Standard[]>;
   teacherId: string;
+  isHod?: boolean;
 }
 
-export function CoverageView({ standards, byStrand, teacherId }: CoverageViewProps) {
-  const { classes, loading: classesLoading, addClass } = useClasses(teacherId);
+export function CoverageView({ standards, byStrand, teacherId, isHod }: CoverageViewProps) {
+  const { classes, loading: classesLoading } = useClasses(teacherId);
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
-  const [addClassDialog, setAddClassDialog] = useState(false);
-  const [newClassName, setNewClassName] = useState("");
-  const [savingClass, setSavingClass] = useState(false);
-
-  async function handleAddClass() {
-    if (!newClassName.trim()) return;
-    setSavingClass(true);
-    const created = await addClass(newClassName.trim());
-    setSavingClass(false);
-    setAddClassDialog(false);
-    setNewClassName("");
-    if (created) setSelectedClassId(created.id);
-  }
-
   if (classesLoading) return null;
 
   return (
@@ -69,15 +52,9 @@ export function CoverageView({ standards, byStrand, teacherId }: CoverageViewPro
             {cls.name}
           </button>
         ))}
-        <Button
-          size="sm"
-          variant="ghost"
-          className="h-8 text-muted-foreground"
-          onClick={() => setAddClassDialog(true)}
-        >
-          <Plus className="h-3.5 w-3.5 mr-1" />
-          Add Class
-        </Button>
+        {isHod && (
+          <span className="text-xs text-muted-foreground italic ml-1">Manage classes in HOD settings</span>
+        )}
       </div>
 
       <CoverageGrid
@@ -89,31 +66,6 @@ export function CoverageView({ standards, byStrand, teacherId }: CoverageViewPro
         className={selectedClassId ? (classes.find((c) => c.id === selectedClassId)?.name ?? "") : "All Classes"}
       />
 
-      <Dialog open={addClassDialog} onOpenChange={(o) => !o && setAddClassDialog(false)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Add Class</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            <div className="space-y-1.5">
-              <Label>Class Name</Label>
-              <Input
-                placeholder="e.g. 6A, Period 3, Grade 6 Blue"
-                value={newClassName}
-                onChange={(e) => setNewClassName(e.target.value)}
-                autoFocus
-                onKeyDown={(e) => { if (e.key === "Enter" && newClassName.trim()) handleAddClass(); }}
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setAddClassDialog(false)}>Cancel</Button>
-            <Button onClick={handleAddClass} disabled={savingClass || !newClassName.trim()}>
-              {savingClass ? "Adding..." : "Add Class"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
     </PageContainer>
   );

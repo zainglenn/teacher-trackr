@@ -24,9 +24,8 @@ export function useSkillCoverage(teacherId: string, classId?: string | null) {
 
     if (classId) {
       query = query.eq("class_id", classId);
-    } else {
-      query = query.is("class_id", null);
     }
+    // when classId is null/undefined, fetch all rows (all classes) for the union view
 
     const { data } = await query;
     setLogs(data ?? []);
@@ -36,7 +35,7 @@ export function useSkillCoverage(teacherId: string, classId?: string | null) {
   useEffect(() => { fetch(); }, [fetch]);
 
   async function markSkill(skillId: string, taughtDate: string, notes?: string) {
-    const existing = logs.find((l) => l.skill_id === skillId);
+    const existing = logs.find((l) => l.skill_id === skillId && l.class_id === (classId ?? null));
     let result;
     if (existing) {
       const { data } = await supabase
@@ -83,7 +82,7 @@ export function useSkillCoverage(teacherId: string, classId?: string | null) {
     }
 
     await query;
-    setLogs((prev) => prev.filter((l) => l.skill_id !== skillId));
+    setLogs((prev) => prev.filter((l) => !(l.skill_id === skillId && l.class_id === (classId ?? null))));
   }
 
   const coveredSkillIds = new Set(logs.map((l) => l.skill_id));

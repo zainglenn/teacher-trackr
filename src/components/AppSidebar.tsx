@@ -11,11 +11,11 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { BookOpen, LayoutDashboard, CheckSquare, ClipboardList, Users, ClipboardCheck, LogOut, UserCog, BookMarked } from "lucide-react";
+import { BookOpen, LayoutDashboard, CheckSquare, ClipboardList, Users, ClipboardCheck, LogOut, UserCog, BookMarked, GraduationCap } from "lucide-react";
 import { Role } from "@/types";
 import { useAuth } from "@/hooks/useAuth";
 
-export type AppView = "dashboard" | "coverage" | "long-term-plan" | "student-progress" | "hod-review" | "manage-users" | "my-units";
+export type AppView = "dashboard" | "coverage" | "long-term-plan" | "student-progress" | "hod-review" | "manage-users" | "manage-classes" | "my-units";
 
 const NAV_ITEMS: { key: AppView; label: string; icon: React.ElementType; hodOnly?: boolean; teacherOnly?: boolean }[] = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -24,6 +24,7 @@ const NAV_ITEMS: { key: AppView; label: string; icon: React.ElementType; hodOnly
   { key: "my-units", label: "My Units", icon: BookMarked, teacherOnly: true },
   { key: "student-progress", label: "Student Progress", icon: Users },
   { key: "hod-review", label: "HOD Review", icon: ClipboardCheck, hodOnly: true },
+  { key: "manage-classes", label: "Manage Classes", icon: GraduationCap, hodOnly: true },
   { key: "manage-users", label: "Manage Users", icon: UserCog, hodOnly: true },
 ];
 

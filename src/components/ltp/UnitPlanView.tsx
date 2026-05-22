@@ -323,10 +323,12 @@ export function UnitPlanView({
         {/* Map standards footer */}
         {canEdit && (
           <div className="border-t">
-            <button
-              type="button"
-              className="w-full flex items-center justify-between px-4 py-2.5 text-xs hover:bg-muted/30 transition-colors"
+            <div
+              role="button"
+              tabIndex={0}
+              className="w-full flex items-center justify-between px-4 py-2.5 text-xs cursor-pointer hover:bg-muted/30 transition-colors"
               onClick={() => setPickerOpen(v => !v)}
+              onKeyDown={e => { if (e.key === "Enter" || e.key === " ") setPickerOpen(v => !v); }}
             >
               <span className="flex items-center gap-1.5 text-muted-foreground font-medium">
                 <Plus className="h-3.5 w-3.5" /> Map standards
@@ -345,7 +347,7 @@ export function UnitPlanView({
                 )}
                 {pickerOpen ? <ChevronUp className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />}
               </div>
-            </button>
+            </div>
 
             {pickerOpen && (
               <div className="border-t">
