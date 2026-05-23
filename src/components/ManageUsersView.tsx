@@ -16,6 +16,7 @@ import { Role } from "@/types";
 const ROLE_CONFIG: Record<Role, { label: string; className: string; icon: React.ElementType }> = {
   hod: { label: "Head of Department", className: "bg-violet-100 text-violet-700", icon: ShieldCheck },
   teacher: { label: "Teacher", className: "bg-blue-100 text-blue-700", icon: UserCog },
+  admin: { label: "Administrator", className: "bg-rose-100 text-rose-700", icon: ShieldCheck },
 };
 
 export function ManageUsersView({ currentUserId }: { currentUserId: string }) {
@@ -145,6 +146,7 @@ export function ManageUsersView({ currentUserId }: { currentUserId: string }) {
               <SelectContent>
                 <SelectItem value="teacher">Teacher</SelectItem>
                 <SelectItem value="hod">Head of Department</SelectItem>
+                <SelectItem value="admin">Administrator</SelectItem>
               </SelectContent>
             </Select>
           </div>

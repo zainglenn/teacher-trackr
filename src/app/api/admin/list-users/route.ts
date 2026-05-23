@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
     .eq("id", caller.id)
     .single();
 
-  if (profile?.role !== "hod") {
+  if (!["hod", "admin"].includes(profile?.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

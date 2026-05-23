@@ -3,9 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 export async function DELETE(req: NextRequest) {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!serviceRoleKey) {
-    return NextResponse.json({ error: "Service role key not configured" }, { status: 500 });
-  }
+  if (!serviceRoleKey) return NextResponse.json({ error: "Service role key not configured" }, { status: 500 });
 
   const admin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -20,21 +18,15 @@ export async function DELETE(req: NextRequest) {
   const { data: { user: caller }, error: callerErr } = await admin.auth.getUser(token);
   if (callerErr || !caller) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { data: profile } = await admin
-    .from("profiles")
-    .select("role")
-    .eq("id", caller.id)
-    .single();
-
+  const { data: profile } = await admin.from("profiles").select("role").eq("id", caller.id).single();
   if (!["hod", "admin"].includes(profile?.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { userId } = await req.json();
-  if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
-  if (userId === caller.id) return NextResponse.json({ error: "Cannot delete yourself" }, { status: 400 });
+  const { ltpId } = await req.json();
+  if (!ltpId) return NextResponse.json({ error: "ltpId required" }, { status: 400 });
 
-  const { error } = await admin.auth.admin.deleteUser(userId);
+  const { error } = await admin.from("long_term_plans").delete().eq("id", ltpId);
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
 
   return NextResponse.json({ success: true });

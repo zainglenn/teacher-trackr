@@ -11,13 +11,13 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { BookOpen, LayoutDashboard, CheckSquare, ClipboardList, Users, ClipboardCheck, LogOut, UserCog, BookMarked, GraduationCap } from "lucide-react";
+import { BookOpen, LayoutDashboard, CheckSquare, ClipboardList, Users, ClipboardCheck, LogOut, UserCog, BookMarked, GraduationCap, ShieldAlert } from "lucide-react";
 import { Role } from "@/types";
 import { useAuth } from "@/hooks/useAuth";
 
-export type AppView = "dashboard" | "coverage" | "long-term-plan" | "student-progress" | "hod-review" | "manage-users" | "manage-classes" | "my-units" | "unit-assignments";
+export type AppView = "dashboard" | "coverage" | "long-term-plan" | "student-progress" | "hod-review" | "manage-users" | "manage-classes" | "my-units" | "unit-assignments" | "admin";
 
-const NAV_ITEMS: { key: AppView; label: string; icon: React.ElementType; hodOnly?: boolean; teacherOnly?: boolean }[] = [
+const NAV_ITEMS: { key: AppView; label: string; icon: React.ElementType; hodOnly?: boolean; teacherOnly?: boolean; adminOnly?: boolean }[] = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { key: "coverage", label: "Standards Coverage", icon: CheckSquare },
   { key: "long-term-plan", label: "Long Term Plan", icon: ClipboardList },
@@ -27,6 +27,7 @@ const NAV_ITEMS: { key: AppView; label: string; icon: React.ElementType; hodOnly
   { key: "unit-assignments", label: "Unit Assignments", icon: BookMarked, hodOnly: true },
   { key: "manage-classes", label: "Manage Classes", icon: GraduationCap, hodOnly: true },
   { key: "manage-users", label: "Manage Users", icon: UserCog, hodOnly: true },
+  { key: "admin", label: "Admin Panel", icon: ShieldAlert, adminOnly: true },
 ];
 
 interface AppSidebarProps {
@@ -41,7 +42,9 @@ export function AppSidebar({ view, onViewChange, role, email, resubmittedCount =
   const { signOut } = useAuth();
 
   const items = NAV_ITEMS.filter((item) =>
-    (!item.hodOnly || role === "hod") && (!item.teacherOnly || role === "teacher")
+    (!item.hodOnly || role === "hod") &&
+    (!item.teacherOnly || role === "teacher") &&
+    (!item.adminOnly || role === "admin")
   );
 
   return (
@@ -88,7 +91,9 @@ export function AppSidebar({ view, onViewChange, role, email, resubmittedCount =
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0">
             <p className="text-xs font-medium text-sidebar-foreground truncate">{email}</p>
-            <p className="text-xs text-sidebar-foreground/60 capitalize">{role === "hod" ? "Head of Department" : "Teacher"}</p>
+            <p className="text-xs text-sidebar-foreground/60 capitalize">
+              {role === "hod" ? "Head of Department" : role === "admin" ? "Administrator" : "Teacher"}
+            </p>
           </div>
           <button
             onClick={signOut}

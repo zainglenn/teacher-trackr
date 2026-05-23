@@ -27,8 +27,8 @@ export async function POST(req: NextRequest) {
     .eq("id", caller.id)
     .single();
 
-  if (profile?.role !== "hod") {
-    return NextResponse.json({ error: "Only HOD can create users" }, { status: 403 });
+  if (!["hod", "admin"].includes(profile?.role)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const { email, password, full_name, role } = await req.json();

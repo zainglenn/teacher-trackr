@@ -13,6 +13,7 @@ import { ManageUsersView } from "@/components/ManageUsersView";
 import { ManageClassesView } from "@/components/ManageClassesView";
 import { MyUnitsView } from "@/components/MyUnitsView";
 import { UnitAssignmentsView } from "@/components/UnitAssignmentsView";
+import { AdminView } from "@/components/AdminView";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useStandards } from "@/hooks/useStandards";
@@ -27,6 +28,7 @@ function CurriculumApp({ userId, email }: { userId: string; email: string }) {
   const [view, setView] = useState<AppView>("dashboard");
   const { role } = useProfile(userId);
   const isHod = role === "hod";
+  const isAdmin = role === "admin";
   const { standards, byStrand, loading: standardsLoading } = useStandards();
   const { logs: coverageLogs } = useCoverage(userId);
   const { plans: ltps, assignUnit } = useLongTermPlans(userId, isHod);
@@ -87,6 +89,9 @@ function CurriculumApp({ userId, email }: { userId: string; email: string }) {
           )}
           {view === "unit-assignments" && isHod && (
             <UnitAssignmentsView plans={ltps} teachers={teachers} assignUnit={assignUnit} />
+          )}
+          {view === "admin" && isAdmin && (
+            <AdminView userId={userId} />
           )}
         </main>
       </SidebarInset>
