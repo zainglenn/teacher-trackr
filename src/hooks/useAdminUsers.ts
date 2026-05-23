@@ -53,6 +53,20 @@ export function useAdminUsers() {
     await fetchUsers();
   }
 
+  async function updateUser(userId: string, updates: { full_name?: string; role?: Role }) {
+    const token = await getFreshToken();
+    if (!token) throw new Error("Not authenticated");
+
+    const res = await fetch("/api/admin/update-user", {
+      method: "PATCH",
+      headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+      body: JSON.stringify({ userId, ...updates }),
+    });
+    const json = await res.json();
+    if (json.error) throw new Error(json.error);
+    setUsers((prev) => prev.map((u) => u.id === userId ? { ...u, ...updates } : u));
+  }
+
   async function deleteUser(userId: string) {
     const token = await getFreshToken();
     if (!token) throw new Error("Not authenticated");
@@ -67,5 +81,5 @@ export function useAdminUsers() {
     setUsers((prev) => prev.filter((u) => u.id !== userId));
   }
 
-  return { users, loading, createUser, deleteUser };
+  return { users, loading, createUser, updateUser, deleteUser };
 }
