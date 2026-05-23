@@ -608,6 +608,319 @@ Before running these tests:
 
 ---
 
+---
+
+## Standards Coverage Redesign (TC-35 – TC-38)
+
+---
+
+## TC-35 — Strand Summary Cards: Click-to-Filter
+
+**Actor:** Teacher  
+**Precondition:** Teacher is assigned to a class with at least some standards mapped in multiple strands
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Log in as teacher → open **Standards Coverage** | Five strand cards visible at the top (RL, RI, W, SL, L); each shows strand name, `X of Y standards covered`, and a coloured progress bar |
+| 2 | Note the counts on the RL (Reading Literature) card | X of Y matches number of RL standards with skills recorded |
+| 3 | Click the RL card | Standards table below filters to RL strand only; RL card appears highlighted/selected |
+| 4 | Click the RL card again (or click a different strand card) | Filter toggles off (shows all strands) or switches to the new strand |
+| 5 | Verify table row count matches card count | Number of rows shown equals the Y value on the card |
+
+**Pass criteria:** Clicking a strand card filters the table; the card count matches the table row count.
+
+---
+
+## TC-36 — Coverage Tab Bar Filtering
+
+**Actor:** Teacher  
+**Precondition:** At least one standard is fully covered, one partially covered, and one not covered
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Open Standards Coverage | Default tab is **All Standards**; all rows visible |
+| 2 | Click **Covered** tab | Only rows where covered = total and total > 0 are shown; count on tab matches |
+| 3 | Click **Partial** tab | Only rows where 0 < covered < total shown |
+| 4 | Click **Not Covered** tab | Only rows where covered = 0 shown |
+| 5 | Combine with strand card filter | Both the strand filter and the tab filter apply simultaneously |
+| 6 | Tab counts sum to total in All Standards tab | Covered + Partial + Not Covered = total standard count |
+
+**Pass criteria:** Each tab filters correctly; combined strand + tab filtering works; tab counts are accurate.
+
+---
+
+## TC-37 — Right Sidebar Consistency
+
+**Actor:** Teacher  
+**Precondition:** Some standards covered across multiple strands
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Open Standards Coverage | Right sidebar shows **Overall Coverage** card with a large `%` number and progress bar |
+| 2 | Verify sidebar `%` calculation | % = (total skills covered across all standards) / (total possible skills) × 100, rounded |
+| 3 | Check **Coverage Insights** card | Shows Covered count (green check), Partial count (amber warning), Not Covered count (red circle); counts match the tab counts |
+| 4 | Check **HOD Readiness** card | Visible in teacher view; shows circular progress ring and "Full coverage recommended before submitting for HOD review." |
+| 5 | Log in as HOD → open Standards Coverage for a teacher | HOD Readiness ring not shown in the HOD's own coverage sidebar (it is a teacher-facing prompt only) |
+
+**Pass criteria:** Sidebar totals match table totals; HOD Readiness only visible in teacher view.
+
+---
+
+## TC-38 — Strand Dropdown Filter
+
+**Actor:** Teacher  
+**Precondition:** Standards exist across all five strands
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Open Standards Coverage | Strand dropdown shows "All Strands" |
+| 2 | Open dropdown → select "Writing" | Table shows only W strand standards; strand card for W appears selected |
+| 3 | Change dropdown to "Language" | Table switches to L strand rows |
+| 4 | Change back to "All Strands" | All rows visible again |
+| 5 | Verify strand dropdown and strand cards stay in sync | Selecting a card updates the dropdown; changing dropdown updates card selection |
+
+**Pass criteria:** Dropdown and card filter are in sync; selecting either one updates the table correctly.
+
+---
+
+## HOD Monitoring Dashboard (TC-39 – TC-42)
+
+---
+
+## TC-39 — HOD Department Coverage View: Teacher Cards
+
+**Actor:** HOD  
+**Precondition:** At least two teachers are assigned to the HOD's department with different levels of standards coverage
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Log in as HOD → open **Standards Coverage** | Department view loads; one card per teacher in the department |
+| 2 | Verify each card shows | Teacher initials avatar, full name, readiness badge (Ready / In Progress / Starting), progress bar, `X of Y standards covered` |
+| 3 | Teacher with no coverage | Badge shows "Starting"; progress bar at 0% |
+| 4 | Teacher with partial coverage | Badge shows "In Progress" |
+| 5 | Teacher with full coverage | Badge shows "Ready"; progress bar at 100% |
+
+**Pass criteria:** All teachers shown; readiness badge accurately reflects their coverage level.
+
+---
+
+## TC-40 — HOD Department: Standards Table with Teachers Column
+
+**Actor:** HOD  
+**Precondition:** Multiple teachers have mapped different standards
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Log in as HOD → open Standards Coverage | Standards table visible below teacher cards |
+| 2 | Locate the **Teachers** column | Shows initials avatars for each teacher who has covered that standard |
+| 3 | Standard covered by no teachers | Teachers column shows no avatars (or empty state) |
+| 4 | Standard covered by all teachers | All teacher initials shown |
+| 5 | Hover an initials avatar | Tooltip shows teacher's full name |
+
+**Pass criteria:** Teachers column accurately reflects which teachers cover each standard; tooltips work.
+
+---
+
+## TC-41 — HOD Sidebar: Department Stats and Biggest Gaps
+
+**Actor:** HOD  
+**Precondition:** Mixed coverage across teachers and standards
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Log in as HOD → open Standards Coverage | Right sidebar shows department `%` coverage |
+| 2 | Check **Teacher Readiness** section | Shows three counts: Ready, In Progress, Starting — matches teacher card states |
+| 3 | Check **Biggest Gaps** section | Lists up to 5 standards with the fewest teachers covering them |
+| 4 | Verify gap ordering | Standards with the fewest teachers (most critical) are listed first |
+| 5 | All standards covered by all teachers | Biggest Gaps section is empty or shows a "No gaps" message |
+
+**Pass criteria:** Teacher readiness counts match cards; biggest gaps are ordered by fewest-teachers-covering.
+
+---
+
+## TC-42 — HOD: Teacher Selector
+
+**Actor:** HOD  
+**Precondition:** HOD has multiple teachers in their department
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Log in as HOD → open Standards Coverage | Teacher selector dropdown visible at top |
+| 2 | Default state | Shows department-wide view (all teachers) |
+| 3 | Select a specific teacher | View switches to that teacher's individual coverage (CoverageGrid, not DepartmentCoverageGrid) |
+| 4 | Select teacher's class if they have multiple | Class pill bar appears; shows only that teacher's classes |
+| 5 | Switch back to "All Teachers" | Department view restores |
+
+**Pass criteria:** HOD can drill into a single teacher's coverage and return to department view.
+
+---
+
+## Admin Panel (TC-43 – TC-46)
+
+---
+
+## TC-43 — Admin: Delete a Long Term Plan
+
+**Actor:** Admin  
+**Precondition:** At least one LTP with units exists in the system
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Log in as admin → click **Admin Panel** in sidebar | Admin Panel loads; "Long Term Plans" tab active |
+| 2 | Locate an LTP row | Title, teacher name, school year, status, and unit count visible |
+| 3 | Click the expand chevron on an LTP with units | Unit rows appear inline below the LTP |
+| 4 | Click the trash icon on the LTP row | Confirm dialog appears: "Delete Long Term Plan — This will permanently delete…" |
+| 5 | Click Cancel | Dialog closes; LTP still visible |
+| 6 | Click trash icon again → click **Delete LTP** | LTP and all its units are removed from the table; page reloads |
+| 7 | Navigate to Long Term Plans view | Deleted LTP no longer appears |
+
+**Pass criteria:** LTP and all its units are permanently deleted; confirmation required.
+
+---
+
+## TC-44 — Admin: Delete a Unit Plan from the LTPs Tab
+
+**Actor:** Admin  
+**Precondition:** An LTP with multiple units exists
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Log in as admin → Admin Panel → Long Term Plans tab | LTP list visible |
+| 2 | Expand an LTP with at least 2 units | Unit sub-rows appear |
+| 3 | Click the (smaller) trash icon on one unit sub-row | Confirm dialog appears: "Delete Unit Plan — This will permanently delete the unit…" |
+| 4 | Confirm deletion | Unit row removed; parent LTP unit count decrements |
+| 5 | Parent LTP still visible | Only the one unit was deleted |
+
+**Pass criteria:** Individual unit deletable from the LTP expand view without deleting the parent LTP.
+
+---
+
+## TC-45 — Admin: Delete a Unit Plan from the Unit Plans Tab
+
+**Actor:** Admin  
+**Precondition:** Unit plans exist across multiple LTPs
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Log in as admin → Admin Panel → **Unit Plans** tab | Flat list of all units shown; columns: Unit Title, Long Term Plan, Teacher, Term, Status |
+| 2 | Identify a unit to delete | All metadata visible in the row |
+| 3 | Click the trash icon → confirm | Unit deleted; removed from list |
+| 4 | Switch to Long Term Plans tab → expand the parent LTP | Unit no longer appears in the LTP's unit list |
+
+**Pass criteria:** Unit Plans tab shows all units flat; deletion reflects in the LTPs tab as well.
+
+---
+
+## TC-46 — Admin Panel: Access Control
+
+**Actor:** Teacher / HOD (non-admin)  
+**Precondition:** Two accounts exist: one teacher, one HOD
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Log in as **teacher** | Sidebar does not contain "Admin Panel" nav item |
+| 2 | Manually attempt `GET /api/admin/delete-ltp` with teacher's token | Returns `403 Forbidden` |
+| 3 | Log in as **HOD** | Sidebar does not contain "Admin Panel" nav item |
+| 4 | Manually attempt `DELETE /api/admin/delete-ltp` with HOD's token | Returns `403 Forbidden` |
+| 5 | Log in as **admin** | "Admin Panel" nav item visible in sidebar |
+| 6 | Admin Panel loads and delete buttons work | All delete operations succeed for admin role |
+
+**Pass criteria:** Admin Panel and its API routes are restricted to users with `role = "admin"` only.
+
+---
+
+## Manage Users Rebuild (TC-47 – TC-51)
+
+---
+
+## TC-47 — Manage Users: Table and Search
+
+**Actor:** HOD or Admin  
+**Precondition:** At least 3 users exist with different names, emails, and roles
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Log in as HOD → open **Manage Users** | Table shows all users; columns: User (avatar + name), Sign-in Email, Role badge, Joined date, Actions |
+| 2 | Verify "you" tag | The currently logged-in user has a small "you" label next to their name |
+| 3 | Type a partial name in the search field | Table filters in real time to matching users |
+| 4 | Type a partial email address | Matches by email as well |
+| 5 | Clear search | All users shown again |
+| 6 | Page header shows `N users with access to the system` | N matches total user count (not filtered count) |
+
+**Pass criteria:** Search filters by name and email in real time; total count in header is unaffected by search.
+
+---
+
+## TC-48 — Manage Users: Role Filter
+
+**Actor:** HOD or Admin  
+**Precondition:** Users exist across at least two roles
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Open Manage Users → open the role dropdown | Options: All Roles, Teacher, Head of Department, Administrator |
+| 2 | Select **Teacher** | Only teacher-role users shown |
+| 3 | Select **Head of Department** | Only HOD-role users shown |
+| 4 | Select **Administrator** | Only admin-role users shown |
+| 5 | Combine role filter with name search | Both filters apply simultaneously |
+| 6 | Counter below filters shows `X of Y` | X = filtered count, Y = total user count |
+
+**Pass criteria:** Role filter narrows the table; combined with search both filters are applied together.
+
+---
+
+## TC-49 — Manage Users: Edit User
+
+**Actor:** HOD or Admin  
+**Precondition:** At least one other user exists
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Click the pencil (edit) icon on any user row | Edit dialog opens; shows user's current email (read-only) as context |
+| 2 | Change the full name field | Name field accepts new input |
+| 3 | Change the role to a different value | Role dropdown updates |
+| 4 | Click **Save Changes** | Dialog closes; user row updates immediately with new name and role badge |
+| 5 | Refresh the page | Changes persisted (new name and role still shown) |
+| 6 | Open edit for the current user (you) | Edit works; "you" tag still visible after save |
+
+**Pass criteria:** Name and role changes save to the database and reflect immediately in the table.
+
+---
+
+## TC-50 — Manage Users: Copy Email
+
+**Actor:** HOD or Admin  
+**Precondition:** Users are visible in the table
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Locate the Sign-in Email column (desktop) | Email displayed in monospace font with a copy icon beside it |
+| 2 | Click the copy icon | Icon briefly changes to a green check mark; email is copied to clipboard |
+| 3 | Paste into another field | Copied text matches the user's email exactly |
+| 4 | On mobile (narrow viewport) | Email shown inline below the name in the User column with a copy icon |
+
+**Pass criteria:** Copy button works; visual feedback shown; mobile fallback email + copy visible.
+
+---
+
+## TC-51 — Manage Users: Add User with Admin Role
+
+**Actor:** Admin  
+**Precondition:** Logged in as admin
+
+| Step | Action | Expected Result |
+|------|--------|-----------------|
+| 1 | Click **Add User** button | Modal opens with fields: Full Name, Sign-in Email, Temporary Password, Role |
+| 2 | Fill in name and email; set role to **Administrator** | All fields accept input; role dropdown shows Administrator option |
+| 3 | Enter a password under 6 characters | Create User button disabled (or validation shown after submit attempt) |
+| 4 | Enter a valid password (≥ 6 chars) → click **Create User** | Modal closes; new user appears in the table with the Administrator role badge |
+| 5 | New admin logs in with the provided credentials | Login succeeds; Admin Panel visible in sidebar |
+| 6 | Attempt to add a user without filling in email or password | Create User button remains disabled |
+
+**Pass criteria:** Admin role available in Add User dialog; new admin account is functional immediately.
+
+---
+
 ## Regression Checks
 
 After running the above, verify these existing features still work:
@@ -625,3 +938,6 @@ After running the above, verify these existing features still work:
 - [ ] HOD Review: approve, request revision, re-open still work (TC-07, TC-08, TC-10)
 - [ ] Teacher submit / withdraw / resubmit workflow still works (TC-01, TC-02, TC-09)
 - [ ] My Units view shows correct per-unit status for teachers (TC-17)
+- [ ] Admin Panel visible only for admin role; hidden for teacher and HOD (TC-46)
+- [ ] Strand cards, tabs, and table all filter consistently (TC-35, TC-36)
+- [ ] HOD department view shows teacher cards with correct readiness badges (TC-39)
