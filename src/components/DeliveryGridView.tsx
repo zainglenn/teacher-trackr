@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Check, Clock, AlertCircle, Circle, X, ChevronRight, Grid3X3 } from "lucide-react";
+import { Check, Clock, AlertCircle, Circle, X, ChevronRight, Grid3X3, ArrowRight } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StrandBadge } from "@/components/ltp/StrandBadge";
 import { useDeliveryGrid, DeliveryStatus, GridClass, GridWeek, DeliveryRecord } from "@/hooks/useDeliveryGrid";
@@ -163,9 +164,10 @@ function DetailSheet({ open, onClose, cls, week, delivery, status }: DetailSheet
 
 interface DeliveryGridViewProps {
   teacherId: string;
+  onNavigate?: (view: import("@/components/AppSidebar").AppView) => void;
 }
 
-export function DeliveryGridView({ teacherId: _ }: DeliveryGridViewProps) {
+export function DeliveryGridView({ teacherId: _, onNavigate }: DeliveryGridViewProps) {
   const { classes, weeks, loading, getCellStatus, getDelivery, overdueCount } = useDeliveryGrid();
   const [activeTerm, setActiveTerm] = useState<1 | 2 | 3>(1);
   const [sheet, setSheet] = useState<{ classId: string; unitId: string; weekNumber: number } | null>(null);
@@ -268,7 +270,7 @@ export function DeliveryGridView({ teacherId: _ }: DeliveryGridViewProps) {
               onClick={() => setActiveTerm(term)}
               className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                 activeTerm === term
-                  ? "bg-background shadow-sm text-foreground"
+                  ? "bg-foreground text-background shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >
@@ -280,8 +282,19 @@ export function DeliveryGridView({ teacherId: _ }: DeliveryGridViewProps) {
 
       {/* ── No master plan notice ─────────────────────────────────────────── */}
       {noMasterPlan && (
-        <div className="px-4 sm:px-6 py-4 bg-muted/40 border-b text-sm text-muted-foreground">
-          Attach a master plan to classes in the Admin Panel to populate the grid.
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 px-4 sm:px-6 py-5 bg-muted/40 border-b">
+          <div className="flex-1">
+            <p className="text-sm font-medium">No master plan attached</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Attach a master plan to your classes in the Admin Panel to start tracking delivery.
+            </p>
+          </div>
+          {onNavigate && (
+            <Button variant="outline" size="sm" onClick={() => onNavigate("hod-admin")} className="w-fit">
+              Go to Admin Panel
+              <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
+            </Button>
+          )}
         </div>
       )}
 

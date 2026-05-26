@@ -59,23 +59,153 @@ function ClassStatusBadge({ cls }: { cls: ClassWithTeacher }) {
 
 // ── Classes Tab ───────────────────────────────────────────────────────────────
 
-function ClassesTab({ plans, teachers }: { plans: LongTermPlan[]; teachers: { id: string; email: string; full_name: string | null; role: string }[] }) {
+type TeacherRow = { id: string; email: string; full_name: string | null; role: string };
+
+function ClassDetailPanel({
+  cls,
+  plans,
+  teachers,
+  reassignClass,
+  deleteClass,
+  refresh,
+  onDeleted,
+}: {
+  cls: ClassWithTeacher & { ltp_id?: string };
+  plans: LongTermPlan[];
+  teachers: TeacherRow[];
+  reassignClass: (classId: string, teacherId: string) => Promise<void>;
+  deleteClass: (classId: string) => Promise<void>;
+  refresh: () => void;
+  onDeleted: () => void;
+}) {
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+
+  async function attachPlan(ltpId: string) {
+    await supabase.from("classes").update({ ltp_id: ltpId || null }).eq("id", cls.id);
+    refresh();
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-base font-semibold">{cls.name}</h2>
+          <p className="text-xs text-muted-foreground mt-0.5">{cls.school_year}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <ClassStatusBadge cls={cls} />
+          <button
+            onClick={() => setDeleteConfirm(true)}
+            className="text-muted-foreground hover:text-destructive transition-colors"
+            aria-label="Delete class"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+
+      <Separator />
+
+      <div className="space-y-5">
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5">
+            <UserCheck className="h-3.5 w-3.5 text-muted-foreground" />
+            <Label className="text-xs font-medium">Teacher</Label>
+          </div>
+          <Select
+            value={cls.teacher?.id ?? ""}
+            onValueChange={(val) => val && reassignClass(cls.id, val)}
+          >
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue placeholder="Assign teacher…">
+                {cls.teacher ? (cls.teacher.full_name ?? cls.teacher.email) : "Assign teacher…"}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {teachers.map((t) => (
+                <SelectItem key={t.id} value={t.id} className="text-xs">
+                  {t.full_name ?? t.email}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex items-center gap-1.5">
+            <BookOpen className="h-3.5 w-3.5 text-muted-foreground" />
+            <Label className="text-xs font-medium">Master Plan</Label>
+          </div>
+          <Select
+            value={cls.ltp_id ?? ""}
+            onValueChange={(val) => attachPlan(val ?? "")}
+          >
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue placeholder="Attach plan…" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="" className="text-xs text-muted-foreground">None</SelectItem>
+              {plans.map((p) => (
+                <SelectItem key={p.id} value={p.id} className="text-xs">
+                  {p.title} ({p.school_year})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <Dialog open={deleteConfirm} onOpenChange={setDeleteConfirm}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Delete class?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground py-2">
+            This will permanently delete the class and all delivery records. This cannot be undone.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirm(false)}>Cancel</Button>
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                await deleteClass(cls.id);
+                setDeleteConfirm(false);
+                onDeleted();
+              }}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function ClassesTab({ plans, teachers }: { plans: LongTermPlan[]; teachers: TeacherRow[] }) {
   const { classes, loading, createClass, deleteClass, reassignClass, refresh } = useAllClasses();
 
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [createDialog, setCreateDialog] = useState(false);
   const [newName, setNewName] = useState("");
   const [newTeacherId, setNewTeacherId] = useState("");
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
+  const effectiveSelectedId = selectedId ?? classes[0]?.id ?? null;
+  const selectedCls = classes.find((c) => c.id === effectiveSelectedId) as
+    | (ClassWithTeacher & { ltp_id?: string })
+    | undefined;
+
   async function handleCreate() {
     if (!newName.trim()) return;
     setSaving(true);
-    await createClass(newName.trim(), (newTeacherId || teachers[0]?.id) ?? "");
+    const created = await createClass(newName.trim(), (newTeacherId || teachers[0]?.id) ?? "");
     setNewName("");
     setNewTeacherId("");
     setCreateDialog(false);
     setSaving(false);
+    if (created?.id) setSelectedId(created.id);
   }
 
   async function attachPlan(classId: string, ltpId: string) {
@@ -93,178 +223,257 @@ function ClassesTab({ plans, teachers }: { plans: LongTermPlan[]; teachers: { id
     );
   }
 
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">
-          {classes.length} class{classes.length !== 1 ? "es" : ""} this year
-        </p>
+  const createBtn = (
+    <Button size="sm" onClick={() => setCreateDialog(true)}>
+      <Plus className="h-3.5 w-3.5 mr-1.5" />
+      New Class
+    </Button>
+  );
+
+  const emptyState = (
+    <Card>
+      <CardContent className="flex flex-col items-center justify-center py-12 text-center">
+        <GraduationCap className="h-8 w-8 text-muted-foreground mb-3" />
+        <p className="text-sm font-medium mb-1">No classes yet</p>
+        <p className="text-xs text-muted-foreground mb-4">Create classes to assign teachers and plans.</p>
         <Button size="sm" onClick={() => setCreateDialog(true)}>
           <Plus className="h-3.5 w-3.5 mr-1.5" />
-          New Class
+          Create first class
         </Button>
+      </CardContent>
+    </Card>
+  );
+
+  const createDialogNode = (
+    <Dialog open={createDialog} onOpenChange={setCreateDialog}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>New Class</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 py-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="class-name">Class name</Label>
+            <Input
+              id="class-name"
+              placeholder="e.g. 6A"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && handleCreate()}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="class-teacher">Assign teacher</Label>
+            <Select value={newTeacherId} onValueChange={(val) => val && setNewTeacherId(val)}>
+              <SelectTrigger id="class-teacher">
+                <SelectValue placeholder="Select teacher…" />
+              </SelectTrigger>
+              <SelectContent>
+                {teachers.map((t) => (
+                  <SelectItem key={t.id} value={t.id}>
+                    {t.full_name ?? t.email}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setCreateDialog(false)}>Cancel</Button>
+          <Button onClick={handleCreate} disabled={!newName.trim() || saving}>
+            {saving ? "Creating…" : "Create Class"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+
+  return (
+    <>
+      {/* ── Mobile / tablet: card list ─────────────────────────────────────── */}
+      <div className="xl:hidden space-y-4">
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            {classes.length} class{classes.length !== 1 ? "es" : ""} this year
+          </p>
+          {createBtn}
+        </div>
+
+        {classes.length === 0 && emptyState}
+
+        <div className="space-y-2">
+          {classes.map((cls) => {
+            const extCls = cls as ClassWithTeacher & { ltp_id?: string };
+            return (
+              <Card key={cls.id} className="overflow-hidden">
+                <CardContent className="p-0">
+                  <div className="flex items-center gap-3 px-4 py-3 border-b">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold">{cls.name}</p>
+                      <p className="text-xs text-muted-foreground">{cls.school_year}</p>
+                    </div>
+                    <ClassStatusBadge cls={cls} />
+                    <button
+                      onClick={() => setDeleteConfirm(cls.id)}
+                      className="text-muted-foreground hover:text-destructive transition-colors ml-1"
+                      aria-label="Delete class"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x">
+                    <div className="px-4 py-3 flex items-center gap-2.5">
+                      <UserCheck className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-muted-foreground mb-1">Teacher</p>
+                        <Select
+                          value={cls.teacher?.id ?? ""}
+                          onValueChange={(val) => val && reassignClass(cls.id, val)}
+                        >
+                          <SelectTrigger className="h-7 text-xs border-0 bg-transparent p-0 shadow-none focus:ring-0">
+                            <SelectValue placeholder="Assign teacher…">
+                              {cls.teacher ? (cls.teacher.full_name ?? cls.teacher.email) : "Assign teacher…"}
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {teachers.map((t) => (
+                              <SelectItem key={t.id} value={t.id} className="text-xs">
+                                {t.full_name ?? t.email}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div className="px-4 py-3 flex items-center gap-2.5">
+                      <BookOpen className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-muted-foreground mb-1">Master Plan</p>
+                        <Select
+                          value={extCls.ltp_id ?? ""}
+                          onValueChange={(val) => attachPlan(cls.id, val ?? "")}
+                        >
+                          <SelectTrigger className="h-7 text-xs border-0 bg-transparent p-0 shadow-none focus:ring-0">
+                            <SelectValue placeholder="Attach plan…" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="" className="text-xs text-muted-foreground">None</SelectItem>
+                            {plans.map((p) => (
+                              <SelectItem key={p.id} value={p.id} className="text-xs">
+                                {p.title} ({p.school_year})
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+
+        <Dialog open={!!deleteConfirm} onOpenChange={(v) => !v && setDeleteConfirm(null)}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Delete class?</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground py-2">
+              This will permanently delete the class and all delivery records. This cannot be undone.
+            </p>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDeleteConfirm(null)}>Cancel</Button>
+              <Button
+                variant="destructive"
+                onClick={async () => {
+                  if (deleteConfirm) await deleteClass(deleteConfirm);
+                  setDeleteConfirm(null);
+                }}
+              >
+                Delete
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      {classes.length === 0 && (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-            <GraduationCap className="h-8 w-8 text-muted-foreground mb-3" />
-            <p className="text-sm font-medium mb-1">No classes yet</p>
-            <p className="text-xs text-muted-foreground mb-4">Create classes to assign teachers and plans.</p>
-            <Button size="sm" onClick={() => setCreateDialog(true)}>
-              <Plus className="h-3.5 w-3.5 mr-1.5" />
-              Create first class
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+      {/* ── Desktop: two-panel layout ──────────────────────────────────────── */}
+      <div className="hidden xl:flex border rounded-xl overflow-hidden bg-background min-h-[420px]">
+        {/* Left: class list */}
+        <div className="w-56 shrink-0 border-r flex flex-col">
+          <div className="flex items-center justify-between px-3 py-2.5 border-b">
+            <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+              {classes.length} class{classes.length !== 1 ? "es" : ""}
+            </span>
+            <button
+              onClick={() => setCreateDialog(true)}
+              className="p-1 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+              aria-label="New class"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </button>
+          </div>
 
-      <div className="space-y-2">
-        {classes.map((cls) => {
-          const extCls = cls as ClassWithTeacher & { ltp_id?: string };
-          return (
-            <Card key={cls.id} className="overflow-hidden">
-              <CardContent className="p-0">
-                <div className="flex items-center gap-3 px-4 py-3 border-b">
-                  <div className="w-8 h-8 rounded-lg bg-sidebar text-sidebar-foreground flex items-center justify-center text-xs font-bold shrink-0">
-                    {cls.name}
-                  </div>
+          {classes.length === 0 ? (
+            <div className="flex flex-col items-center justify-center flex-1 py-8 px-4 text-center">
+              <GraduationCap className="h-6 w-6 text-muted-foreground mb-2" />
+              <p className="text-xs text-muted-foreground">No classes yet</p>
+            </div>
+          ) : (
+            <div className="overflow-y-auto flex-1">
+              {classes.map((cls) => (
+                <button
+                  key={cls.id}
+                  onClick={() => setSelectedId(cls.id)}
+                  className={`w-full flex items-center gap-2.5 px-3 py-3 text-left border-b last:border-b-0 transition-colors ${
+                    cls.id === effectiveSelectedId
+                      ? "bg-muted/60"
+                      : "hover:bg-muted/30"
+                  }`}
+                >
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold">{cls.name}</p>
-                    <p className="text-xs text-muted-foreground">{cls.school_year}</p>
+                    <p className="text-sm font-medium truncate">{cls.name}</p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {cls.teacher?.full_name ?? "No teacher"}
+                    </p>
                   </div>
                   <ClassStatusBadge cls={cls} />
-                  <button
-                    onClick={() => setDeleteConfirm(cls.id)}
-                    className="text-muted-foreground hover:text-destructive transition-colors ml-1"
-                    aria-label="Delete class"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x">
-                  {/* Teacher assignment */}
-                  <div className="px-4 py-3 flex items-center gap-2.5">
-                    <UserCheck className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-muted-foreground mb-1">Teacher</p>
-                      <Select
-                        value={cls.teacher?.id ?? ""}
-                        onValueChange={(val) => val && reassignClass(cls.id, val)}
-                      >
-                        <SelectTrigger className="h-7 text-xs border-0 bg-transparent p-0 shadow-none focus:ring-0">
-                          <SelectValue placeholder="Assign teacher…">
-                            {cls.teacher ? (cls.teacher.full_name ?? cls.teacher.email) : "Assign teacher…"}
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {teachers.map((t) => (
-                            <SelectItem key={t.id} value={t.id} className="text-xs">
-                              {t.full_name ?? t.email}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  {/* Plan attachment */}
-                  <div className="px-4 py-3 flex items-center gap-2.5">
-                    <BookOpen className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-muted-foreground mb-1">Master Plan</p>
-                      <Select
-                        value={extCls.ltp_id ?? ""}
-                        onValueChange={(val) => attachPlan(cls.id, val ?? "")}
-                      >
-                        <SelectTrigger className="h-7 text-xs border-0 bg-transparent p-0 shadow-none focus:ring-0">
-                          <SelectValue placeholder="Attach plan…" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="" className="text-xs text-muted-foreground">None</SelectItem>
-                          {plans.map((p) => (
-                            <SelectItem key={p.id} value={p.id} className="text-xs">
-                              {p.title} ({p.school_year})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
+        {/* Right: detail panel */}
+        <div className="flex-1 p-6 overflow-y-auto">
+          {selectedCls ? (
+            <ClassDetailPanel
+              cls={selectedCls}
+              plans={plans}
+              teachers={teachers}
+              reassignClass={reassignClass}
+              deleteClass={deleteClass}
+              refresh={refresh}
+              onDeleted={() => setSelectedId(null)}
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center h-full text-center py-12">
+              <GraduationCap className="h-8 w-8 text-muted-foreground mb-3" />
+              <p className="text-sm font-medium mb-1">No classes yet</p>
+              <p className="text-xs text-muted-foreground mb-4">Create a class to get started.</p>
+              <Button size="sm" onClick={() => setCreateDialog(true)}>
+                <Plus className="h-3.5 w-3.5 mr-1.5" />
+                Create first class
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Create dialog */}
-      <Dialog open={createDialog} onOpenChange={setCreateDialog}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>New Class</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="class-name">Class name</Label>
-              <Input
-                id="class-name"
-                placeholder="e.g. 6A"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="class-teacher">Assign teacher</Label>
-              <Select value={newTeacherId} onValueChange={(val) => val && setNewTeacherId(val)}>
-                <SelectTrigger id="class-teacher">
-                  <SelectValue placeholder="Select teacher…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {teachers.map((t) => (
-                    <SelectItem key={t.id} value={t.id}>
-                      {t.full_name ?? t.email}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateDialog(false)}>Cancel</Button>
-            <Button onClick={handleCreate} disabled={!newName.trim() || saving}>
-              {saving ? "Creating…" : "Create Class"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete confirm dialog */}
-      <Dialog open={!!deleteConfirm} onOpenChange={(v) => !v && setDeleteConfirm(null)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Delete class?</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground py-2">
-            This will permanently delete the class and all delivery records. This cannot be undone.
-          </p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteConfirm(null)}>Cancel</Button>
-            <Button
-              variant="destructive"
-              onClick={async () => {
-                if (deleteConfirm) await deleteClass(deleteConfirm);
-                setDeleteConfirm(null);
-              }}
-            >
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+      {createDialogNode}
+    </>
   );
 }
 
@@ -374,11 +583,14 @@ function NotificationsTab() {
       </div>
 
       {classes.length > 0 && (
-        <Button size="sm" className="w-full" onClick={() => {}}>
+        <Button size="sm" className="w-full" disabled title="Notification delivery coming soon">
           <Check className="h-3.5 w-3.5 mr-1.5" />
           Save notification settings
         </Button>
       )}
+      <p className="text-xs text-muted-foreground text-center">
+        Email reminders coming soon — settings are saved for when delivery is enabled.
+      </p>
     </div>
   );
 }

@@ -73,12 +73,12 @@ const SLIDE_ICONS: Record<SlidePreview["type"], string> = {
 };
 
 const SLIDE_ACCENTS: Record<SlidePreview["type"], React.CSSProperties> = {
-  title:       { background: "#1E293B", color: "#FFFFFF" },
-  objectives:  { background: "#EFF6FF", color: "#1E40AF", borderColor: "#DBEAFE" },
-  standards:   { background: "#F5F3FF", color: "#5B21B6", borderColor: "#EDE9FE" },
-  activities:  { background: "#F0FDF4", color: "#065F46", borderColor: "#D1FAE5" },
-  vocabulary:  { background: "#F8FAFC", color: "#1E293B", borderColor: "#E2E8F0" },
-  exit:        { background: "#1E293B", color: "#FFFFFF" },
+  title:       { background: "var(--sidebar)",          color: "var(--sidebar-foreground)" },
+  objectives:  { background: "var(--strand-rl-bg)",     color: "var(--strand-rl-text)",  borderColor: "var(--strand-rl-border)" },
+  standards:   { background: "var(--strand-ri-bg)",     color: "var(--strand-ri-text)",  borderColor: "var(--strand-ri-border)" },
+  activities:  { background: "var(--strand-sl-bg)",     color: "var(--strand-sl-text)",  borderColor: "var(--strand-sl-border)" },
+  vocabulary:  { background: "var(--muted)",            color: "var(--muted-foreground)", borderColor: "var(--border)" },
+  exit:        { background: "var(--sidebar)",          color: "var(--sidebar-foreground)" },
 };
 
 interface PptGenerationSheetProps {

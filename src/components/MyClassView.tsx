@@ -356,13 +356,18 @@ export function MyClassView({ teacherId }: MyClassViewProps) {
 
   const extClass = myClass as typeof myClass & { ltp_id?: string };
 
+  const extClass2 = myClass as typeof myClass & { subject?: string; grade?: string };
+  const classSubject = extClass2.subject ?? "English";
+  const classGrade = extClass2.grade ?? "";
+  const classLabel = [classGrade, classSubject].filter(Boolean).join(" · ") || myClass.school_year;
+
   // ── No master plan ───────────────────────────────────────────────────────
   if (!extClass.ltp_id || masterWeeks.length === 0) {
     return (
       <div className="max-w-2xl mx-auto space-y-5">
         <div>
           <h1 className="text-lg font-semibold tracking-tight">{myClass.name}</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Your class</p>
+          <p className="text-sm text-muted-foreground mt-0.5">{classLabel}</p>
         </div>
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
@@ -400,7 +405,7 @@ export function MyClassView({ teacherId }: MyClassViewProps) {
       <div className="pb-4 flex flex-col sm:flex-row sm:items-end gap-3">
         <div className="flex-1">
           <h1 className="text-lg font-semibold tracking-tight">{myClass.name}</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">{myClass.school_year}</p>
+          <p className="text-sm text-muted-foreground mt-0.5">{classLabel}</p>
         </div>
 
         {/* Term tabs */}
@@ -411,7 +416,7 @@ export function MyClassView({ teacherId }: MyClassViewProps) {
               onClick={() => setActiveTerm(term)}
               className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
                 activeTerm === term
-                  ? "bg-background shadow-sm text-foreground"
+                  ? "bg-foreground text-background shadow-sm"
                   : "text-muted-foreground hover:text-foreground"
               }`}
             >

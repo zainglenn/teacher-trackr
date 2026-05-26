@@ -71,7 +71,7 @@ function CurriculumApp({ userId, email }: { userId: string; email: string }) {
             <StudentProgressView teacherId={userId} standards={standards} byStrand={byStrand} isHod={isHod} />
           )}
           {view === "delivery-grid" && isHod && (
-            <DeliveryGridView teacherId={userId} />
+            <DeliveryGridView teacherId={userId} onNavigate={setView} />
           )}
           {view === "hod-admin" && isHod && (
             <HODAdminPanel

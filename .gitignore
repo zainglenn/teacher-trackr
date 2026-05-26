@@ -42,3 +42,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# tool artefacts — never commit
+.playwright-mcp/
+.claude/
+.agents/
