@@ -12,6 +12,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { StrandBadge } from "@/components/ltp/StrandBadge";
 import { supabase } from "@/lib/supabase";
 import { useClasses } from "@/hooks/useClasses";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Standard, LessonWeek } from "@/types";
 import { PptGenerationSheet } from "@/components/PptGenerationSheet";
 
@@ -327,12 +328,17 @@ function WeekDetailSheet({
     setSaving(false);
   }
 
+  const isMobile = useIsMobile();
+
   if (!week) return null;
 
   return (
     <>
       <Sheet open={open} onOpenChange={(v) => !v && onClose()}>
-        <SheetContent className="w-full sm:max-w-[420px] flex flex-col gap-0 p-0 overflow-hidden">
+        <SheetContent
+          side={isMobile ? "bottom" : "right"}
+          className={`flex flex-col gap-0 p-0 overflow-hidden ${isMobile ? "max-h-[88vh] rounded-t-2xl" : "w-full sm:max-w-[420px]"}`}
+        >
           <SheetHeader className="px-5 pt-5 pb-4 border-b border-border/60 shrink-0">
             <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
               {week.unit_title} · Week {week.week}
@@ -526,19 +532,17 @@ function UnitLane({
           </span>
         )}
 
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-[11px] font-medium text-muted-foreground shrink-0">
-              Unit {unit.unit_number}
-            </span>
-            <span className="text-sm font-semibold truncate">{unit.title}</span>
-            <Badge
-              variant="outline"
-              className="text-[10px] px-1.5 py-0 shrink-0 font-normal text-muted-foreground"
-            >
-              {assessmentLabel}
-            </Badge>
-          </div>
+        <div className="flex-1 min-w-0 flex items-center gap-2">
+          <span className="text-[11px] font-medium text-muted-foreground shrink-0">
+            Unit {unit.unit_number}
+          </span>
+          <span className="text-sm font-semibold truncate">{unit.title}</span>
+          <Badge
+            variant="outline"
+            className="text-[10px] px-1.5 py-0 shrink-0 font-normal text-muted-foreground hidden sm:inline-flex"
+          >
+            {assessmentLabel}
+          </Badge>
         </div>
 
         <div className="flex items-center gap-2 shrink-0">

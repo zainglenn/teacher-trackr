@@ -368,3 +368,11 @@
     --term-3-accent:   oklch(0.65 0.13 163);
   }
 }
+
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
