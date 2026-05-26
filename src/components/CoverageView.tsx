@@ -62,8 +62,8 @@ const STRAND_ACCENT_VAR: Record<string, string> = {
 function strandIconStyle(code: string): React.CSSProperties {
   const c = code.toLowerCase();
   return {
-    background: `var(--strand-${c}-bg, var(--muted))`,
-    color: `var(--strand-${c}-text, var(--muted-foreground))`,
+    background: `color-mix(in srgb, var(--strand-${c}-accent, var(--muted)) 15%, transparent)`,
+    color: `var(--strand-${c}-accent, var(--muted-foreground))`,
   };
 }
 
