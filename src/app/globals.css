@@ -254,6 +254,18 @@
   --breakpoint-lg:   1024px;
   --breakpoint-xl:   1280px;
   --breakpoint-2xl:  1536px;
+
+  /* ── Term Accent Colors ───────────────────────────────────────────────────── */
+  /* Left-border accent on unit swim lanes, keyed by academic term.             */
+  /* Intentionally distinct from strand colors — terms ≠ strands.               */
+  --term-1-accent:   oklch(0.55 0.18 264);   /* indigo  — Term 1 */
+  --term-2-accent:   oklch(0.52 0.17 307);   /* violet  — Term 2 */
+  --term-3-accent:   oklch(0.47 0.14 163);   /* emerald — Term 3 */
+
+  /* ── Unit Lane States ────────────────────────────────────────────────────── */
+  /* Opacity for upcoming (not yet active) unit lanes.                          */
+  /* Applied as opacity on the entire lane so it degrades gracefully.           */
+  --lane-upcoming-opacity: 0.55;
 }
 
 /* ── Dark mode overrides for extended tokens ─────────────────────────────── */
@@ -295,6 +307,13 @@
   --strand-l-bg:             oklch(0.240 0.050 11);
   --strand-l-text:           oklch(0.840 0.120 11);
   --strand-l-border:         oklch(0.330 0.080 11);
+
+  /* Term accents — lightened for dark mode readability */
+  --term-1-accent:   oklch(0.70 0.16 264);
+  --term-2-accent:   oklch(0.68 0.15 307);
+  --term-3-accent:   oklch(0.65 0.13 163);
+
+  /* Lane upcoming opacity unchanged — same contrast relationship in dark mode */
 
   /* Shadows are darker in dark mode */
   --shadow-sm:   0 1px 2px 0 oklch(0 0 0 / 0.3);
@@ -343,5 +362,9 @@
     --shadow-sm:   0 1px 2px 0 oklch(0 0 0 / 0.3);
     --shadow-md:   0 4px 6px -1px oklch(0 0 0 / 0.4), 0 2px 4px -2px oklch(0 0 0 / 0.3);
     --shadow-lg:   0 10px 15px -3px oklch(0 0 0 / 0.5), 0 4px 6px -4px oklch(0 0 0 / 0.4);
+
+    --term-1-accent:   oklch(0.70 0.16 264);
+    --term-2-accent:   oklch(0.68 0.15 307);
+    --term-3-accent:   oklch(0.65 0.13 163);
   }
 }
