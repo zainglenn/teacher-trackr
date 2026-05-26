@@ -15,16 +15,14 @@ import {
   Languages,
   BookMarked,
   AlertTriangle,
-  SlidersHorizontal,
-  MoreHorizontal,
 } from "lucide-react";
 import { Standard } from "@/types";
-import { useSkillCoverage } from "@/hooks/useSkillCoverage";
+import { useCoverageFromDelivery, CoverageStatus } from "@/hooks/useCoverageFromDelivery";
 import { useAllSkills } from "@/hooks/useAllSkills";
 import { useClasses } from "@/hooks/useClasses";
 import { useTeachers } from "@/hooks/useTeachers";
 import { useDepartmentCoverage } from "@/hooks/useDepartmentCoverage";
-import { StandardDetailView } from "@/components/StandardDetailView";
+import { StandardContextView } from "@/components/StandardDetailView";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { STRAND_COLORS, StrandBadge } from "@/components/ltp/StrandBadge";
 
@@ -35,29 +33,14 @@ interface CoverageViewProps {
   isHod?: boolean;
 }
 
-type StatusFilter = "all" | "covered" | "partial" | "not_covered";
+type StatusFilter = "all" | "covered" | "in_progress" | "planned" | "gap";
 
-function skillStatus(covered: number, total: number): "covered" | "partial" | "not_covered" {
-  if (total === 0 || covered === 0) return "not_covered";
-  if (covered === total) return "covered";
-  return "partial";
-}
-
-// byStrand keys are full strand names; this maps them to short codes
 const STRAND_CODE: Record<string, string> = {
   "Reading Literature": "RL",
   "Reading Informational Text": "RI",
   "Writing": "W",
   "Speaking & Listening": "SL",
   "Language": "L",
-};
-
-const STRAND_FULL_NAME: Record<string, string> = {
-  RL: "Reading Literature",
-  RI: "Reading Informational Text",
-  W: "Writing",
-  SL: "Speaking & Listening",
-  L: "Language",
 };
 
 const STRAND_ICON: Record<string, React.ReactNode> = {
@@ -68,12 +51,12 @@ const STRAND_ICON: Record<string, React.ReactNode> = {
   L: <Languages className="h-5 w-5" />,
 };
 
-const STRAND_PROGRESS_COLOR: Record<string, string> = {
-  RL: "bg-blue-500",
-  RI: "bg-violet-500",
-  W: "bg-amber-500",
-  SL: "bg-emerald-500",
-  L: "bg-rose-500",
+const STRAND_ACCENT_VAR: Record<string, string> = {
+  RL: "--strand-rl-accent",
+  RI: "--strand-ri-accent",
+  W:  "--strand-w-accent",
+  SL: "--strand-sl-accent",
+  L:  "--strand-l-accent",
 };
 
 const STRAND_ICON_BG: Record<string, string> = {
@@ -84,6 +67,26 @@ const STRAND_ICON_BG: Record<string, string> = {
   L: "bg-rose-50 text-rose-600",
 };
 
+function StatusBadge({ status }: { status: CoverageStatus }) {
+  const styles: Record<CoverageStatus, { bg: string; text: string; border: string; label: string }> = {
+    covered:     { bg: "var(--status-taught-bg)",  text: "var(--status-taught-text)",  border: "var(--status-taught-border)",  label: "Covered"     },
+    in_progress: { bg: "var(--status-behind-bg)",  text: "var(--status-behind-text)",  border: "var(--status-behind-border)",  label: "In Progress" },
+    planned:     { bg: "var(--status-pending-bg)", text: "var(--status-pending-text)", border: "var(--status-pending-border)", label: "Planned"     },
+    gap:         { bg: "var(--status-overdue-bg)", text: "var(--status-overdue-text)", border: "var(--status-overdue-border)", label: "Gap"         },
+  };
+  const s = styles[status];
+  const Icon = status === "covered" ? CheckCircle2 : status === "gap" ? AlertTriangle : status === "in_progress" ? AlertTriangle : Circle;
+  return (
+    <span
+      className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border font-medium"
+      style={{ background: s.bg, color: s.text, borderColor: s.border }}
+    >
+      <Icon className="h-3 w-3" />
+      {s.label}
+    </span>
+  );
+}
+
 export function CoverageView({ standards, byStrand, teacherId, isHod }: CoverageViewProps) {
   const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(null);
   const { teachers } = useTeachers();
@@ -92,7 +95,6 @@ export function CoverageView({ standards, byStrand, teacherId, isHod }: Coverage
   const { classes, loading: classesLoading } = useClasses(effectiveTeacherId ?? "");
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
 
-  // Default to first class once loaded
   const activeClassId = selectedClassId ?? classes[0]?.id ?? null;
 
   if (classesLoading && !isHod) return null;
@@ -102,7 +104,7 @@ export function CoverageView({ standards, byStrand, teacherId, isHod }: Coverage
   return (
     <PageContainer
       title="Standards Coverage"
-      description="View which New York State Next Generation ELA standards are mapped to your units, and which ones still need to be addressed."
+      description="Coverage is computed from your class delivery — no extra steps needed."
     >
       <div className="space-y-4">
         {isHod && (
@@ -172,8 +174,8 @@ function CoverageGrid({
   classId: string | null;
   isHod?: boolean;
 }) {
-  const { coveredSkillIds } = useSkillCoverage(teacherId, classId);
-  const { byStandardId, loading: skillsLoading } = useAllSkills();
+  const { statusMap, loading } = useCoverageFromDelivery(teacherId, classId);
+  const { byStandardId } = useAllSkills();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [selectedStandard, setSelectedStandard] = useState<(typeof standards)[0] | null>(null);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -181,67 +183,78 @@ function CoverageGrid({
 
   const strandKeys = Object.keys(byStrand);
 
-  // Per-standard computed values
   const standardStats = useMemo(() => {
     return standards.map((s) => {
-      const skills = byStandardId[s.id] ?? [];
-      const covered = skills.filter((sk) => coveredSkillIds.has(sk.id)).length;
-      const total = skills.length;
-      const status = skillStatus(covered, total);
-      const pct = total > 0 ? Math.round((covered / total) * 100) : 0;
-      return { standard: s, covered, total, status, pct };
+      const delivery = statusMap.get(s.id);
+      const status: CoverageStatus = delivery?.status ?? "gap";
+      const deliveredWeeks = delivery?.deliveredWeeks ?? 0;
+      const totalWeeks = delivery?.totalWeeks ?? 0;
+      const pct = totalWeeks > 0 ? Math.round((deliveredWeeks / totalWeeks) * 100) : 0;
+      return { standard: s, status, deliveredWeeks, totalWeeks, pct, delivery };
     });
-  }, [standards, byStandardId, coveredSkillIds]);
+  }, [standards, statusMap]);
 
-  // Overall totals
-  const totalSkills = standardStats.reduce((sum, s) => sum + s.total, 0);
-  const totalCovered = standardStats.reduce((sum, s) => sum + s.covered, 0);
-  const overallPct = totalSkills > 0 ? Math.round((totalCovered / totalSkills) * 100) : 0;
+  const coveredCount     = standardStats.filter((s) => s.status === "covered").length;
+  const inProgressCount  = standardStats.filter((s) => s.status === "in_progress").length;
+  const plannedCount     = standardStats.filter((s) => s.status === "planned").length;
+  const gapCount         = standardStats.filter((s) => s.status === "gap").length;
+  const overallPct       = standards.length > 0 ? Math.round((coveredCount / standards.length) * 100) : 0;
 
-  const coveredCount = standardStats.filter((s) => s.status === "covered").length;
-  const partialCount = standardStats.filter((s) => s.status === "partial").length;
-  const notCoveredCount = standardStats.filter((s) => s.status === "not_covered").length;
-
-  // Per-strand stats for header cards
   const strandStats = useMemo(() => {
     return strandKeys.map((strand) => {
       const items = byStrand[strand] ?? [];
-      const stats = items.map((s) => {
-        const skills = byStandardId[s.id] ?? [];
-        const covered = skills.filter((sk) => coveredSkillIds.has(sk.id)).length;
-        const total = skills.length;
-        return { covered, total };
-      });
-      const totalSkillsInStrand = stats.reduce((sum, s) => sum + s.total, 0);
-      const coveredSkillsInStrand = stats.reduce((sum, s) => sum + s.covered, 0);
-      const coveredStandards = stats.filter((s) => s.covered === s.total && s.total > 0).length;
-      const pct = totalSkillsInStrand > 0 ? Math.round((coveredSkillsInStrand / totalSkillsInStrand) * 100) : 0;
+      const coveredStandards = items.filter((s) => (statusMap.get(s.id)?.status ?? "gap") === "covered").length;
+      const pct = items.length > 0 ? Math.round((coveredStandards / items.length) * 100) : 0;
       return { strand, total: items.length, coveredStandards, pct };
     });
-  }, [strandKeys, byStrand, byStandardId, coveredSkillIds]);
+  }, [strandKeys, byStrand, statusMap]);
 
   if (selectedStandard) {
     return (
-      <StandardDetailView
+      <StandardContextView
         standard={selectedStandard}
-        teacherId={teacherId}
-        classId={classId}
         onBack={() => setSelectedStandard(null)}
         preloadedSkills={byStandardId[selectedStandard.id] ?? []}
-        coveredSkillIds={coveredSkillIds}
+        deliveryStatus={statusMap.get(selectedStandard.id) ?? null}
       />
     );
   }
 
   const tabs: { key: StatusFilter; label: string; count: number }[] = [
-    { key: "all", label: "All Standards", count: standards.length },
-    { key: "covered", label: "Covered", count: coveredCount },
-    { key: "partial", label: "Partial", count: partialCount },
-    { key: "not_covered", label: "Not Covered", count: notCoveredCount },
+    { key: "all",         label: "All Standards", count: standards.length },
+    { key: "covered",     label: "Covered",       count: coveredCount    },
+    { key: "in_progress", label: "In Progress",   count: inProgressCount },
+    { key: "planned",     label: "Planned",       count: plannedCount    },
+    { key: "gap",         label: "Gap",           count: gapCount        },
   ];
 
   return (
     <div className="space-y-5">
+      {/* Gap alert banner */}
+      {gapCount > 0 && (
+        <div
+          role="alert"
+          className="flex items-center gap-3 px-4 py-3 rounded-xl border"
+          style={{
+            background: "var(--status-overdue-bg)",
+            borderColor: "var(--status-overdue-border)",
+          }}
+        >
+          <AlertTriangle className="h-4 w-4 shrink-0" style={{ color: "var(--status-overdue-text)" }} />
+          <p className="text-sm flex-1" style={{ color: "var(--status-overdue-text)" }}>
+            <span className="font-semibold">{gapCount} standard{gapCount !== 1 ? "s" : ""} have no unit plan</span>
+            {" "}— they may not be taught this year.
+          </p>
+          <button
+            onClick={() => setStatusFilter("gap")}
+            className="text-sm font-medium underline shrink-0"
+            style={{ color: "var(--status-overdue-text)" }}
+          >
+            Show gaps
+          </button>
+        </div>
+      )}
+
       {/* Strand summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         {strandStats.map(({ strand, total, coveredStandards, pct }) => {
@@ -250,6 +263,8 @@ function CoverageGrid({
           return (
             <button
               key={strand}
+              type="button"
+              aria-pressed={isActive}
               onClick={() => setStrandFilter(isActive ? "all" : strand)}
               className={`text-left p-4 rounded-xl border transition-all ${
                 isActive
@@ -266,8 +281,8 @@ function CoverageGrid({
               <div className="flex items-center gap-2">
                 <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
                   <div
-                    className={`h-full rounded-full transition-all ${STRAND_PROGRESS_COLOR[code] ?? "bg-primary"}`}
-                    style={{ width: `${pct}%` }}
+                    className="h-full rounded-full transition-all"
+                    style={{ width: `${pct}%`, backgroundColor: `var(${STRAND_ACCENT_VAR[code]})` }}
                   />
                 </div>
                 <span className="text-xs font-medium tabular-nums">{pct}%</span>
@@ -281,7 +296,7 @@ function CoverageGrid({
       <div className="flex gap-5 items-start">
         {/* Left: tabs + table */}
         <div className="flex-1 min-w-0">
-          {/* Tab bar + filters row */}
+          {/* Tab bar + strand select */}
           <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
             <div className="flex items-center gap-1 border-b border-transparent">
               {tabs.map((tab) => (
@@ -315,10 +330,6 @@ function CoverageGrid({
                   ))}
                 </SelectContent>
               </Select>
-              <button className="h-8 px-3 text-sm border rounded-md flex items-center gap-1.5 hover:bg-muted transition-colors text-muted-foreground">
-                <SlidersHorizontal className="h-3.5 w-3.5" />
-                Filters
-              </button>
             </div>
           </div>
 
@@ -330,47 +341,41 @@ function CoverageGrid({
                   <th className="text-left px-4 py-2.5 font-medium text-muted-foreground w-24">Standard</th>
                   <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">Description</th>
                   <th className="text-left px-4 py-2.5 font-medium text-muted-foreground w-32 hidden md:table-cell">Strand</th>
-                  <th className="text-left px-4 py-2.5 font-medium text-muted-foreground w-20 hidden sm:table-cell">Skills</th>
-                  <th className="text-left px-4 py-2.5 font-medium text-muted-foreground w-32">Coverage</th>
+                  <th className="text-left px-4 py-2.5 font-medium text-muted-foreground w-36 hidden sm:table-cell">Delivery</th>
                   <th className="text-left px-4 py-2.5 font-medium text-muted-foreground w-28">Status</th>
-                  <th className="w-8 px-2" />
                 </tr>
               </thead>
               <tbody>
-                {skillsLoading ? (
+                {loading ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-sm text-muted-foreground">
-                      Loading skills…
+                    <td colSpan={5} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                      Loading coverage…
                     </td>
                   </tr>
                 ) : (
                   strandKeys.map((strand) => {
                     const code = STRAND_CODE[strand] ?? strand;
-                    const items = (byStrand[strand] ?? []);
+                    const items = byStrand[strand] ?? [];
                     if (strandFilter !== "all" && strandFilter !== strand) return null;
 
                     const filteredItems = items.filter((s) => {
+                      if (statusFilter === "all") return true;
                       const stat = standardStats.find((st) => st.standard.id === s.id);
-                      if (!stat) return statusFilter === "all";
-                      return statusFilter === "all" || stat.status === statusFilter;
+                      return stat?.status === statusFilter;
                     });
                     if (filteredItems.length === 0) return null;
 
                     const isOpen = !collapsed[strand];
-                    const strandSkillTotal = items.reduce((sum, s) => sum + (byStandardId[s.id]?.length ?? 0), 0);
-                    const strandSkillCovered = items.reduce((sum, s) => {
-                      return sum + (byStandardId[s.id] ?? []).filter((sk) => coveredSkillIds.has(sk.id)).length;
-                    }, 0);
-                    const strandPct = strandSkillTotal > 0 ? Math.round((strandSkillCovered / strandSkillTotal) * 100) : 0;
+                    const strandCovered = items.filter((s) => (statusMap.get(s.id)?.status ?? "gap") === "covered").length;
+                    const strandPct = items.length > 0 ? Math.round((strandCovered / items.length) * 100) : 0;
 
                     return [
-                      // Strand group header row
                       <tr
                         key={`header-${strand}`}
                         className="border-t bg-muted/20 cursor-pointer select-none hover:bg-muted/40 transition-colors"
                         onClick={() => setCollapsed((p) => ({ ...p, [strand]: !p[strand] }))}
                       >
-                        <td colSpan={7} className="px-4 py-2">
+                        <td colSpan={5} className="px-4 py-2">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                               {isOpen
@@ -382,30 +387,33 @@ function CoverageGrid({
                               <span className="text-xs font-medium">{strand}</span>
                               <span className="text-xs text-muted-foreground">· {filteredItems.length} standard{filteredItems.length !== 1 ? "s" : ""}</span>
                             </div>
-                            <div className="flex items-center gap-3">
-                              <div className="hidden sm:flex items-center gap-2">
-                                <div className="w-20 h-1.5 rounded-full bg-muted overflow-hidden">
-                                  <div
-                                    className={`h-full rounded-full ${STRAND_PROGRESS_COLOR[code] ?? "bg-primary"}`}
-                                    style={{ width: `${strandPct}%` }}
-                                  />
-                                </div>
-                                <span className="text-xs tabular-nums text-muted-foreground">{strandPct}%</span>
+                            <div className="hidden sm:flex items-center gap-2">
+                              <div className="w-20 h-1.5 rounded-full bg-muted overflow-hidden">
+                                <div
+                                  className="h-full rounded-full"
+                                  style={{ width: `${strandPct}%`, backgroundColor: `var(${STRAND_ACCENT_VAR[code]})` }}
+                                />
                               </div>
+                              <span className="text-xs tabular-nums text-muted-foreground">{strandPct}%</span>
                             </div>
                           </div>
                         </td>
                       </tr>,
-                      // Standard rows
                       ...(isOpen ? filteredItems.map((standard) => {
                         const stat = standardStats.find((st) => st.standard.id === standard.id);
-                        const { covered = 0, total = 0, status = "not_covered", pct = 0 } = stat ?? {};
+                        const status: CoverageStatus = stat?.status ?? "gap";
+                        const deliveredWeeks = stat?.deliveredWeeks ?? 0;
+                        const totalWeeks = stat?.totalWeeks ?? 0;
+                        const pct = stat?.pct ?? 0;
 
                         return (
                           <tr
                             key={standard.id}
-                            className="border-t hover:bg-muted/30 cursor-pointer transition-colors group"
+                            tabIndex={0}
+                            role="row"
+                            className="border-t hover:bg-muted/30 cursor-pointer transition-colors"
                             onClick={() => setSelectedStandard(standard)}
+                            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedStandard(standard); } }}
                           >
                             <td className="px-4 py-3">
                               <StrandBadge code={standard.code} />
@@ -418,43 +426,23 @@ function CoverageGrid({
                                 {strand}
                               </span>
                             </td>
-                            <td className="px-4 py-3 hidden sm:table-cell text-xs text-muted-foreground tabular-nums">
-                              {total > 0 ? `${covered}/${total}` : "—"}
-                            </td>
-                            <td className="px-4 py-3">
-                              {total > 0 ? (
+                            <td className="px-4 py-3 hidden sm:table-cell">
+                              {status !== "gap" && totalWeeks > 0 ? (
                                 <div className="flex items-center gap-2">
                                   <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden min-w-[48px]">
                                     <div
-                                      className={`h-full rounded-full ${STRAND_PROGRESS_COLOR[code] ?? "bg-primary"}`}
-                                      style={{ width: `${pct}%` }}
+                                      className="h-full rounded-full"
+                                      style={{ width: `${pct}%`, backgroundColor: `var(${STRAND_ACCENT_VAR[code]})` }}
                                     />
                                   </div>
-                                  <span className="text-xs tabular-nums text-muted-foreground w-8">{pct}%</span>
+                                  <span className="text-xs tabular-nums text-muted-foreground w-12 shrink-0">{deliveredWeeks}/{totalWeeks}w</span>
                                 </div>
                               ) : (
                                 <span className="text-xs text-muted-foreground">—</span>
                               )}
                             </td>
                             <td className="px-4 py-3">
-                              {status === "covered" && (
-                                <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-medium">
-                                  <CheckCircle2 className="h-3 w-3" /> Covered
-                                </span>
-                              )}
-                              {status === "partial" && (
-                                <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 font-medium">
-                                  <AlertTriangle className="h-3 w-3" /> Partial
-                                </span>
-                              )}
-                              {status === "not_covered" && (
-                                <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200 font-medium">
-                                  <Circle className="h-3 w-3" /> Not Covered
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-2 py-3">
-                              <MoreHorizontal className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                              <StatusBadge status={status} />
                             </td>
                           </tr>
                         );
@@ -469,7 +457,6 @@ function CoverageGrid({
 
         {/* Right sidebar */}
         <div className="w-60 shrink-0 space-y-3 hidden lg:block">
-          {/* Overall Coverage */}
           <Card>
             <CardContent className="pt-4 pb-4">
               <div className="flex items-start justify-between mb-1">
@@ -477,45 +464,57 @@ function CoverageGrid({
               </div>
               <div className="text-4xl font-bold mb-1">{overallPct}%</div>
               <Progress value={overallPct} className="h-2 mb-2" />
-              <p className="text-xs text-muted-foreground">{totalCovered} of {totalSkills} skills covered</p>
+              <p className="text-xs text-muted-foreground">{coveredCount} of {standards.length} standards covered</p>
             </CardContent>
           </Card>
 
-          {/* Coverage Insights */}
           <Card>
             <CardHeader className="pb-2 pt-4 px-4">
-              <CardTitle className="text-sm">Coverage Insights</CardTitle>
+              <CardTitle className="text-sm">Coverage Breakdown</CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-4 space-y-2.5">
-              <div className="flex items-start gap-2">
-                <CheckCircle2 className="h-4 w-4 text-emerald-600 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-sm font-medium">{coveredCount} standard{coveredCount !== 1 ? "s" : ""} fully covered</p>
-                  <p className="text-xs text-muted-foreground">Great job! Keep it up.</p>
-                </div>
-              </div>
-              {partialCount > 0 && (
-                <div className="flex items-start gap-2">
-                  <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium">{partialCount} standard{partialCount !== 1 ? "s" : ""} partially covered</p>
-                    <p className="text-xs text-muted-foreground">More skills needed.</p>
+              {coveredCount > 0 && (
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 shrink-0" style={{ color: "var(--status-taught-text)" }} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">{coveredCount} covered</p>
                   </div>
                 </div>
               )}
-              {notCoveredCount > 0 && (
-                <div className="flex items-start gap-2">
-                  <Circle className="h-4 w-4 text-red-500 mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-sm font-medium">{notCoveredCount} standard{notCoveredCount !== 1 ? "s" : ""} not covered</p>
-                    <p className="text-xs text-muted-foreground">Add these to ensure full compliance.</p>
+              {inProgressCount > 0 && (
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 shrink-0" style={{ color: "var(--status-behind-text)" }} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">{inProgressCount} in progress</p>
                   </div>
+                </div>
+              )}
+              {plannedCount > 0 && (
+                <div className="flex items-center gap-2">
+                  <Circle className="h-4 w-4 shrink-0" style={{ color: "var(--status-pending-text)" }} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">{plannedCount} planned</p>
+                  </div>
+                </div>
+              )}
+              {gapCount > 0 && (
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 shrink-0" style={{ color: "var(--status-overdue-text)" }} />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium">{gapCount} gap{gapCount !== 1 ? "s" : ""}</p>
+                    <p className="text-xs text-muted-foreground">Not in any unit plan</p>
+                  </div>
+                </div>
+              )}
+              {coveredCount === 0 && inProgressCount === 0 && plannedCount === 0 && gapCount === 0 && (
+                <div className="flex items-center gap-2">
+                  <Circle className="h-4 w-4 text-muted-foreground" />
+                  <p className="text-sm text-muted-foreground">No data yet</p>
                 </div>
               )}
             </CardContent>
           </Card>
 
-          {/* HOD Readiness */}
           {!isHod && (
             <Card>
               <CardHeader className="pb-2 pt-4 px-4">
@@ -523,7 +522,6 @@ function CoverageGrid({
               </CardHeader>
               <CardContent className="px-4 pb-4">
                 <div className="flex items-center gap-3 mb-3">
-                  {/* Circular progress ring */}
                   <div className="relative shrink-0">
                     <svg width="56" height="56" viewBox="0 0 56 56">
                       <circle cx="28" cy="28" r="22" fill="none" stroke="hsl(var(--muted))" strokeWidth="5" />
@@ -587,12 +585,11 @@ function DepartmentCoverageGrid({
   const { byStandardId } = useAllSkills();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [focusTeacherId, setFocusTeacherId] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "covered" | "partial" | "not_covered">("all");
   const [strandFilter, setStrandFilter] = useState<string>("all");
 
   const strandKeys = Object.keys(byStrand);
 
-  // Per-teacher summary stats
   const teacherStats = teachers.map((t) => {
     const covered = coverageByTeacher.get(t.id) ?? new Set<string>();
     const totalSkills = standards.reduce((sum, s) => sum + (byStandardId[s.id]?.length ?? 0), 0);
@@ -607,10 +604,16 @@ function DepartmentCoverageGrid({
     return { teacher: t, pct, coveredSkills: coveredCount, totalSkills, standardsCovered };
   });
 
-  // Per-standard stats for the active view (focused teacher or union of all)
   const activeSkillIds: Set<string> = focusTeacherId
     ? (coverageByTeacher.get(focusTeacherId) ?? new Set())
     : new Set(teachers.flatMap((t) => [...(coverageByTeacher.get(t.id) ?? new Set())]));
+
+  type DeptStatus = "covered" | "partial" | "not_covered";
+  function skillStatus(covered: number, total: number): DeptStatus {
+    if (total === 0 || covered === 0) return "not_covered";
+    if (covered === total) return "covered";
+    return "partial";
+  }
 
   const standardStats = standards.map((s) => {
     const skills = byStandardId[s.id] ?? [];
@@ -618,7 +621,6 @@ function DepartmentCoverageGrid({
     const total = skills.length;
     const status = skillStatus(covered, total);
     const pct = total > 0 ? Math.round((covered / total) * 100) : 0;
-    // Which teachers cover this standard (any skill)?
     const coveringTeachers = teachers.filter((t) => {
       const ts = coverageByTeacher.get(t.id) ?? new Set();
       return (byStandardId[s.id] ?? []).some((sk) => ts.has(sk.id));
@@ -638,7 +640,6 @@ function DepartmentCoverageGrid({
   const inProgressCount = teacherStats.filter((t) => t.pct >= 50 && t.pct < 80).length;
   const startingCount = teacherStats.filter((t) => t.pct < 50).length;
 
-  // Top gaps: uncovered standards sorted by how few teachers touch them
   const topGaps = standardStats
     .filter((s) => s.status !== "covered")
     .sort((a, b) => a.coveringTeachers.length - b.coveringTeachers.length)
@@ -646,16 +647,15 @@ function DepartmentCoverageGrid({
 
   if (loading) return null;
 
-  const tabs: { key: StatusFilter; label: string; count: number }[] = [
-    { key: "all", label: "All Standards", count: standards.length },
-    { key: "covered", label: "Covered", count: coveredCount },
-    { key: "partial", label: "Partial", count: partialCount },
-    { key: "not_covered", label: "Not Covered", count: notCoveredCount },
+  const tabs = [
+    { key: "all" as const,         label: "All Standards", count: standards.length },
+    { key: "covered" as const,     label: "Covered",       count: coveredCount     },
+    { key: "partial" as const,     label: "Partial",       count: partialCount     },
+    { key: "not_covered" as const, label: "Not Covered",   count: notCoveredCount  },
   ];
 
   return (
     <div className="space-y-5">
-      {/* Teacher summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
         {teacherStats.map(({ teacher, pct, standardsCovered }) => {
           const { label, color } = readinessLabel(pct);
@@ -663,6 +663,7 @@ function DepartmentCoverageGrid({
           return (
             <button
               key={teacher.id}
+              type="button"
               onClick={() => setFocusTeacherId(isActive ? null : teacher.id)}
               className={`text-left p-4 rounded-xl border transition-all ${
                 isActive
@@ -694,9 +695,7 @@ function DepartmentCoverageGrid({
         })}
       </div>
 
-      {/* Main content: table + sidebar */}
       <div className="flex gap-5 items-start">
-        {/* Left: tabs + table */}
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
             <div className="flex items-center gap-1">
@@ -821,7 +820,7 @@ function DepartmentCoverageGrid({
                               </span>
                             )}
                             {status === "not_covered" && (
-                              <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200 font-medium">
+                              <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border font-medium">
                                 <Circle className="h-3 w-3" /> Not Covered
                               </span>
                             )}
@@ -836,9 +835,7 @@ function DepartmentCoverageGrid({
           </div>
         </div>
 
-        {/* Right sidebar */}
         <div className="w-60 shrink-0 space-y-3 hidden lg:block">
-          {/* Department Overview */}
           <Card>
             <CardContent className="pt-4 pb-4">
               <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Department Coverage</div>
@@ -852,7 +849,6 @@ function DepartmentCoverageGrid({
             </CardContent>
           </Card>
 
-          {/* Teacher Readiness */}
           <Card>
             <CardHeader className="pb-2 pt-4 px-4">
               <CardTitle className="text-sm">Teacher Readiness</CardTitle>
@@ -882,7 +878,6 @@ function DepartmentCoverageGrid({
             </CardContent>
           </Card>
 
-          {/* Top Gaps */}
           {topGaps.length > 0 && (
             <Card>
               <CardHeader className="pb-2 pt-4 px-4">
@@ -891,9 +886,7 @@ function DepartmentCoverageGrid({
               <CardContent className="px-4 pb-4 space-y-2">
                 {topGaps.map(({ standard, coveringTeachers }) => (
                   <div key={standard.id} className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <StrandBadge code={standard.code} />
-                    </div>
+                    <StrandBadge code={standard.code} />
                     <span className="text-xs text-muted-foreground shrink-0">
                       {coveringTeachers.length === 0 ? "No one" : `${coveringTeachers.length} teacher${coveringTeachers.length !== 1 ? "s" : ""}`}
                     </span>

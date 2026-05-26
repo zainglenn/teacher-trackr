@@ -1,46 +1,35 @@
 "use client";
 
-import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { Modal, ModalFooter, ModalCancel } from "@/components/ui/modal";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { CheckCircle2, Circle, ArrowLeft, BookOpen } from "lucide-react";
 import { Standard } from "@/types";
-import { useStandardSkills } from "@/hooks/useStandardSkills";
-import { StandardSkill } from "@/hooks/useStandardSkills";
-import { useSkillCoverage } from "@/hooks/useSkillCoverage";
+import { useStandardSkills, StandardSkill } from "@/hooks/useStandardSkills";
+import { StandardDeliveryStatus } from "@/hooks/useCoverageFromDelivery";
 
 const GENRE_COLOURS: Record<string, string> = {
-  "Argument Writing":           "bg-rose-50 border-rose-200 text-rose-700",
-  "Informative/Explanatory Writing": "bg-blue-50 border-blue-200 text-blue-700",
-  "Narrative Writing":          "bg-amber-50 border-amber-200 text-amber-700",
-  "Writing Quality":            "bg-emerald-50 border-emerald-200 text-emerald-700",
-  "Writing Process":            "bg-violet-50 border-violet-200 text-violet-700",
-  "Digital Writing":            "bg-cyan-50 border-cyan-200 text-cyan-700",
-  "Research":                   "bg-orange-50 border-orange-200 text-orange-700",
-  "Source Use":                 "bg-indigo-50 border-indigo-200 text-indigo-700",
-  "Text Evidence":              "bg-teal-50 border-teal-200 text-teal-700",
-  "Writing Stamina":            "bg-pink-50 border-pink-200 text-pink-700",
+  "Argument Writing":                 "bg-rose-50 border-rose-200 text-rose-700",
+  "Informative/Explanatory Writing":  "bg-blue-50 border-blue-200 text-blue-700",
+  "Narrative Writing":                "bg-amber-50 border-amber-200 text-amber-700",
+  "Writing Quality":                  "bg-emerald-50 border-emerald-200 text-emerald-700",
+  "Writing Process":                  "bg-violet-50 border-violet-200 text-violet-700",
+  "Digital Writing":                  "bg-cyan-50 border-cyan-200 text-cyan-700",
+  "Research":                         "bg-orange-50 border-orange-200 text-orange-700",
+  "Source Use":                       "bg-indigo-50 border-indigo-200 text-indigo-700",
+  "Text Evidence":                    "bg-teal-50 border-teal-200 text-teal-700",
+  "Writing Stamina":                  "bg-pink-50 border-pink-200 text-pink-700",
 };
 
-interface StandardDetailViewProps {
+interface StandardContextViewProps {
   standard: Standard;
-  teacherId: string;
-  classId?: string | null;
   onBack: () => void;
   preloadedSkills?: StandardSkill[];
-  coveredSkillIds?: Set<string>;
+  deliveryStatus?: StandardDeliveryStatus | null;
 }
 
-export function StandardDetailView({ standard, teacherId, classId, onBack, preloadedSkills, coveredSkillIds: externalCovered }: StandardDetailViewProps) {
-  const { skills: fetchedSkills, byGenre: fetchedByGenre, hasGenres: fetchedHasGenres, loading } = useStandardSkills(
-    preloadedSkills ? null : standard.id
-  );
+export function StandardContextView({ standard, onBack, preloadedSkills, deliveryStatus }: StandardContextViewProps) {
+  const { skills: fetchedSkills } = useStandardSkills(preloadedSkills ? null : standard.id);
   const skills = preloadedSkills ?? fetchedSkills;
 
   const byGenre = skills.reduce<Record<string, StandardSkill[]>>((acc, skill) => {
@@ -50,173 +39,155 @@ export function StandardDetailView({ standard, teacherId, classId, onBack, prelo
     return acc;
   }, {});
   const hasGenres = skills.some((s) => s.genre !== null);
-  void fetchedByGenre; void fetchedHasGenres;
-
-  const { isCovered: fetchedIsCovered, markSkill, unmarkSkill } = useSkillCoverage(teacherId, classId);
-  const isCovered = externalCovered
-    ? (skillId: string) => externalCovered.has(skillId)
-    : fetchedIsCovered;
-  const [markingSkill, setMarkingSkill] = useState<StandardSkill | null>(null);
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
-  const [notes, setNotes] = useState("");
-  const [saving, setSaving] = useState(false);
-
-  const coveredCount = skills.filter((s) => isCovered(s.id)).length;
-  const pct = skills.length > 0 ? Math.round((coveredCount / skills.length) * 100) : 0;
-
-  async function handleMark() {
-    if (!markingSkill) return;
-    setSaving(true);
-    await markSkill(markingSkill.id, date, notes);
-    setSaving(false);
-    setMarkingSkill(null);
-    setNotes("");
-  }
-
   const genreKeys = Object.keys(byGenre).filter((k) => k !== "__none__");
   const ungrouped = byGenre["__none__"] ?? [];
 
+  const isGap = !deliveryStatus || deliveryStatus.status === "gap";
+  const skillsCovered = deliveryStatus?.status === "covered";
+
+  const statusBg = deliveryStatus?.status === "covered"
+    ? "var(--status-taught-bg)"
+    : deliveryStatus?.status === "in_progress"
+    ? "var(--status-behind-bg)"
+    : "var(--status-pending-bg)";
+  const statusText = deliveryStatus?.status === "covered"
+    ? "var(--status-taught-text)"
+    : deliveryStatus?.status === "in_progress"
+    ? "var(--status-behind-text)"
+    : "var(--status-pending-text)";
+  const statusBorder = deliveryStatus?.status === "covered"
+    ? "var(--status-taught-border)"
+    : deliveryStatus?.status === "in_progress"
+    ? "var(--status-behind-border)"
+    : "var(--status-pending-border)";
+  const statusLabel = deliveryStatus?.status === "covered"
+    ? "Covered"
+    : deliveryStatus?.status === "in_progress"
+    ? "In Progress"
+    : "Planned";
+
   return (
     <div className="space-y-5">
-      {/* Header */}
-      <div className="flex items-start gap-3">
-        <Button variant="ghost" size="sm" onClick={onBack} className="mt-0.5 shrink-0 -ml-2">
-          <ArrowLeft className="h-4 w-4 mr-1" />
-          Back
-        </Button>
-      </div>
+      {/* Back button */}
+      <Button variant="ghost" size="sm" onClick={onBack} className="-ml-2">
+        <ArrowLeft className="h-4 w-4 mr-1" />
+        Back
+      </Button>
 
-      <div className="space-y-1">
-        <div className="flex items-center gap-2 flex-wrap">
+      {/* Standard identity */}
+      <div>
+        <div className="flex items-center gap-2 flex-wrap mb-2">
           <Badge variant="outline" className="font-mono text-sm">{standard.code}</Badge>
           <Badge variant="secondary" className="text-xs">{standard.strand}</Badge>
         </div>
-        <p className="text-base font-medium mt-2">{standard.description}</p>
+        <p className="text-base font-medium">{standard.description}</p>
       </div>
 
-      {/* Progress */}
-      <Card>
-        <CardContent className="p-4 space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <span className="font-medium">Skills covered</span>
-            <span className="text-muted-foreground">{coveredCount} / {skills.length}</span>
-          </div>
-          <Progress value={pct} className="h-2" />
-          {pct === 100 && (
-            <p className="text-xs text-emerald-600 font-medium">All skills covered — standard achieved!</p>
-          )}
-        </CardContent>
-      </Card>
-
-      {loading ? null : hasGenres ? (
-        // Genre-grouped (Writing standards)
-        <div className="space-y-4">
-          {genreKeys.map((genre) => {
-            const genreSkills = byGenre[genre];
-            const genreCovered = genreSkills.filter((s) => isCovered(s.id)).length;
-            const colourClass = GENRE_COLOURS[genre] ?? "bg-muted border-border text-muted-foreground";
-
-            return (
-              <Card key={genre}>
-                <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <BookOpen className="h-4 w-4 text-muted-foreground" />
-                      <CardTitle className="text-sm font-semibold">{genre}</CardTitle>
-                    </div>
-                    <Badge className={`text-xs border ${colourClass}`}>
-                      {genreCovered}/{genreSkills.length}
-                    </Badge>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-0 space-y-2">
-                  {genreSkills.map((skill) => (
-                    <SkillRow
-                      key={skill.id}
-                      skill={skill}
-                      covered={isCovered(skill.id)}
-                      onMark={() => { setMarkingSkill(skill); setDate(new Date().toISOString().split("T")[0]); setNotes(""); }}
-                      onUnmark={() => unmarkSkill(skill.id)}
-                    />
-                  ))}
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      ) : (
-        // Flat list (non-writing standards)
+      {/* Unit delivery context */}
+      {!isGap && deliveryStatus && (
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold">Skills & Success Criteria</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0 space-y-2">
-            {ungrouped.map((skill) => (
-              <SkillRow
-                key={skill.id}
-                skill={skill}
-                covered={isCovered(skill.id)}
-                onMark={() => { setMarkingSkill(skill); setDate(new Date().toISOString().split("T")[0]); setNotes(""); }}
-                onUnmark={() => unmarkSkill(skill.id)}
-              />
-            ))}
+          <CardContent className="p-4 space-y-3">
+            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Unit Coverage</div>
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-sm font-medium">{deliveryStatus.unitTitle}</p>
+              <span className="text-xs text-muted-foreground shrink-0">Term {deliveryStatus.term}</span>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all"
+                  style={{
+                    width: `${deliveryStatus.totalWeeks > 0 ? Math.round((deliveryStatus.deliveredWeeks / deliveryStatus.totalWeeks) * 100) : 0}%`,
+                    backgroundColor: `var(--term-${deliveryStatus.term}-accent)`,
+                  }}
+                />
+              </div>
+              <span className="text-xs text-muted-foreground tabular-nums shrink-0">
+                {deliveryStatus.deliveredWeeks}/{deliveryStatus.totalWeeks} weeks taught
+              </span>
+            </div>
+            <span
+              className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium border"
+              style={{ background: statusBg, color: statusText, borderColor: statusBorder }}
+            >
+              {deliveryStatus.status === "covered" ? <CheckCircle2 className="h-3 w-3" /> : <Circle className="h-3 w-3" />}
+              {statusLabel}
+            </span>
           </CardContent>
         </Card>
       )}
 
-      <Modal open={!!markingSkill} onClose={() => setMarkingSkill(null)} title="Mark Skill as Taught" size="md">
-        {markingSkill && (
-          <div className="space-y-4 py-2">
-            <div className="bg-muted rounded-lg p-3 text-sm">
-              <Badge variant="outline" className="font-mono mb-1">{markingSkill.code}</Badge>
-              {markingSkill.genre && (
-                <Badge className={`ml-1 mb-1 text-xs border ${GENRE_COLOURS[markingSkill.genre] ?? ""}`}>
-                  {markingSkill.genre}
-                </Badge>
-              )}
-              <p className="text-muted-foreground mt-1">{markingSkill.description}</p>
+      {/* Gap prompt */}
+      {isGap && (
+        <div
+          className="rounded-xl border p-4"
+          style={{ background: "var(--status-overdue-bg)", borderColor: "var(--status-overdue-border)" }}
+        >
+          <p className="text-sm font-medium" style={{ color: "var(--status-overdue-text)" }}>
+            This standard is not mapped to any unit
+          </p>
+          <p className="text-xs mt-1 opacity-80" style={{ color: "var(--status-overdue-text)" }}>
+            Add this standard to a unit in your Long Term Plan to start tracking coverage.
+          </p>
+        </div>
+      )}
+
+      {/* Skills list — read-only */}
+      {hasGenres ? (
+        <div className="space-y-4">
+          {genreKeys.map((genre) => {
+            const genreSkills = byGenre[genre];
+            const colourClass = GENRE_COLOURS[genre] ?? "bg-muted border-border text-muted-foreground";
+            return (
+              <Card key={genre}>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <BookOpen className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-semibold">{genre}</span>
+                    <Badge className={`text-xs border ml-auto ${colourClass}`}>
+                      {genreSkills.length} skills
+                    </Badge>
+                  </div>
+                  <div className="space-y-1.5">
+                    {genreSkills.map((skill) => (
+                      <ReadOnlySkillRow key={skill.id} skill={skill} covered={skillsCovered} />
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+          {ungrouped.length > 0 && (
+            <Card>
+              <CardContent className="p-4 space-y-1.5">
+                {ungrouped.map((skill) => (
+                  <ReadOnlySkillRow key={skill.id} skill={skill} covered={skillsCovered} />
+                ))}
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      ) : (
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
+              Skills & Success Criteria
             </div>
             <div className="space-y-1.5">
-              <Label>Date Taught</Label>
-              <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+              {ungrouped.map((skill) => (
+                <ReadOnlySkillRow key={skill.id} skill={skill} covered={skillsCovered} />
+              ))}
             </div>
-            <div className="space-y-1.5">
-              <Label>Notes (optional)</Label>
-              <Textarea
-                placeholder="How was this skill taught? Any observations..."
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={3}
-              />
-            </div>
-          </div>
-        )}
-        <ModalFooter>
-          <ModalCancel onClick={() => setMarkingSkill(null)} />
-          <Button onClick={handleMark} disabled={saving}>
-            {saving ? "Saving..." : "Mark as Taught"}
-          </Button>
-        </ModalFooter>
-      </Modal>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
 
-function SkillRow({
-  skill,
-  covered,
-  onMark,
-  onUnmark,
-}: {
-  skill: StandardSkill;
-  covered: boolean;
-  onMark: () => void;
-  onUnmark: () => void;
-}) {
+function ReadOnlySkillRow({ skill, covered }: { skill: StandardSkill; covered: boolean }) {
   return (
-    <div className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${
-      covered ? "bg-emerald-50 border-emerald-200" : "bg-background border-border"
-    }`}>
+    <div className="flex items-start gap-3 py-2">
       <div className="mt-0.5 shrink-0">
         {covered
           ? <CheckCircle2 className="h-4 w-4 text-emerald-600" />
@@ -226,17 +197,8 @@ function SkillRow({
         <Badge variant="outline" className="font-mono text-xs mb-1">{skill.code}</Badge>
         <p className="text-sm text-foreground/80">{skill.description}</p>
       </div>
-      <div className="shrink-0">
-        {covered ? (
-          <Button size="sm" variant="ghost" className="text-xs h-7 text-muted-foreground hover:text-rose-600" onClick={onUnmark}>
-            Unmark
-          </Button>
-        ) : (
-          <Button size="sm" className="text-xs h-7" onClick={onMark}>
-            Mark
-          </Button>
-        )}
-      </div>
     </div>
   );
 }
+
+export { StandardContextView as StandardDetailView };
