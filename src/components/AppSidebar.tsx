@@ -48,7 +48,7 @@ type NavItem = {
 };
 
 const NAV_ITEMS: NavItem[] = [
-  { key: "dashboard",       label: "Dashboard",          icon: LayoutDashboard },
+  { key: "dashboard",       label: "Dashboard",          icon: LayoutDashboard,  hodOnly: true },
   { key: "my-class",        label: "My Class",           icon: School,       teacherOnly: true },
   { key: "coverage",        label: "Standards Coverage", icon: CheckSquare },
   { key: "long-term-plan",  label: "Master Plans",       icon: ClipboardList },

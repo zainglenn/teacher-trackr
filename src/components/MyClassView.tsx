@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Check, ChevronDown, ChevronUp, AlertTriangle,
-  Presentation, X, BookOpen, School,
+  Presentation, X, BookOpen, School, ArrowRight,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +36,7 @@ function useMyClassData(teacherId: string) {
   const { classes, loading: classLoading } = useClasses(teacherId);
   const [deliveries, setDeliveries] = useState<ClassDelivery[]>([]);
   const [masterWeeks, setMasterWeeks] = useState<MasterWeek[]>([]);
+  const [myPlanRole, setMyPlanRole] = useState<"contributor" | "lead" | null>(null);
   const [loadingData, setLoadingData] = useState(true);
 
   const myClass = classes[0] ?? null;
@@ -46,6 +47,15 @@ function useMyClassData(teacherId: string) {
     // Load master plan weeks if an LTP is attached
     const extClass = myClass as typeof myClass & { ltp_id?: string };
     if (extClass.ltp_id) {
+      // Fetch this teacher's role in the plan
+      supabase.from("ltp_members")
+        .select("role")
+        .eq("plan_id", extClass.ltp_id)
+        .eq("teacher_id", teacherId)
+        .maybeSingle()
+        .then(({ data }) => {
+          if (data) setMyPlanRole(data.role as "contributor" | "lead");
+        });
       const { data: units } = await supabase
         .from("ltp_units")
         .select("id, title, term, lesson_sequence, unit_number")
@@ -134,6 +144,7 @@ function useMyClassData(teacherId: string) {
     myClass,
     masterWeeks,
     deliveries,
+    myPlanRole,
     loading: classLoading || loadingData,
     isDelivered,
     getDelivery,
@@ -154,12 +165,14 @@ interface WeekCardProps {
   classId?: string;
   unitTitle: string;
   vocabulary?: string[];
+  canEditUnit?: boolean;
   onMarkTaught: (notes?: string) => Promise<void>;
   onUnmark: () => Promise<void>;
   onSaveNotes: (notes: string) => Promise<void>;
+  onEditUnit?: () => void;
 }
 
-function WeekCard({ week, isCurrent, isPast, delivered, delivery, classId, unitTitle, vocabulary = [], onMarkTaught, onUnmark, onSaveNotes }: WeekCardProps) {
+function WeekCard({ week, isCurrent, isPast, delivered, delivery, classId, unitTitle, vocabulary = [], canEditUnit, onMarkTaught, onUnmark, onSaveNotes, onEditUnit }: WeekCardProps) {
   const [notes, setNotes] = useState(delivery?.notes ?? "");
   const [saving, setSaving] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
@@ -237,6 +250,15 @@ function WeekCard({ week, isCurrent, isPast, delivered, delivery, classId, unitT
 
           {/* Actions */}
           <div className="flex items-center gap-1 shrink-0 mt-1">
+            {canEditUnit && onEditUnit && (
+              <button
+                onClick={onEditUnit}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1 mr-0.5"
+                title="Edit unit plan"
+              >
+                <ArrowRight className="h-3.5 w-3.5" />
+              </button>
+            )}
             <button
               onClick={() => setPptOpen(true)}
               className="text-xs text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
@@ -304,10 +326,12 @@ function WeekCard({ week, isCurrent, isPast, delivered, delivery, classId, unitT
 interface MyClassViewProps {
   teacherId: string;
   standards: Standard[];
+  onNavigateToUnit?: (planId: string, unitId: string) => void;
 }
 
-export function MyClassView({ teacherId }: MyClassViewProps) {
-  const { myClass, masterWeeks, loading, isDelivered, getDelivery, markTaught, unmarkTaught, saveNotes } = useMyClassData(teacherId);
+export function MyClassView({ teacherId, onNavigateToUnit }: MyClassViewProps) {
+  const { myClass, masterWeeks, myPlanRole, loading, isDelivered, getDelivery, markTaught, unmarkTaught, saveNotes } = useMyClassData(teacherId);
+  const canEditUnit = myPlanRole === "lead";
   const [activeTerm, setActiveTerm] = useState<1 | 2 | 3>(1);
   const [pastExpanded, setPastExpanded] = useState(false);
   const [warningDismissed, setWarningDismissed] = useState(false);
@@ -477,9 +501,11 @@ export function MyClassView({ teacherId }: MyClassViewProps) {
                   delivery={getDelivery(week.unit_id, week.week)}
                   classId={myClass?.id}
                   unitTitle={week.unit_title}
+                  canEditUnit={canEditUnit}
                   onMarkTaught={(notes) => markTaught(week.unit_id, week.week, notes)}
                   onUnmark={() => unmarkTaught(week.unit_id, week.week)}
                   onSaveNotes={(n) => saveNotes(week.unit_id, week.week, n)}
+                  onEditUnit={onNavigateToUnit ? () => onNavigateToUnit((myClass as typeof myClass & { ltp_id?: string }).ltp_id ?? "", week.unit_id) : undefined}
                 />
               ))}
             </div>
@@ -499,9 +525,11 @@ export function MyClassView({ teacherId }: MyClassViewProps) {
             delivery={getDelivery(week.unit_id, week.week)}
             classId={myClass?.id}
             unitTitle={week.unit_title}
+            canEditUnit={canEditUnit}
             onMarkTaught={(notes) => markTaught(week.unit_id, week.week, notes)}
             onUnmark={() => unmarkTaught(week.unit_id, week.week)}
             onSaveNotes={(n) => saveNotes(week.unit_id, week.week, n)}
+            onEditUnit={onNavigateToUnit ? () => onNavigateToUnit((myClass as typeof myClass & { ltp_id?: string }).ltp_id ?? "", week.unit_id) : undefined}
           />
         ))}
       </div>

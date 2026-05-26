@@ -13,7 +13,7 @@ import {
   ChevronDown, ChevronUp, Sparkles, Loader2, AlertCircle, CheckCircle2,
   UserPlus, UserCircle2,
 } from "lucide-react";
-import { LongTermPlan, LTPUnit, LTPStatus, Standard, Profile } from "@/types";
+import { LongTermPlan, LTPUnit, LTPStatus, LTPMemberRole, Standard, Profile } from "@/types";
 import { supabase } from "@/lib/supabase";
 import { StrandBadge, STRAND_COLORS, strandFromCode } from "@/components/ltp/StrandBadge";
 import { StrandProgressBar } from "@/components/ltp/StrandProgressBar";
@@ -29,6 +29,7 @@ interface Allocation {
 interface LTPDetailViewProps {
   plan: LongTermPlan;
   isHod: boolean;
+  myRole: LTPMemberRole | "hod" | null;
   standards: Standard[];
   teachers: Profile[];
   currentUserId: string;
@@ -40,14 +41,16 @@ interface LTPDetailViewProps {
   setUnitStandards: (unitId: string, standardIds: string[]) => Promise<void>;
   setStatus: (id: string, status: LTPStatus, hodFeedback?: string) => Promise<void>;
   assignUnit: (unitId: string, teacherId: string | null) => Promise<void>;
+  setMemberRole: (planId: string, memberId: string, role: LTPMemberRole) => Promise<void>;
   allLTPStandardIds: string[];
 }
 
 export function LTPDetailView({
-  plan, isHod, standards, teachers, currentUserId, onBack, onOpenUnit,
-  addUnit, updateUnit, deleteUnit, setUnitStandards, setStatus, assignUnit, allLTPStandardIds,
+  plan, isHod, myRole, standards, teachers, currentUserId, onBack, onOpenUnit,
+  addUnit, updateUnit, deleteUnit, setUnitStandards, setStatus, assignUnit, setMemberRole, allLTPStandardIds,
 }: LTPDetailViewProps) {
-  const canEdit = !isHod;
+  // canEdit: HOD always, lead members can edit, contributors read-only
+  const canEdit = isHod || myRole === "lead";
 
   const [unitDialogState, setUnitDialogState] = useState<{ term: number } | null>(null);
 
@@ -183,8 +186,39 @@ export function LTPDetailView({
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2 shrink-0" />
+        <div className="flex items-center gap-2 shrink-0">
+          {!canEdit && (
+            <Badge variant="outline" className="text-xs bg-muted text-muted-foreground">View only</Badge>
+          )}
+        </div>
       </div>
+
+      {/* Members section — HOD only */}
+      {isHod && (plan.members?.length ?? 0) > 0 && (
+        <div className="rounded-lg border bg-card px-4 py-3">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2.5">Members</p>
+          <div className="flex flex-wrap gap-2">
+            {(plan.members ?? []).map((m) => (
+              <div key={m.id} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border bg-background text-xs">
+                <UserCircle2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                <span className="font-medium">{m.teacher?.full_name ?? m.teacher?.email ?? "Unknown"}</span>
+                <button
+                  onClick={() => setMemberRole(plan.id, m.id, m.role === "lead" ? "contributor" : "lead")}
+                  className={`ml-1 px-1.5 py-0.5 rounded text-[10px] font-semibold transition-colors ${
+                    m.role === "lead"
+                      ? "bg-violet-100 text-violet-700 hover:bg-violet-200"
+                      : "bg-muted text-muted-foreground hover:bg-muted/80"
+                  }`}
+                  title={m.role === "lead" ? "Click to set as Contributor" : "Click to promote to Lead"}
+                >
+                  {m.role === "lead" ? "Lead" : "Contributor"}
+                </button>
+              </div>
+            ))}
+          </div>
+          <p className="text-[10px] text-muted-foreground mt-2">Click a role to toggle between Contributor and Lead.</p>
+        </div>
+      )}
 
       {/* Coverage summary bar */}
       <div className="rounded-lg border bg-card px-4 py-3">
@@ -200,8 +234,8 @@ export function LTPDetailView({
           ))}
         </div>
 
-        {/* Coverage gate */}
-        {!isHod && (
+        {/* Coverage gate — only for editors */}
+        {canEdit && (
           <div className={`mt-3 pt-3 border-t flex items-center justify-between gap-3 ${allMapped ? "border-emerald-100" : "border-rose-100"}`}>
             <div className="flex items-center gap-1.5 min-w-0">
               {allMapped

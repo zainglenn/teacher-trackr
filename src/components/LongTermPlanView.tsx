@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Modal, ModalFooter, ModalCancel } from "@/components/ui/modal";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, ClipboardList, Eye, Pencil, Sparkles, Loader2, Wand2 } from "lucide-react";
+import { Plus, ClipboardList, Eye, Pencil, Sparkles, Loader2, Wand2, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Standard } from "@/types";
 import { useLongTermPlans } from "@/hooks/useLongTermPlans";
@@ -23,15 +23,18 @@ interface LongTermPlanViewProps {
   teacherId: string;
   isHod: boolean;
   standards: Standard[];
+  initialPlanId?: string | null;
+  initialUnitId?: string | null;
+  onInitialConsumed?: () => void;
 }
 
-export function LongTermPlanView({ teacherId, isHod, standards }: LongTermPlanViewProps) {
-  const { plans, loading, createLTP, updateLTP, setStatus, deleteLTP, addUnit, updateUnit, deleteUnit, setUnitStandards, batchAddUnits, assignUnit, submitUnit, withdrawUnit, approveUnit, requestUnitRevision, reopenUnit } =
+export function LongTermPlanView({ teacherId, isHod, standards, initialPlanId, initialUnitId, onInitialConsumed }: LongTermPlanViewProps) {
+  const { plans, loading, createLTP, updateLTP, setStatus, deleteLTP, addUnit, updateUnit, deleteUnit, setUnitStandards, batchAddUnits, assignUnit, submitUnit, withdrawUnit, approveUnit, requestUnitRevision, reopenUnit, getMyRole, setMemberRole } =
     useLongTermPlans(teacherId, isHod);
   const { teachers } = useTeachers();
 
-  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
-  const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
+  const [selectedPlanId, setSelectedPlanId] = useState<string | null>(initialPlanId ?? null);
+  const [selectedUnitId, setSelectedUnitId] = useState<string | null>(initialUnitId ?? null);
 
   // New LTP dialog state
   const [newLTPOpen, setNewLTPOpen] = useState(false);
@@ -41,15 +44,23 @@ export function LongTermPlanView({ teacherId, isHod, standards }: LongTermPlanVi
   const [creating, setCreating] = useState(false);
   const [drafting, setDrafting] = useState(false);
 
+  // Consume initial selection once plans have loaded
+  useState(() => {
+    if (initialPlanId && onInitialConsumed) onInitialConsumed();
+  });
+
   if (loading) return null;
 
-  const myPlans = isHod ? plans : plans.filter((p) => p.teacher_id === teacherId);
+  // RLS already filters to plans the user can see; no client-side filter needed
+  const myPlans = plans;
 
   // Drill into a unit plan
   const selectedPlan = myPlans.find((p) => p.id === selectedPlanId);
   const selectedUnit = selectedPlan?.units?.find((u) => u.id === selectedUnitId);
 
   if (selectedPlan && selectedUnit) {
+    const myRole = getMyRole(selectedPlan.id);
+    const canEdit = myRole === "hod" || myRole === "lead";
     return (
       <UnitPlanView
         plan={selectedPlan}
@@ -57,11 +68,12 @@ export function LongTermPlanView({ teacherId, isHod, standards }: LongTermPlanVi
         standards={standards}
         currentUserId={teacherId}
         isHod={isHod}
+        canEdit={canEdit}
         onBack={() => setSelectedUnitId(null)}
         updateUnit={updateUnit}
         setUnitStandards={setUnitStandards}
-        submitUnit={submitUnit}
-        withdrawUnit={withdrawUnit}
+        submitUnit={myRole === "lead" ? submitUnit : undefined}
+        withdrawUnit={myRole === "lead" ? withdrawUnit : undefined}
         approveUnit={isHod ? approveUnit : undefined}
         requestUnitRevision={isHod ? requestUnitRevision : undefined}
         reopenUnit={isHod ? reopenUnit : undefined}
@@ -71,6 +83,7 @@ export function LongTermPlanView({ teacherId, isHod, standards }: LongTermPlanVi
 
   // Drill into a plan detail view
   if (selectedPlan) {
+    const myRole = getMyRole(selectedPlan.id);
     const allLTPStandardIds = myPlans.flatMap((p) =>
       p.units?.flatMap((u) => u.standards?.map((s) => s.id) ?? []) ?? []
     );
@@ -78,6 +91,7 @@ export function LongTermPlanView({ teacherId, isHod, standards }: LongTermPlanVi
       <LTPDetailView
         plan={selectedPlan}
         isHod={isHod}
+        myRole={myRole}
         standards={standards}
         teachers={teachers}
         currentUserId={teacherId}
@@ -89,6 +103,7 @@ export function LongTermPlanView({ teacherId, isHod, standards }: LongTermPlanVi
         setUnitStandards={setUnitStandards}
         setStatus={setStatus}
         assignUnit={assignUnit}
+        setMemberRole={setMemberRole}
         allLTPStandardIds={allLTPStandardIds}
       />
     );
@@ -166,6 +181,8 @@ export function LongTermPlanView({ teacherId, isHod, standards }: LongTermPlanVi
           const { computed } = ltpAggregateStatus((plan.units ?? []).map((u) => ({ status: u.status ?? "draft" })));
           const statusCfg = COMPUTED_LTP_STATUS_CONFIG[computed];
           const hasRevisions = (plan.units ?? []).filter((u) => u.status === "revision" && u.hod_feedback);
+          const myRole = getMyRole(plan.id);
+          const memberCount = plan.members?.length ?? 0;
 
           return (
             <Card key={plan.id}>
@@ -174,10 +191,19 @@ export function LongTermPlanView({ teacherId, isHod, standards }: LongTermPlanVi
                   <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-sm font-semibold">{plan.title}</p>
                     <Badge variant="outline" className={`text-xs ${statusCfg.className}`}>{statusCfg.label}</Badge>
+                    {!isHod && myRole && (
+                      <Badge variant="outline" className={`text-xs ${myRole === "lead" ? "bg-violet-50 text-violet-700 border-violet-200" : "bg-muted text-muted-foreground"}`}>
+                        {myRole === "lead" ? "Lead" : "Contributor"}
+                      </Badge>
+                    )}
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">
                     {plan.school_year} · {totalUnits} unit{totalUnits !== 1 ? "s" : ""} · {mappedIds.size}/{standards.length} standards mapped
-                    {isHod && plan.teacher && ` · ${plan.teacher.full_name ?? plan.teacher.email}`}
+                    {isHod && memberCount > 0 && (
+                      <span className="inline-flex items-center gap-0.5 ml-1">
+                        · <Users className="h-3 w-3 inline" /> {memberCount}
+                      </span>
+                    )}
                   </p>
                   {hasRevisions.length > 0 && (
                     <p className="text-xs text-rose-600 italic mt-0.5 truncate max-w-md">
@@ -188,7 +214,7 @@ export function LongTermPlanView({ teacherId, isHod, standards }: LongTermPlanVi
                 <div className="flex items-center gap-2 shrink-0">
                   <Button size="sm" variant="outline" className="h-8 text-xs gap-1"
                     onClick={() => setSelectedPlanId(plan.id)}>
-                    {isHod ? <><Eye className="h-3 w-3" /> View</> : <><Pencil className="h-3 w-3" /> Open</>}
+                    {isHod || myRole === "lead" ? <><Pencil className="h-3 w-3" /> Open</> : <><Eye className="h-3 w-3" /> View</>}
                   </Button>
                   {isHod && (
                     <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-rose-600"

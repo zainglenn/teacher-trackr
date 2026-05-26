@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
-import { LongTermPlan, LTPStatus, LTPUnit, Standard } from "@/types";
+import { LongTermPlan, LTPStatus, LTPUnit, LTPMemberRole, Standard } from "@/types";
 import { ltpAggregateStatus } from "@/lib/ltpStatus";
 
 export function useLongTermPlans(teacherId: string, isHod: boolean) {
@@ -10,13 +10,18 @@ export function useLongTermPlans(teacherId: string, isHod: boolean) {
   const [loading, setLoading] = useState(true);
 
   const fetch = useCallback(async () => {
-    let query = supabase
+    // RLS handles visibility: HOD sees all, teachers see plans they're members of.
+    // No teacher_id filter needed here.
+    const { data } = await supabase
       .from("long_term_plans")
-      .select(`*, teacher:profiles(id,email,full_name,role), units:ltp_units(*, assignedTeacher:profiles!ltp_units_assigned_to_fkey(id,email,full_name,role), standards:ltp_unit_standards(standard:standards(*)))`)
+      .select(`
+        *,
+        teacher:profiles(id,email,full_name,role),
+        units:ltp_units(*, assignedTeacher:profiles!ltp_units_assigned_to_fkey(id,email,full_name,role), standards:ltp_unit_standards(standard:standards(*))),
+        members:ltp_members(id,teacher_id,role,teacher:profiles(id,email,full_name))
+      `)
       .order("created_at", { ascending: false });
-    if (!isHod) query = query.eq("teacher_id", teacherId);
 
-    const { data } = await query;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const normalized = (data ?? []).map((p: any) => ({
       ...p,
@@ -27,10 +32,11 @@ export function useLongTermPlans(teacherId: string, isHod: boolean) {
         standards: u.standards?.map((s: any) => s.standard) ?? [],
         assignedTeacher: u.assignedTeacher ?? null,
       })),
+      members: p.members ?? [],
     }));
     setPlans(normalized as LongTermPlan[]);
     setLoading(false);
-  }, [teacherId, isHod]);
+  }, []);
 
   useEffect(() => { fetch(); }, [fetch]);
 
@@ -110,6 +116,18 @@ export function useLongTermPlans(teacherId: string, isHod: boolean) {
     await fetch();
   }
 
+  function getMyRole(planId: string): LTPMemberRole | "hod" | null {
+    if (isHod) return "hod";
+    const plan = plans.find((p) => p.id === planId);
+    const member = plan?.members?.find((m) => m.teacher_id === teacherId);
+    return member?.role ?? null;
+  }
+
+  async function setMemberRole(planId: string, memberId: string, role: LTPMemberRole) {
+    await supabase.from("ltp_members").update({ role }).eq("id", memberId);
+    await fetch();
+  }
+
   async function syncPlanStatus(planId: string) {
     const { data } = await supabase.from("ltp_units").select("status").eq("ltp_id", planId);
     if (!data) return;
@@ -174,5 +192,5 @@ export function useLongTermPlans(teacherId: string, isHod: boolean) {
     await fetch();
   }
 
-  return { plans, loading, createLTP, updateLTP, setStatus, deleteLTP, addUnit, updateUnit, deleteUnit, setUnitStandards, batchAddUnits, assignUnit, submitUnit, withdrawUnit, approveUnit, requestUnitRevision, reopenUnit };
+  return { plans, loading, createLTP, updateLTP, setStatus, deleteLTP, addUnit, updateUnit, deleteUnit, setUnitStandards, batchAddUnits, assignUnit, submitUnit, withdrawUnit, approveUnit, requestUnitRevision, reopenUnit, getMyRole, setMemberRole };
 }

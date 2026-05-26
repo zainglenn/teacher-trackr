@@ -27,6 +27,7 @@ interface UnitPlanViewProps {
   standards: Standard[];
   currentUserId: string;
   isHod: boolean;
+  canEdit?: boolean;
   onBack: () => void;
   updateUnit: (unitId: string, updates: Partial<Omit<LTPUnit, "id" | "ltp_id" | "created_at" | "standards">>) => Promise<void>;
   setUnitStandards: (unitId: string, standardIds: string[]) => Promise<void>;
@@ -131,12 +132,16 @@ function EditableList({
 }
 
 export function UnitPlanView({
-  plan, unit, standards, currentUserId, isHod,
+  plan, unit, standards, currentUserId, isHod, canEdit: canEditProp,
   onBack, updateUnit, setUnitStandards,
   submitUnit, withdrawUnit, approveUnit, requestUnitRevision, reopenUnit,
 }: UnitPlanViewProps) {
+  // canEditProp is passed from LongTermPlanView based on membership role.
+  // Fall back to old assigned_to logic if prop not provided.
   const isOwner = unit.assigned_to === currentUserId;
-  const canEdit = !isHod && isOwner && (unit.status === "draft" || unit.status === "revision");
+  const canEdit = canEditProp !== undefined
+    ? canEditProp && (unit.status === "draft" || unit.status === "revision")
+    : !isHod && isOwner && (unit.status === "draft" || unit.status === "revision");
 
   const [tab, setTab] = useState<"view" | "edit">("view");
 

@@ -85,6 +85,17 @@ export interface LTPUnit {
   assignedTeacher?: Profile | null;
 }
 
+export type LTPMemberRole = "contributor" | "lead";
+
+export interface LTPMember {
+  id: string;
+  plan_id: string;
+  teacher_id: string;
+  role: LTPMemberRole;
+  created_at: string;
+  teacher?: Pick<Profile, "id" | "email" | "full_name">;
+}
+
 export interface LongTermPlan {
   id: string;
   teacher_id: string;
@@ -99,6 +110,7 @@ export interface LongTermPlan {
   updated_at: string;
   units?: LTPUnit[];
   teacher?: Profile;
+  members?: LTPMember[];
 }
 
 export interface Class {

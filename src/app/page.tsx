@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { AppSidebar, AppView } from "@/components/AppSidebar";
 import { AuthGate } from "@/components/AuthGate";
@@ -25,7 +25,14 @@ import { Loader2 } from "lucide-react";
 
 function CurriculumApp({ userId, email }: { userId: string; email: string }) {
   const [view, setView] = useState<AppView>("dashboard");
+  const [ltpInitialPlanId, setLtpInitialPlanId] = useState<string | null>(null);
+  const [ltpInitialUnitId, setLtpInitialUnitId] = useState<string | null>(null);
   const { role } = useProfile(userId);
+
+  // Redirect teachers away from dashboard (which is HOD-only) to My Class
+  useEffect(() => {
+    if (role === "teacher") setView("my-class");
+  }, [role]);
   const isHod = role === "hod";
   const isAdmin = role === "admin";
   const { standards, byStrand, loading: standardsLoading } = useStandards();
@@ -65,7 +72,14 @@ function CurriculumApp({ userId, email }: { userId: string; email: string }) {
             <CoverageView standards={standards} byStrand={byStrand} teacherId={userId} isHod={isHod} />
           )}
           {view === "long-term-plan" && (
-            <LongTermPlanView teacherId={userId} isHod={isHod} standards={standards} />
+            <LongTermPlanView
+              teacherId={userId}
+              isHod={isHod}
+              standards={standards}
+              initialPlanId={ltpInitialPlanId}
+              initialUnitId={ltpInitialUnitId}
+              onInitialConsumed={() => { setLtpInitialPlanId(null); setLtpInitialUnitId(null); }}
+            />
           )}
           {view === "student-progress" && (
             <StudentProgressView teacherId={userId} standards={standards} byStrand={byStrand} isHod={isHod} />
@@ -84,7 +98,15 @@ function CurriculumApp({ userId, email }: { userId: string; email: string }) {
             <ManageUsersView currentUserId={userId} />
           )}
           {view === "my-class" && !isHod && (
-            <MyClassView teacherId={userId} standards={standards} />
+            <MyClassView
+              teacherId={userId}
+              standards={standards}
+              onNavigateToUnit={(planId, unitId) => {
+                setLtpInitialPlanId(planId);
+                setLtpInitialUnitId(unitId);
+                setView("long-term-plan");
+              }}
+            />
           )}
           {view === "admin" && isAdmin && (
             <AdminView userId={userId} />
