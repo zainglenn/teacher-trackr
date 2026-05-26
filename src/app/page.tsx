@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar, AppView } from "@/components/AppSidebar";
 import { AuthGate } from "@/components/AuthGate";
 import { DashboardView } from "@/components/DashboardView";
@@ -56,7 +56,10 @@ function CurriculumApp({ userId, email }: { userId: string; email: string }) {
     <SidebarProvider>
       <AppSidebar view={view} onViewChange={setView} role={role} email={email} overdueCount={overdueCount} />
       <SidebarInset className="flex flex-col min-h-svh bg-slate-50/60">
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-4">
+        <header className="flex items-center h-10 px-3 border-b border-border/40 shrink-0 bg-background/80 backdrop-blur-sm sticky top-0 z-10">
+          <SidebarTrigger className="h-7 w-7 text-muted-foreground hover:text-foreground" />
+        </header>
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
           {view === "dashboard" && (
             <DashboardView
               standards={standards}

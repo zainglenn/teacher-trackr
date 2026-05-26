@@ -10,6 +10,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarTrigger,
 } from "@/components/ui/sidebar";
 import {
   BookOpen,
@@ -78,7 +79,7 @@ export function AppSidebar({ view, onViewChange, role, email, overdueCount = 0 }
   );
 
   return (
-    <Sidebar className="border-r border-sidebar-border">
+    <Sidebar collapsible="offcanvas" className="border-r border-sidebar-border">
       <SidebarHeader className="px-4 py-4 border-b border-sidebar-border">
         <div className="flex items-center gap-2">
           <div className="bg-sidebar-primary rounded-lg p-1.5">

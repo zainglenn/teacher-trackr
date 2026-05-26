@@ -494,7 +494,7 @@ export function MyClassView({ teacherId, onNavigateToUnit }: MyClassViewProps) {
           </button>
 
           {pastExpanded && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3 mb-3 opacity-70">
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3 mb-3 opacity-70">
               {pastWeeks.map((week) => (
                 <WeekCard
                   key={`${week.unit_id}-${week.week}`}
@@ -518,7 +518,7 @@ export function MyClassView({ teacherId, onNavigateToUnit }: MyClassViewProps) {
       )}
 
       {/* ── Upcoming weeks ────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3">
         {upcomingWeeks.map((week, idx) => (
           <WeekCard
             key={`${week.unit_id}-${week.week}`}
