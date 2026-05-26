@@ -185,43 +185,44 @@ export function LongTermPlanView({ teacherId, isHod, standards, initialPlanId, i
           const memberCount = plan.members?.length ?? 0;
 
           return (
-            <Card key={plan.id}>
-              <CardContent className="p-4 flex items-center justify-between gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="text-sm font-semibold">{plan.title}</p>
-                    <Badge variant="outline" className={`text-xs ${statusCfg.className}`}>{statusCfg.label}</Badge>
-                    {!isHod && myRole && (
-                      <Badge variant="outline" className={`text-xs ${myRole === "lead" ? "bg-violet-50 text-violet-700 border-violet-200" : "bg-muted text-muted-foreground"}`}>
-                        {myRole === "lead" ? "Lead" : "Contributor"}
-                      </Badge>
+            <Card key={plan.id} className="hover:shadow-md transition-shadow cursor-pointer" onClick={() => setSelectedPlanId(plan.id)}>
+              <CardContent className="p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <p className="text-base font-semibold">{plan.title}</p>
+                      <Badge variant="outline" className={`text-xs ${statusCfg.className}`}>{statusCfg.label}</Badge>
+                      {!isHod && myRole && (
+                        <Badge variant="outline" className={`text-xs ${myRole === "lead" ? "bg-violet-50 text-violet-700 border-violet-200" : "bg-muted text-muted-foreground"}`}>
+                          {myRole === "lead" ? "Lead" : "Contributor"}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {plan.school_year} · {totalUnits} unit{totalUnits !== 1 ? "s" : ""} · {mappedIds.size}/{standards.length} standards mapped
+                      {isHod && memberCount > 0 && (
+                        <span className="inline-flex items-center gap-0.5 ml-1">
+                          · <Users className="h-3 w-3 inline" /> {memberCount} member{memberCount !== 1 ? "s" : ""}
+                        </span>
+                      )}
+                    </p>
+                    {hasRevisions.length > 0 && (
+                      <p className="text-xs text-rose-600 mt-1.5 font-medium">
+                        ⚠ {hasRevisions.length} unit{hasRevisions.length !== 1 ? "s" : ""} need revision
+                      </p>
                     )}
                   </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {plan.school_year} · {totalUnits} unit{totalUnits !== 1 ? "s" : ""} · {mappedIds.size}/{standards.length} standards mapped
-                    {isHod && memberCount > 0 && (
-                      <span className="inline-flex items-center gap-0.5 ml-1">
-                        · <Users className="h-3 w-3 inline" /> {memberCount}
-                      </span>
-                    )}
-                  </p>
-                  {hasRevisions.length > 0 && (
-                    <p className="text-xs text-rose-600 italic mt-0.5 truncate max-w-md">
-                      {hasRevisions.length} unit{hasRevisions.length !== 1 ? "s" : ""} need revision
-                    </p>
-                  )}
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <Button size="sm" variant="outline" className="h-8 text-xs gap-1"
-                    onClick={() => setSelectedPlanId(plan.id)}>
-                    {isHod || myRole === "lead" ? <><Pencil className="h-3 w-3" /> Open</> : <><Eye className="h-3 w-3" /> View</>}
-                  </Button>
-                  {isHod && (
-                    <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-rose-600"
-                      onClick={() => { if (confirm("Delete this LTP and all its units?")) deleteLTP(plan.id); }}>
-                      ×
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button size="sm" className="h-8 text-xs gap-1.5" onClick={(e) => { e.stopPropagation(); setSelectedPlanId(plan.id); }}>
+                      {isHod || myRole === "lead" ? <><Pencil className="h-3 w-3" /> Open</> : <><Eye className="h-3 w-3" /> View</>}
                     </Button>
-                  )}
+                    {isHod && (
+                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-rose-600"
+                        onClick={(e) => { e.stopPropagation(); if (confirm("Delete this LTP and all its units?")) deleteLTP(plan.id); }}>
+                        ×
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>

@@ -55,8 +55,8 @@ function CurriculumApp({ userId, email }: { userId: string; email: string }) {
   return (
     <SidebarProvider>
       <AppSidebar view={view} onViewChange={setView} role={role} email={email} overdueCount={overdueCount} />
-      <SidebarInset className="flex flex-col min-h-svh bg-muted/30">
-        <main className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
+      <SidebarInset className="flex flex-col min-h-svh bg-slate-50/60">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 space-y-4">
           {view === "dashboard" && (
             <DashboardView
               standards={standards}

@@ -199,13 +199,17 @@ function WeekCard({ week, isCurrent, isPast, delivered, delivery, classId, unitT
     setSaving(false);
   }
 
+  const termAccent = week.term === 1
+    ? "oklch(0.55 0.18 264)"
+    : week.term === 2
+    ? "oklch(0.52 0.17 307)"
+    : "oklch(0.47 0.14 163)";
+
   const cardStyle: React.CSSProperties = delivered
-    ? { borderColor: "var(--status-taught-border)", background: "var(--status-taught-bg)" }
+    ? { borderColor: "var(--status-taught-border)", background: "var(--status-taught-bg)", borderLeftColor: "var(--status-taught-text)", borderLeftWidth: 3 }
     : isCurrent
-    ? { borderColor: "var(--status-behind-border)", background: "var(--status-behind-bg)" }
-    : isPast
-    ? { opacity: 0.7 }
-    : {};
+    ? { borderColor: "var(--status-behind-border)", background: "var(--status-behind-bg)", borderLeftColor: "var(--status-behind-text)", borderLeftWidth: 3 }
+    : { borderLeftColor: termAccent, borderLeftWidth: 3 };
 
   return (
     <Card className="overflow-hidden transition-all" style={cardStyle}>
@@ -229,8 +233,8 @@ function WeekCard({ week, isCurrent, isPast, delivered, delivery, classId, unitT
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-xs font-semibold text-muted-foreground">
-                Week {week.week}
+              <span className="text-[10px] font-medium text-muted-foreground/70 uppercase tracking-wide">
+                {week.unit_title} · Wk {week.week}
               </span>
               {isCurrent && !delivered && (
                 <Badge variant="outline" className="text-[10px] px-1.5 py-0" style={{ background: "var(--status-behind-bg)", color: "var(--status-behind-text)", borderColor: "var(--status-behind-border)" }}>
@@ -245,7 +249,7 @@ function WeekCard({ week, isCurrent, isPast, delivered, delivery, classId, unitT
                 </span>
               )}
             </div>
-            <p className="text-sm font-medium leading-snug mt-0.5">{week.focus || week.unit_title}</p>
+            <p className="text-sm font-semibold leading-snug mt-0.5">{week.focus || week.unit_title}</p>
           </div>
 
           {/* Actions */}
@@ -355,7 +359,7 @@ export function MyClassView({ teacherId, onNavigateToUnit }: MyClassViewProps) {
   // ── Loading ──────────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="space-y-4 max-w-2xl mx-auto">
+      <div className="space-y-4 max-w-4xl mx-auto">
         <Skeleton className="h-8 w-48" />
         <Skeleton className="h-4 w-32" />
         {[1, 2, 3].map((i) => <Skeleton key={i} className="h-24 rounded-xl" />)}
@@ -388,7 +392,7 @@ export function MyClassView({ teacherId, onNavigateToUnit }: MyClassViewProps) {
   // ── No master plan ───────────────────────────────────────────────────────
   if (!extClass.ltp_id || masterWeeks.length === 0) {
     return (
-      <div className="max-w-2xl mx-auto space-y-5">
+      <div className="max-w-lg mx-auto space-y-5">
         <div>
           <h1 className="text-lg font-semibold tracking-tight">{myClass.name}</h1>
           <p className="text-sm text-muted-foreground mt-0.5">{classLabel}</p>
@@ -407,7 +411,7 @@ export function MyClassView({ teacherId, onNavigateToUnit }: MyClassViewProps) {
   }
 
   return (
-    <div className="max-w-2xl mx-auto space-y-0">
+    <div className="space-y-0">
       {/* ── Coverage warning ───────────────────────────────────────────────── */}
       {!warningDismissed && warningCount > 0 && (
         <div
@@ -490,7 +494,7 @@ export function MyClassView({ teacherId, onNavigateToUnit }: MyClassViewProps) {
           </button>
 
           {pastExpanded && (
-            <div className="space-y-2 mb-3 opacity-70">
+            <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3 mb-3 opacity-70">
               {pastWeeks.map((week) => (
                 <WeekCard
                   key={`${week.unit_id}-${week.week}`}
@@ -514,7 +518,7 @@ export function MyClassView({ teacherId, onNavigateToUnit }: MyClassViewProps) {
       )}
 
       {/* ── Upcoming weeks ────────────────────────────────────────────────── */}
-      <div className="space-y-2">
+      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3">
         {upcomingWeeks.map((week, idx) => (
           <WeekCard
             key={`${week.unit_id}-${week.week}`}
