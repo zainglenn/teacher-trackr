@@ -1,0 +1,108 @@
+- generic [ref=e1]:
+  - alert [ref=e5]
+  - generic [ref=e2731]:
+    - generic [ref=e2734]:
+      - generic [ref=e2736]:
+        - img [ref=e2738]
+        - generic [ref=e2740]:
+          - paragraph [ref=e2741]: Curriculum Tracker
+          - paragraph [ref=e2742]: Grade 6 English
+      - list [ref=e2746]:
+        - listitem [ref=e2747]:
+          - button [ref=e2983] [cursor=pointer]:
+            - img [ref=e2749]
+            - generic [ref=e2754]: Dashboard
+        - listitem [ref=e2755]:
+          - button [ref=e2984] [cursor=pointer]:
+            - img [ref=e2757]
+            - generic [ref=e2760]: Standards Coverage
+        - listitem [ref=e2761]:
+          - button [ref=e2985] [cursor=pointer]:
+            - img [ref=e2763]
+            - generic [ref=e2766]: Long Term Plan
+        - listitem [ref=e2767]:
+          - button [ref=e2986] [cursor=pointer]:
+            - img [ref=e2769]
+            - generic [ref=e2774]: Student Progress
+        - listitem [ref=e2775]:
+          - button [ref=e2987] [cursor=pointer]:
+            - img [ref=e2777]
+            - generic [ref=e2781]: HOD Review
+        - listitem [ref=e2782]:
+          - button [ref=e2988] [cursor=pointer]:
+            - img [ref=e2784]
+            - generic [ref=e2787]: Unit Assignments
+        - listitem [ref=e2788]:
+          - button [ref=e2989] [cursor=pointer]:
+            - img [ref=e2790]
+            - generic [ref=e2793]: Manage Classes
+        - listitem [ref=e2794]:
+          - button [ref=e2990] [cursor=pointer]:
+            - img [ref=e2796]
+            - generic [ref=e2808]: Manage Users
+      - generic [ref=e2810]:
+        - generic [ref=e2811]:
+          - paragraph [ref=e2812]: zainglenn1995@gmail.com
+          - paragraph [ref=e2813]: Head of Department
+        - button [ref=e2991]:
+          - img [ref=e2815]
+    - main [ref=e2818]:
+      - main [ref=e2819]:
+        - generic [ref=e2938]:
+          - generic [ref=e2940]:
+            - heading [level=1] [ref=e2992]: HOD Review
+            - paragraph [ref=e2942]: 1 unit awaiting review
+          - generic [ref=e2943]:
+            - heading [level=2] [ref=e2993]: Awaiting Review
+            - generic [ref=e2946]:
+              - generic [ref=e2947]:
+                - paragraph [ref=e2948]: Grade 6 English 2026-2027
+                - generic [ref=e2949]: Partially Approved
+                - generic [ref=e2950]: Jade Glenn · 2026-2027
+              - button [ref=e2994]:
+                - img [ref=e2953]
+                - generic [ref=e2955]: Standards Coverage
+                - generic [ref=e2956]: 36/41 mapped · 5 missing
+              - generic [ref=e2958]:
+                - generic [ref=e2959]:
+                  - generic [ref=e2960]:
+                    - generic [ref=e2961]: T3 · U2
+                    - generic [ref=e2962]: TC-01 Test Unit
+                  - generic [ref=e2963]:
+                    - generic [ref=e2964]: 6w
+                    - generic [ref=e2965]: summative
+                    - generic [ref=e2966]: Submitted today
+                - generic [ref=e2967]:
+                  - button [ref=e2995]: Open Unit
+                  - button [ref=e2996]:
+                    - img
+                    - text: Approve
+                  - button [ref=e2997]:
+                    - img
+                    - text: Revise
+          - generic [ref=e2971]:
+            - heading [level=2] [ref=e2998]: Recently Reviewed
+            - generic [ref=e2974]:
+              - generic [ref=e2975]:
+                - generic [ref=e2976]:
+                  - generic [ref=e2977]: Identity & Narrative
+                  - generic [ref=e2978]: Approved
+                - paragraph [ref=e2979]: Grade 6 English 2026-2027 · Jade Glenn · today
+              - generic [ref=e2980]:
+                - button [ref=e2999]: Open
+                - button [ref=e3000]: Re-open
+  - dialog "Request Revision" [ref=e3004]:
+    - heading "Request Revision" [level=2] [ref=e3006]
+    - generic [ref=e3007]:
+      - generic [ref=e3008]:
+        - paragraph [ref=e3009]: TC-01 Test Unit
+        - paragraph [ref=e3010]: Grade 6 English 2026-2027 · Term 3 · Jade Glenn
+      - generic [ref=e3011]:
+        - generic [ref=e3012]: Feedback for teacher
+        - textbox "Explain what needs to be revised..." [active] [ref=e3013]
+    - generic [ref=e3014]:
+      - button "Cancel" [ref=e3015]
+      - button "Request Revision" [disabled]
+    - button "Close" [ref=e3016]:
+      - img
+      - generic [ref=e3017]: Close

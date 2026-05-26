@@ -1,0 +1,51 @@
+- generic [ref=e1]:
+  - alert [ref=e5]
+  - generic [ref=e1518]:
+    - generic [ref=e1521]:
+      - generic [ref=e1523]:
+        - img [ref=e1525]
+        - generic [ref=e1527]:
+          - paragraph [ref=e1528]: Curriculum Tracker
+          - paragraph [ref=e1529]: Grade 6 English
+      - list [ref=e1533]:
+        - listitem [ref=e1534]:
+          - button "Dashboard" [ref=e1987] [cursor=pointer]:
+            - img [ref=e1536]
+            - generic [ref=e1541]: Dashboard
+        - listitem [ref=e1542]:
+          - button "Standards Coverage" [ref=e1988] [cursor=pointer]:
+            - img [ref=e1544]
+            - generic [ref=e1547]: Standards Coverage
+        - listitem [ref=e1548]:
+          - button "Long Term Plan" [active] [ref=e1989] [cursor=pointer]:
+            - img [ref=e1550]
+            - generic [ref=e1553]: Long Term Plan
+        - listitem [ref=e1554]:
+          - button "My Units" [ref=e1990] [cursor=pointer]:
+            - img [ref=e1556]
+            - generic [ref=e1559]: My Units
+        - listitem [ref=e1560]:
+          - button "Student Progress" [ref=e1991] [cursor=pointer]:
+            - img [ref=e1562]
+            - generic [ref=e1567]: Student Progress
+      - generic [ref=e1569]:
+        - generic [ref=e1570]:
+          - paragraph [ref=e1571]: jadedamonse@gmail.com
+          - paragraph [ref=e1572]: Teacher
+        - button "Sign out" [ref=e1992]:
+          - img [ref=e1574]
+    - main [ref=e1577]:
+      - main [ref=e1578]:
+        - generic [ref=e1998]:
+          - generic [ref=e2000]:
+            - heading "Long Term Plan" [level=1] [ref=e2001]
+            - paragraph [ref=e2002]: Year-long curriculum overview organised by term and unit
+          - generic [ref=e2005]:
+            - generic [ref=e2006]:
+              - generic [ref=e2007]:
+                - paragraph [ref=e2008]: Grade 6 English 2026-2027
+                - generic [ref=e2009]: Partially Approved
+              - paragraph [ref=e2010]: 2026-2027 · 5 units · 36/41 standards mapped
+            - button "Open" [ref=e2012]:
+              - img
+              - text: Open

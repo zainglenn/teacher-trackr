@@ -1,0 +1,19 @@
+- generic [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e13]:
+    - generic [ref=e14]:
+      - img [ref=e17]
+      - generic [ref=e19]: Curriculum Tracker
+      - generic [ref=e20]: Grade 6 English · Dubai Schools Al Khawaneej
+    - generic [ref=e22]:
+      - generic [ref=e23]:
+        - generic [ref=e24]: Email
+        - textbox "Email" [active] [ref=e25]:
+          - /placeholder: you@dubaischools.ae
+      - generic [ref=e26]:
+        - generic [ref=e27]: Password
+        - textbox "Password" [ref=e28]:
+          - /placeholder: ••••••••
+      - button "Sign in" [ref=e29]

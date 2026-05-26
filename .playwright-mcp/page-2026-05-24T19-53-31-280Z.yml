@@ -1,0 +1,225 @@
+- generic [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e177]:
+    - generic [ref=e180]:
+      - generic [ref=e182]:
+        - img [ref=e184]
+        - generic [ref=e186]:
+          - paragraph [ref=e187]: Curriculum Tracker
+          - paragraph [ref=e188]: Dubai Schools
+      - list [ref=e192]:
+        - listitem [ref=e193]:
+          - button "Dashboard" [ref=e194] [cursor=pointer]:
+            - img [ref=e195]
+            - generic [ref=e200]: Dashboard
+        - listitem [ref=e201]:
+          - button "Standards Coverage" [ref=e202] [cursor=pointer]:
+            - img [ref=e203]
+            - generic [ref=e206]: Standards Coverage
+        - listitem [ref=e207]:
+          - button "Master Plans" [ref=e208] [cursor=pointer]:
+            - img [ref=e209]
+            - generic [ref=e212]: Master Plans
+        - listitem [ref=e213]:
+          - button "Student Progress" [ref=e214] [cursor=pointer]:
+            - img [ref=e215]
+            - generic [ref=e220]: Student Progress
+        - listitem [ref=e221]:
+          - button "Delivery Grid" [ref=e222] [cursor=pointer]:
+            - img [ref=e223]
+            - generic [ref=e225]: Delivery Grid
+        - listitem [ref=e226]:
+          - button "Admin Panel" [active] [ref=e227] [cursor=pointer]:
+            - img [ref=e228]
+            - generic [ref=e231]: Admin Panel
+        - listitem [ref=e232]:
+          - button "Manage Users" [ref=e233] [cursor=pointer]:
+            - img [ref=e234]
+            - generic [ref=e246]: Manage Users
+      - generic [ref=e248]:
+        - generic [ref=e249]:
+          - paragraph [ref=e250]: zainglenn1995@gmail.com
+          - paragraph [ref=e251]: Head of Department
+        - button "Sign out" [ref=e252]:
+          - img [ref=e253]
+    - main [ref=e256]:
+      - main [ref=e257]:
+        - generic [ref=e376]:
+          - generic [ref=e377]:
+            - heading "Admin Panel" [level=1] [ref=e378]
+            - paragraph [ref=e379]: Set up classes, assign teachers, and configure lesson deadlines.
+          - generic [ref=e380]:
+            - button "Classes" [ref=e381]:
+              - img [ref=e382]
+              - text: Classes
+            - button "Deadlines" [ref=e385]:
+              - img [ref=e386]
+              - text: Deadlines
+            - button "Notifications" [ref=e388]:
+              - img [ref=e389]
+              - text: Notifications
+          - generic [ref=e392]:
+            - generic [ref=e393]:
+              - paragraph [ref=e394]: 6 classes this year
+              - button "New Class" [ref=e395]:
+                - img
+                - text: New Class
+            - generic [ref=e396]:
+              - generic [ref=e398]:
+                - generic [ref=e399]:
+                  - generic [ref=e400]: 6A
+                  - generic [ref=e401]:
+                    - paragraph [ref=e402]: 6A
+                    - paragraph [ref=e403]: 2026-27
+                  - generic [ref=e404]: Setup
+                  - button "Delete class" [ref=e405]:
+                    - img [ref=e406]
+                - generic [ref=e409]:
+                  - generic [ref=e410]:
+                    - img [ref=e411]
+                    - generic [ref=e415]:
+                      - paragraph [ref=e416]: Teacher
+                      - combobox [ref=e417]:
+                        - generic [ref=e418]: ca514490-1ba4-4c75-acd0-9790a01576aa
+                        - img: ▼
+                      - textbox [ref=e419]: ca514490-1ba4-4c75-acd0-9790a01576aa
+                  - generic [ref=e420]:
+                    - img [ref=e421]
+                    - generic [ref=e423]:
+                      - paragraph [ref=e424]: Master Plan
+                      - combobox [ref=e425]:
+                        - generic [ref=e426]: Attach plan…
+                        - img: ▼
+                      - textbox [ref=e427]
+              - generic [ref=e429]:
+                - generic [ref=e430]:
+                  - generic [ref=e431]: 6B
+                  - generic [ref=e432]:
+                    - paragraph [ref=e433]: 6B
+                    - paragraph [ref=e434]: 2026-27
+                  - generic [ref=e435]: Setup
+                  - button "Delete class" [ref=e436]:
+                    - img [ref=e437]
+                - generic [ref=e440]:
+                  - generic [ref=e441]:
+                    - img [ref=e442]
+                    - generic [ref=e446]:
+                      - paragraph [ref=e447]: Teacher
+                      - combobox [ref=e448]:
+                        - generic [ref=e449]: ffb64ffd-363f-402d-af67-5c7ba4538ad4
+                        - img: ▼
+                      - textbox [ref=e450]: ffb64ffd-363f-402d-af67-5c7ba4538ad4
+                  - generic [ref=e451]:
+                    - img [ref=e452]
+                    - generic [ref=e454]:
+                      - paragraph [ref=e455]: Master Plan
+                      - combobox [ref=e456]:
+                        - generic [ref=e457]: Attach plan…
+                        - img: ▼
+                      - textbox [ref=e458]
+              - generic [ref=e460]:
+                - generic [ref=e461]:
+                  - generic [ref=e462]: 6C
+                  - generic [ref=e463]:
+                    - paragraph [ref=e464]: 6C
+                    - paragraph [ref=e465]: 2026-27
+                  - generic [ref=e466]: Setup
+                  - button "Delete class" [ref=e467]:
+                    - img [ref=e468]
+                - generic [ref=e471]:
+                  - generic [ref=e472]:
+                    - img [ref=e473]
+                    - generic [ref=e477]:
+                      - paragraph [ref=e478]: Teacher
+                      - combobox [ref=e479]:
+                        - generic [ref=e480]: ffb64ffd-363f-402d-af67-5c7ba4538ad4
+                        - img: ▼
+                      - textbox [ref=e481]: ffb64ffd-363f-402d-af67-5c7ba4538ad4
+                  - generic [ref=e482]:
+                    - img [ref=e483]
+                    - generic [ref=e485]:
+                      - paragraph [ref=e486]: Master Plan
+                      - combobox [ref=e487]:
+                        - generic [ref=e488]: Attach plan…
+                        - img: ▼
+                      - textbox [ref=e489]
+              - generic [ref=e491]:
+                - generic [ref=e492]:
+                  - generic [ref=e493]: 6D
+                  - generic [ref=e494]:
+                    - paragraph [ref=e495]: 6D
+                    - paragraph [ref=e496]: 2026-27
+                  - generic [ref=e497]: Setup
+                  - button "Delete class" [ref=e498]:
+                    - img [ref=e499]
+                - generic [ref=e502]:
+                  - generic [ref=e503]:
+                    - img [ref=e504]
+                    - generic [ref=e508]:
+                      - paragraph [ref=e509]: Teacher
+                      - combobox [ref=e510]:
+                        - generic [ref=e511]: ca514490-1ba4-4c75-acd0-9790a01576aa
+                        - img: ▼
+                      - textbox [ref=e512]: ca514490-1ba4-4c75-acd0-9790a01576aa
+                  - generic [ref=e513]:
+                    - img [ref=e514]
+                    - generic [ref=e516]:
+                      - paragraph [ref=e517]: Master Plan
+                      - combobox [ref=e518]:
+                        - generic [ref=e519]: Attach plan…
+                        - img: ▼
+                      - textbox [ref=e520]
+              - generic [ref=e522]:
+                - generic [ref=e523]:
+                  - generic [ref=e524]: 6E
+                  - generic [ref=e525]:
+                    - paragraph [ref=e526]: 6E
+                    - paragraph [ref=e527]: 2026-27
+                  - generic [ref=e528]: Setup
+                  - button "Delete class" [ref=e529]:
+                    - img [ref=e530]
+                - generic [ref=e533]:
+                  - generic [ref=e534]:
+                    - img [ref=e535]
+                    - generic [ref=e539]:
+                      - paragraph [ref=e540]: Teacher
+                      - combobox [ref=e541]:
+                        - generic [ref=e542]: ca514490-1ba4-4c75-acd0-9790a01576aa
+                        - img: ▼
+                      - textbox [ref=e543]: ca514490-1ba4-4c75-acd0-9790a01576aa
+                  - generic [ref=e544]:
+                    - img [ref=e545]
+                    - generic [ref=e547]:
+                      - paragraph [ref=e548]: Master Plan
+                      - combobox [ref=e549]:
+                        - generic [ref=e550]: Attach plan…
+                        - img: ▼
+                      - textbox [ref=e551]
+              - generic [ref=e553]:
+                - generic [ref=e554]:
+                  - generic [ref=e555]: 6F
+                  - generic [ref=e556]:
+                    - paragraph [ref=e557]: 6F
+                    - paragraph [ref=e558]: 2026-27
+                  - generic [ref=e559]: Setup
+                  - button "Delete class" [ref=e560]:
+                    - img [ref=e561]
+                - generic [ref=e564]:
+                  - generic [ref=e565]:
+                    - img [ref=e566]
+                    - generic [ref=e570]:
+                      - paragraph [ref=e571]: Teacher
+                      - combobox [ref=e572]:
+                        - generic [ref=e573]: ffb64ffd-363f-402d-af67-5c7ba4538ad4
+                        - img: ▼
+                      - textbox [ref=e574]: ffb64ffd-363f-402d-af67-5c7ba4538ad4
+                  - generic [ref=e575]:
+                    - img [ref=e576]
+                    - generic [ref=e578]:
+                      - paragraph [ref=e579]: Master Plan
+                      - combobox [ref=e580]:
+                        - generic [ref=e581]: Attach plan…
+                        - img: ▼
+                      - textbox [ref=e582]

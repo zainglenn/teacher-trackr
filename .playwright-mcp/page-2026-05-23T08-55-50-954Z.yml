@@ -1,0 +1,81 @@
+- generic [ref=e1]:
+  - alert [ref=e5]
+  - generic [ref=e2031]:
+    - generic [ref=e2034]:
+      - generic [ref=e2036]:
+        - img [ref=e2038]
+        - generic [ref=e2040]:
+          - paragraph [ref=e2041]: Curriculum Tracker
+          - paragraph [ref=e2042]: Grade 6 English
+      - list [ref=e2046]:
+        - listitem [ref=e2047]:
+          - button "Dashboard" [ref=e2048] [cursor=pointer]:
+            - img [ref=e2049]
+            - generic [ref=e2054]: Dashboard
+        - listitem [ref=e2055]:
+          - button "Standards Coverage" [ref=e2056] [cursor=pointer]:
+            - img [ref=e2057]
+            - generic [ref=e2060]: Standards Coverage
+        - listitem [ref=e2061]:
+          - button "Long Term Plan" [active] [ref=e2062] [cursor=pointer]:
+            - img [ref=e2063]
+            - generic [ref=e2066]: Long Term Plan
+        - listitem [ref=e2067]:
+          - button "Student Progress" [ref=e2068] [cursor=pointer]:
+            - img [ref=e2069]
+            - generic [ref=e2074]: Student Progress
+        - listitem [ref=e2075]:
+          - button "HOD Review" [ref=e2076] [cursor=pointer]:
+            - img [ref=e2077]
+            - generic [ref=e2081]: HOD Review
+        - listitem [ref=e2082]:
+          - button "Unit Assignments" [ref=e2083] [cursor=pointer]:
+            - img [ref=e2084]
+            - generic [ref=e2087]: Unit Assignments
+        - listitem [ref=e2088]:
+          - button "Manage Classes" [ref=e2089] [cursor=pointer]:
+            - img [ref=e2090]
+            - generic [ref=e2093]: Manage Classes
+        - listitem [ref=e2094]:
+          - button "Manage Users" [ref=e2095] [cursor=pointer]:
+            - img [ref=e2096]
+            - generic [ref=e2108]: Manage Users
+      - generic [ref=e2110]:
+        - generic [ref=e2111]:
+          - paragraph [ref=e2112]: zainglenn1995@gmail.com
+          - paragraph [ref=e2113]: Head of Department
+        - button "Sign out" [ref=e2114]:
+          - img [ref=e2115]
+    - main [ref=e2118]:
+      - main [ref=e2119]:
+        - generic [ref=e2238]:
+          - generic [ref=e2239]:
+            - generic [ref=e2240]:
+              - heading "Long Term Plan" [level=1] [ref=e2241]
+              - paragraph [ref=e2242]: Year-long curriculum overview organised by term and unit
+            - button "New LTP" [ref=e2244]:
+              - img
+              - text: New LTP
+          - generic [ref=e2245]:
+            - generic [ref=e2247]:
+              - generic [ref=e2248]:
+                - generic [ref=e2249]:
+                  - paragraph [ref=e2250]: Grade 6 English
+                  - generic [ref=e2251]: In Progress
+                - paragraph [ref=e2252]: 2026-27 · 0 units · 0/41 standards mapped · zainglenn1995@gmail.com
+              - generic [ref=e2253]:
+                - button "View" [ref=e2254]:
+                  - img
+                  - text: View
+                - button "×" [ref=e2255]
+            - generic [ref=e2257]:
+              - generic [ref=e2258]:
+                - generic [ref=e2259]:
+                  - paragraph [ref=e2260]: Grade 6 English 2026-2027
+                  - generic [ref=e2261]: Partially Approved
+                - paragraph [ref=e2262]: 2026-2027 · 5 units · 36/41 standards mapped · Jade Glenn
+              - generic [ref=e2263]:
+                - button "View" [ref=e2264]:
+                  - img
+                  - text: View
+                - button "×" [ref=e2265]

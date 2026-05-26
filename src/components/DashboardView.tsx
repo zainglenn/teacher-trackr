@@ -102,7 +102,7 @@ function HodDashboard({ standards, ltps, onNavigate }: {
                 <button
                   key={p.id}
                   className="flex items-center justify-between py-2.5 first:pt-0 last:pb-0 w-full text-left hover:bg-muted/30 -mx-2 px-2 rounded transition-colors"
-                  onClick={() => onNavigate("hod-review")}
+                  onClick={() => onNavigate("delivery-grid")}
                 >
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium truncate">{p.title}</p>

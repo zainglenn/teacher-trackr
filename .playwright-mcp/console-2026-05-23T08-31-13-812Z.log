@@ -1,0 +1,14 @@
+[    1928ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ https://curriculum-tracker-five.vercel.app/:0
+[   85416ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ https://curriculum-tracker-five.vercel.app/:0
+[  571406ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ https://curriculum-tracker-five.vercel.app/:0
+[  878630ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ https://curriculum-tracker-five.vercel.app/:0
+[ 1427380ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ https://curriculum-tracker-five.vercel.app/:0
+[ 1683013ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ https://curriculum-tracker-five.vercel.app/:0
+[ 1872189ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ https://curriculum-tracker-five.vercel.app/:0
+[ 2108562ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ https://curriculum-tracker-five.vercel.app/:0
+[ 2391895ms] [ERROR] Failed to load resource: the server responded with a status of 403 () @ https://dhznsifsfwqmanslwydu.supabase.co/rest/v1/long_term_plans?id=eq.5e8b1b3d-801b-44e8-8037-a3ef3d08bcdb:0
+[ 2521136ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ https://curriculum-tracker-five.vercel.app/:0
+[ 2542488ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://dhznsifsfwqmanslwydu.supabase.co/auth/v1/token?grant_type=password:0
+[ 4874421ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://dhznsifsfwqmanslwydu.supabase.co/auth/v1/token?grant_type=password:0
+[ 4912274ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://dhznsifsfwqmanslwydu.supabase.co/auth/v1/token?grant_type=password:0
+[ 4927050ms] [ERROR] Failed to load resource: the server responded with a status of 400 () @ https://dhznsifsfwqmanslwydu.supabase.co/auth/v1/token?grant_type=password:0

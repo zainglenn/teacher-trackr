@@ -1,0 +1,48 @@
+- generic [ref=e1]:
+  - button "Open Next.js Dev Tools" [ref=e7] [cursor=pointer]:
+    - img [ref=e8]
+  - alert [ref=e11]
+  - generic [ref=e498]:
+    - generic [ref=e501]:
+      - generic [ref=e503]:
+        - img [ref=e505]
+        - generic [ref=e507]:
+          - paragraph [ref=e508]: Curriculum Tracker
+          - paragraph [ref=e509]: Dubai Schools
+      - list [ref=e513]:
+        - listitem [ref=e514]:
+          - button "Dashboard" [ref=e515] [cursor=pointer]:
+            - img [ref=e516]
+            - generic [ref=e521]: Dashboard
+        - listitem [ref=e522]:
+          - button "My Class" [active] [ref=e523] [cursor=pointer]:
+            - img [ref=e524]
+            - generic [ref=e529]: My Class
+        - listitem [ref=e530]:
+          - button "Standards Coverage" [ref=e531] [cursor=pointer]:
+            - img [ref=e532]
+            - generic [ref=e535]: Standards Coverage
+        - listitem [ref=e536]:
+          - button "Master Plans" [ref=e537] [cursor=pointer]:
+            - img [ref=e538]
+            - generic [ref=e541]: Master Plans
+        - listitem [ref=e542]:
+          - button "Student Progress" [ref=e543] [cursor=pointer]:
+            - img [ref=e544]
+            - generic [ref=e549]: Student Progress
+      - generic [ref=e551]:
+        - generic [ref=e552]:
+          - paragraph [ref=e553]: jadedamonse@gmail.com
+          - paragraph [ref=e554]: Teacher
+        - button "Sign out" [ref=e555]:
+          - img [ref=e556]
+    - main [ref=e559]:
+      - main [ref=e560]:
+        - generic [ref=e642]:
+          - generic [ref=e643]:
+            - heading "6B" [level=1] [ref=e644]
+            - paragraph [ref=e645]: Your class
+          - generic [ref=e647]:
+            - img [ref=e648]
+            - paragraph [ref=e650]: No master plan attached
+            - paragraph [ref=e651]: Your HOD needs to attach a master plan to your class before lesson weeks appear here.

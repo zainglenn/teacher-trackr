@@ -1,0 +1,65 @@
+- generic [ref=e1]:
+  - alert [ref=e5]
+  - generic [ref=e24]:
+    - generic [ref=e27]:
+      - generic [ref=e29]:
+        - img [ref=e31]
+        - generic [ref=e33]:
+          - paragraph [ref=e34]: Curriculum Tracker
+          - paragraph [ref=e35]: Grade 6 English
+      - list [ref=e39]:
+        - listitem [ref=e40]:
+          - button "Dashboard" [ref=e41] [cursor=pointer]:
+            - img [ref=e42]
+            - generic [ref=e47]: Dashboard
+        - listitem [ref=e48]:
+          - button "Standards Coverage" [ref=e49] [cursor=pointer]:
+            - img [ref=e50]
+            - generic [ref=e53]: Standards Coverage
+        - listitem [ref=e54]:
+          - button "Long Term Plan" [ref=e55] [cursor=pointer]:
+            - img [ref=e56]
+            - generic [ref=e59]: Long Term Plan
+        - listitem [ref=e60]:
+          - button "Student Progress" [ref=e61] [cursor=pointer]:
+            - img [ref=e62]
+            - generic [ref=e67]: Student Progress
+        - listitem [ref=e68]:
+          - button "Admin Panel" [active] [ref=e69] [cursor=pointer]:
+            - img [ref=e70]
+            - generic [ref=e72]: Admin Panel
+      - generic [ref=e74]:
+        - generic [ref=e75]:
+          - paragraph [ref=e76]: admin@curriculumtracker.ae
+          - paragraph [ref=e77]: Administrator
+        - button "Sign out" [ref=e78]:
+          - img [ref=e79]
+    - main [ref=e82]:
+      - main [ref=e83]:
+        - generic [ref=e156]:
+          - generic [ref=e158]:
+            - heading "Admin Panel" [level=1] [ref=e159]
+            - paragraph [ref=e160]: Manage and delete Long Term Plans and Unit Plans across all teachers.
+          - generic [ref=e161]:
+            - generic [ref=e162]:
+              - button "Long Term Plans 0" [ref=e163]:
+                - img [ref=e164]
+                - text: Long Term Plans
+                - generic [ref=e167]: "0"
+              - button "Unit Plans 0" [ref=e168]:
+                - img [ref=e169]
+                - text: Unit Plans
+                - generic [ref=e171]: "0"
+            - table [ref=e173]:
+              - rowgroup [ref=e174]:
+                - row "Title Teacher School Year Status Units" [ref=e175]:
+                  - columnheader [ref=e176]
+                  - columnheader "Title" [ref=e177]
+                  - columnheader "Teacher" [ref=e178]
+                  - columnheader "School Year" [ref=e179]
+                  - columnheader "Status" [ref=e180]
+                  - columnheader "Units" [ref=e181]
+                  - columnheader [ref=e182]
+              - rowgroup [ref=e183]:
+                - row "No long term plans found." [ref=e184]:
+                  - cell "No long term plans found." [ref=e185]

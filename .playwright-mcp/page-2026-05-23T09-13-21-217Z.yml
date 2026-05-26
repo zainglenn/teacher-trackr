@@ -1,0 +1,19 @@
+- generic [ref=e1]:
+  - alert [ref=e5]
+  - generic [ref=e3685]:
+    - generic [ref=e3686]:
+      - img [ref=e3689]
+      - generic [ref=e3691]: Curriculum Tracker
+      - generic [ref=e3692]: Grade 6 English · Dubai Schools Al Khawaneej
+    - generic [ref=e3694]:
+      - generic [ref=e3695]:
+        - generic [ref=e3696]: Email
+        - textbox "Email" [active] [ref=e3697]:
+          - /placeholder: you@dubaischools.ae
+          - text: jadedamonse@gmail.com
+      - generic [ref=e3698]:
+        - generic [ref=e3699]: Password
+        - textbox "Password" [ref=e3700]:
+          - /placeholder: ••••••••
+          - text: J@dedamonse1307
+      - button "Sign in" [ref=e3701]

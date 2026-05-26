@@ -1,0 +1,93 @@
+- generic [ref=e1]:
+  - alert [ref=e5]
+  - generic [ref=e2731]:
+    - generic [ref=e2734]:
+      - generic [ref=e2736]:
+        - img [ref=e2738]
+        - generic [ref=e2740]:
+          - paragraph [ref=e2741]: Curriculum Tracker
+          - paragraph [ref=e2742]: Grade 6 English
+      - list [ref=e2746]:
+        - listitem [ref=e2747]:
+          - button "Dashboard" [ref=e2748] [cursor=pointer]:
+            - img [ref=e2749]
+            - generic [ref=e2754]: Dashboard
+        - listitem [ref=e2755]:
+          - button "Standards Coverage" [ref=e2756] [cursor=pointer]:
+            - img [ref=e2757]
+            - generic [ref=e2760]: Standards Coverage
+        - listitem [ref=e2761]:
+          - button "Long Term Plan" [ref=e2762] [cursor=pointer]:
+            - img [ref=e2763]
+            - generic [ref=e2766]: Long Term Plan
+        - listitem [ref=e2767]:
+          - button "Student Progress" [ref=e2768] [cursor=pointer]:
+            - img [ref=e2769]
+            - generic [ref=e2774]: Student Progress
+        - listitem [ref=e2775]:
+          - button "HOD Review" [active] [ref=e2776] [cursor=pointer]:
+            - img [ref=e2777]
+            - generic [ref=e2781]: HOD Review
+        - listitem [ref=e2782]:
+          - button "Unit Assignments" [ref=e2783] [cursor=pointer]:
+            - img [ref=e2784]
+            - generic [ref=e2787]: Unit Assignments
+        - listitem [ref=e2788]:
+          - button "Manage Classes" [ref=e2789] [cursor=pointer]:
+            - img [ref=e2790]
+            - generic [ref=e2793]: Manage Classes
+        - listitem [ref=e2794]:
+          - button "Manage Users" [ref=e2795] [cursor=pointer]:
+            - img [ref=e2796]
+            - generic [ref=e2808]: Manage Users
+      - generic [ref=e2810]:
+        - generic [ref=e2811]:
+          - paragraph [ref=e2812]: zainglenn1995@gmail.com
+          - paragraph [ref=e2813]: Head of Department
+        - button "Sign out" [ref=e2814]:
+          - img [ref=e2815]
+    - main [ref=e2818]:
+      - main [ref=e2819]:
+        - generic [ref=e2938]:
+          - generic [ref=e2940]:
+            - heading "HOD Review" [level=1] [ref=e2941]
+            - paragraph [ref=e2942]: 1 unit awaiting review
+          - generic [ref=e2943]:
+            - heading "Awaiting Review" [level=2] [ref=e2944]
+            - generic [ref=e2946]:
+              - generic [ref=e2947]:
+                - paragraph [ref=e2948]: Grade 6 English 2026-2027
+                - generic [ref=e2949]: Partially Approved
+                - generic [ref=e2950]: Jade Glenn · 2026-2027
+              - button "Standards Coverage 36/41 mapped · 5 missing" [ref=e2952]:
+                - img [ref=e2953]
+                - generic [ref=e2955]: Standards Coverage
+                - generic [ref=e2956]: 36/41 mapped · 5 missing
+              - generic [ref=e2958]:
+                - generic [ref=e2959]:
+                  - generic [ref=e2960]:
+                    - generic [ref=e2961]: T3 · U2
+                    - generic [ref=e2962]: TC-01 Test Unit
+                  - generic [ref=e2963]:
+                    - generic [ref=e2964]: 6w
+                    - generic [ref=e2965]: summative
+                    - generic [ref=e2966]: Submitted today
+                - generic [ref=e2967]:
+                  - button "Open Unit" [ref=e2968]
+                  - button "Approve" [ref=e2969]:
+                    - img
+                    - text: Approve
+                  - button "Revise" [ref=e2970]:
+                    - img
+                    - text: Revise
+          - generic [ref=e2971]:
+            - heading "Recently Reviewed" [level=2] [ref=e2972]
+            - generic [ref=e2974]:
+              - generic [ref=e2975]:
+                - generic [ref=e2976]:
+                  - generic [ref=e2977]: Identity & Narrative
+                  - generic [ref=e2978]: Approved
+                - paragraph [ref=e2979]: Grade 6 English 2026-2027 · Jade Glenn · today
+              - generic [ref=e2980]:
+                - button "Open" [ref=e2981]
+                - button "Re-open" [ref=e2982]

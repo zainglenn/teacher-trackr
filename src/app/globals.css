@@ -128,3 +128,220 @@
     @apply font-sans;
   }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   CURRICULUM TRACKER — EXTENDED DESIGN TOKENS
+   Philosophy: Enterprise-lite — clinical precision with warm human touches.
+   Extends the shadcn/ui base. Do not edit the shadcn tokens above.
+   ───────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* ── Delivery Status ──────────────────────────────────────────────────────── */
+  /* Used in: HOD Delivery Grid cells, My Class week cards, coverage indicators */
+  --status-taught-bg:        oklch(0.962 0.044 155);   /* green-100 */
+  --status-taught-text:      oklch(0.366 0.115 152);   /* green-800 */
+  --status-taught-border:    oklch(0.871 0.100 155);   /* green-200 */
+
+  --status-behind-bg:        oklch(0.973 0.071 66);    /* amber-100 */
+  --status-behind-text:      oklch(0.421 0.123 66);    /* amber-800 */
+  --status-behind-border:    oklch(0.924 0.120 66);    /* amber-200 */
+
+  --status-overdue-bg:       oklch(0.971 0.050 19);    /* red-100 */
+  --status-overdue-text:     oklch(0.444 0.177 19);    /* red-800 */
+  --status-overdue-border:   oklch(0.932 0.105 19);    /* red-200 */
+
+  --status-pending-bg:       oklch(0.970 0 0);         /* neutral-100 */
+  --status-pending-text:     oklch(0.556 0 0);         /* neutral-500 */
+  --status-pending-border:   oklch(0.922 0 0);         /* neutral-200 */
+
+  /* ── Strand Colors ────────────────────────────────────────────────────────── */
+  /* Used in: StrandBadge, standards table, coverage view, PPT slides          */
+  --strand-rl-bg:            oklch(0.932 0.032 254);   /* blue-100    Reading Literature */
+  --strand-rl-text:          oklch(0.379 0.146 254);   /* blue-800 */
+  --strand-rl-border:        oklch(0.872 0.065 254);   /* blue-200 */
+  --strand-rl-accent:        oklch(0.546 0.245 263);   /* blue-600 */
+
+  --strand-ri-bg:            oklch(0.931 0.034 307);   /* violet-100  Reading Informational */
+  --strand-ri-text:          oklch(0.380 0.120 307);   /* violet-800 */
+  --strand-ri-border:        oklch(0.869 0.075 307);   /* violet-200 */
+  --strand-ri-accent:        oklch(0.541 0.185 308);   /* violet-600 */
+
+  --strand-w-bg:             oklch(0.962 0.059 95);    /* amber-100   Writing */
+  --strand-w-text:           oklch(0.421 0.123 75);    /* amber-800 */
+  --strand-w-border:         oklch(0.924 0.120 90);    /* amber-200 */
+  --strand-w-accent:         oklch(0.666 0.179 58);    /* amber-600 */
+
+  --strand-sl-bg:            oklch(0.952 0.054 163);   /* emerald-100 Speaking & Listening */
+  --strand-sl-text:          oklch(0.366 0.115 152);   /* emerald-800 */
+  --strand-sl-border:        oklch(0.880 0.094 163);   /* emerald-200 */
+  --strand-sl-accent:        oklch(0.532 0.157 150);   /* emerald-600 */
+
+  --strand-l-bg:             oklch(0.941 0.041 11);    /* rose-100    Language */
+  --strand-l-text:           oklch(0.444 0.177 9);     /* rose-800 */
+  --strand-l-border:         oklch(0.892 0.090 11);    /* rose-200 */
+  --strand-l-accent:         oklch(0.596 0.241 10);    /* rose-600 */
+
+  /* ── Spacing Scale ────────────────────────────────────────────────────────── */
+  /* 4px base unit. Tailwind v4 — use as CSS vars where Tailwind classes fall short */
+  --space-0:    0px;
+  --space-1:    4px;
+  --space-2:    8px;
+  --space-3:    12px;
+  --space-4:    16px;
+  --space-5:    24px;
+  --space-6:    32px;
+  --space-7:    48px;
+  --space-8:    64px;
+  --space-9:    96px;
+  --space-10:   128px;
+  --space-11:   192px;
+  --space-12:   256px;
+
+  /* ── Typography Scale ─────────────────────────────────────────────────────── */
+  --font-family-display:     var(--font-geist-sans), system-ui, sans-serif;
+  --font-family-body:        var(--font-geist-sans), system-ui, sans-serif;
+  --font-family-mono:        var(--font-geist-mono), "Menlo", monospace;
+
+  --font-size-xs:    0.75rem;    /* 12px — labels, captions */
+  --font-size-sm:    0.875rem;   /* 14px — secondary text */
+  --font-size-base:  1rem;       /* 16px — body */
+  --font-size-md:    1.125rem;   /* 18px — emphasized body */
+  --font-size-lg:    1.25rem;    /* 20px — section headers */
+  --font-size-xl:    1.5rem;     /* 24px — page section titles */
+  --font-size-2xl:   1.875rem;   /* 30px — page titles */
+  --font-size-3xl:   2.25rem;    /* 36px — display */
+  --font-size-4xl:   3rem;       /* 48px — hero/display */
+
+  --font-weight-normal:    400;
+  --font-weight-medium:    500;
+  --font-weight-semibold:  600;
+  --font-weight-bold:      700;
+
+  --line-height-tight:    1.2;
+  --line-height-normal:   1.5;
+  --line-height-relaxed:  1.7;
+
+  --letter-spacing-tight:   -0.02em;  /* display headings */
+  --letter-spacing-normal:   0em;
+  --letter-spacing-wide:     0.06em;  /* labels, caps */
+  --letter-spacing-wider:    0.1em;   /* badge text */
+
+  /* ── Layout ───────────────────────────────────────────────────────────────── */
+  --max-width-content:   68ch;      /* prose / card content */
+  --max-width-wide:      1024px;    /* dashboard panels */
+  --max-width-page:      1440px;    /* outer page shell */
+
+  --shadow-sm:   0 1px 2px 0 oklch(0 0 0 / 0.05);
+  --shadow-md:   0 4px 6px -1px oklch(0 0 0 / 0.08), 0 2px 4px -2px oklch(0 0 0 / 0.06);
+  --shadow-lg:   0 10px 15px -3px oklch(0 0 0 / 0.08), 0 4px 6px -4px oklch(0 0 0 / 0.05);
+  --shadow-focus: 0 0 0 3px var(--ring);
+
+  /* ── Motion ───────────────────────────────────────────────────────────────── */
+  --duration-instant:  50ms;
+  --duration-fast:     150ms;
+  --duration-normal:   250ms;
+  --duration-slow:     400ms;
+  --duration-slower:   600ms;
+
+  --easing-default:  cubic-bezier(0.4, 0, 0.2, 1);
+  --easing-in:       cubic-bezier(0.4, 0, 1, 1);
+  --easing-out:      cubic-bezier(0, 0, 0.2, 1);
+  --easing-bounce:   cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* ── Breakpoints (reference only — use Tailwind sm/md/lg/xl/2xl in classes) */
+  --breakpoint-sm:   375px;
+  --breakpoint-md:   768px;
+  --breakpoint-lg:   1024px;
+  --breakpoint-xl:   1280px;
+  --breakpoint-2xl:  1536px;
+}
+
+/* ── Dark mode overrides for extended tokens ─────────────────────────────── */
+.dark {
+  /* Delivery status — slightly desaturated on dark to avoid harsh vibrancy */
+  --status-taught-bg:        oklch(0.230 0.060 155);
+  --status-taught-text:      oklch(0.821 0.100 155);
+  --status-taught-border:    oklch(0.320 0.090 155);
+
+  --status-behind-bg:        oklch(0.240 0.060 70);
+  --status-behind-text:      oklch(0.880 0.120 70);
+  --status-behind-border:    oklch(0.340 0.090 70);
+
+  --status-overdue-bg:       oklch(0.240 0.070 19);
+  --status-overdue-text:     oklch(0.850 0.130 19);
+  --status-overdue-border:   oklch(0.340 0.100 19);
+
+  --status-pending-bg:       oklch(0.220 0 0);
+  --status-pending-text:     oklch(0.650 0 0);
+  --status-pending-border:   oklch(0.310 0 0);
+
+  /* Strand colors — lightened text, darkened bg for dark mode */
+  --strand-rl-bg:            oklch(0.240 0.040 254);
+  --strand-rl-text:          oklch(0.820 0.090 254);
+  --strand-rl-border:        oklch(0.320 0.060 254);
+
+  --strand-ri-bg:            oklch(0.240 0.040 307);
+  --strand-ri-text:          oklch(0.820 0.080 307);
+  --strand-ri-border:        oklch(0.320 0.060 307);
+
+  --strand-w-bg:             oklch(0.250 0.050 80);
+  --strand-w-text:           oklch(0.870 0.110 80);
+  --strand-w-border:         oklch(0.340 0.080 80);
+
+  --strand-sl-bg:            oklch(0.240 0.050 163);
+  --strand-sl-text:          oklch(0.820 0.090 163);
+  --strand-sl-border:        oklch(0.330 0.070 163);
+
+  --strand-l-bg:             oklch(0.240 0.050 11);
+  --strand-l-text:           oklch(0.840 0.120 11);
+  --strand-l-border:         oklch(0.330 0.080 11);
+
+  /* Shadows are darker in dark mode */
+  --shadow-sm:   0 1px 2px 0 oklch(0 0 0 / 0.3);
+  --shadow-md:   0 4px 6px -1px oklch(0 0 0 / 0.4), 0 2px 4px -2px oklch(0 0 0 / 0.3);
+  --shadow-lg:   0 10px 15px -3px oklch(0 0 0 / 0.5), 0 4px 6px -4px oklch(0 0 0 / 0.4);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --status-taught-bg:        oklch(0.230 0.060 155);
+    --status-taught-text:      oklch(0.821 0.100 155);
+    --status-taught-border:    oklch(0.320 0.090 155);
+
+    --status-behind-bg:        oklch(0.240 0.060 70);
+    --status-behind-text:      oklch(0.880 0.120 70);
+    --status-behind-border:    oklch(0.340 0.090 70);
+
+    --status-overdue-bg:       oklch(0.240 0.070 19);
+    --status-overdue-text:     oklch(0.850 0.130 19);
+    --status-overdue-border:   oklch(0.340 0.100 19);
+
+    --status-pending-bg:       oklch(0.220 0 0);
+    --status-pending-text:     oklch(0.650 0 0);
+    --status-pending-border:   oklch(0.310 0 0);
+
+    --strand-rl-bg:            oklch(0.240 0.040 254);
+    --strand-rl-text:          oklch(0.820 0.090 254);
+    --strand-rl-border:        oklch(0.320 0.060 254);
+
+    --strand-ri-bg:            oklch(0.240 0.040 307);
+    --strand-ri-text:          oklch(0.820 0.080 307);
+    --strand-ri-border:        oklch(0.320 0.060 307);
+
+    --strand-w-bg:             oklch(0.250 0.050 80);
+    --strand-w-text:           oklch(0.870 0.110 80);
+    --strand-w-border:         oklch(0.340 0.080 80);
+
+    --strand-sl-bg:            oklch(0.240 0.050 163);
+    --strand-sl-text:          oklch(0.820 0.090 163);
+    --strand-sl-border:        oklch(0.330 0.070 163);
+
+    --strand-l-bg:             oklch(0.240 0.050 11);
+    --strand-l-text:           oklch(0.840 0.120 11);
+    --strand-l-border:         oklch(0.330 0.080 11);
+
+    --shadow-sm:   0 1px 2px 0 oklch(0 0 0 / 0.3);
+    --shadow-md:   0 4px 6px -1px oklch(0 0 0 / 0.4), 0 2px 4px -2px oklch(0 0 0 / 0.3);
+    --shadow-lg:   0 10px 15px -3px oklch(0 0 0 / 0.5), 0 4px 6px -4px oklch(0 0 0 / 0.4);
+  }
+}

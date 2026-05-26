@@ -2,6 +2,15 @@
 
 import { Badge } from "@/components/ui/badge";
 
+const STRAND_VARS: Record<string, { bg: string; text: string; border: string }> = {
+  RL: { bg: "var(--strand-rl-bg)", text: "var(--strand-rl-text)", border: "var(--strand-rl-border)" },
+  RI: { bg: "var(--strand-ri-bg)", text: "var(--strand-ri-text)", border: "var(--strand-ri-border)" },
+  W:  { bg: "var(--strand-w-bg)",  text: "var(--strand-w-text)",  border: "var(--strand-w-border)"  },
+  SL: { bg: "var(--strand-sl-bg)", text: "var(--strand-sl-text)", border: "var(--strand-sl-border)" },
+  L:  { bg: "var(--strand-l-bg)",  text: "var(--strand-l-text)",  border: "var(--strand-l-border)"  },
+};
+
+// Legacy Tailwind classes kept for any consumers that still use STRAND_COLORS directly
 export const STRAND_COLORS: Record<string, string> = {
   RL: "bg-blue-100 text-blue-700 border-blue-200",
   RI: "bg-violet-100 text-violet-700 border-violet-200",
@@ -21,9 +30,26 @@ interface StrandBadgeProps {
 
 export function StrandBadge({ code, className }: StrandBadgeProps) {
   const strand = strandFromCode(code);
-  const color = STRAND_COLORS[strand] ?? "bg-muted text-muted-foreground border-muted";
+  const vars = STRAND_VARS[strand];
+
+  if (!vars) {
+    return (
+      <Badge variant="outline" className={`font-mono text-xs px-1.5 py-0 ${className ?? ""}`}>
+        {code}
+      </Badge>
+    );
+  }
+
   return (
-    <Badge variant="outline" className={`font-mono text-xs px-1.5 py-0 ${color} ${className ?? ""}`}>
+    <Badge
+      variant="outline"
+      className={`font-mono text-xs px-1.5 py-0 ${className ?? ""}`}
+      style={{
+        backgroundColor: vars.bg,
+        color: vars.text,
+        borderColor: vars.border,
+      }}
+    >
       {code}
     </Badge>
   );

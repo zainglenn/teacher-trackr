@@ -11,23 +11,52 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
-import { BookOpen, LayoutDashboard, CheckSquare, ClipboardList, Users, ClipboardCheck, LogOut, UserCog, BookMarked, GraduationCap, ShieldAlert } from "lucide-react";
+import {
+  BookOpen,
+  LayoutDashboard,
+  CheckSquare,
+  ClipboardList,
+  Users,
+  LogOut,
+  UserCog,
+  School,
+  Grid3X3,
+  Settings2,
+  ShieldAlert,
+} from "lucide-react";
 import { Role } from "@/types";
 import { useAuth } from "@/hooks/useAuth";
 
-export type AppView = "dashboard" | "coverage" | "long-term-plan" | "student-progress" | "hod-review" | "manage-users" | "manage-classes" | "my-units" | "unit-assignments" | "admin";
+export type AppView =
+  | "dashboard"
+  | "coverage"
+  | "long-term-plan"
+  | "student-progress"
+  | "delivery-grid"
+  | "hod-admin"
+  | "manage-users"
+  | "my-class"
+  | "admin";
 
-const NAV_ITEMS: { key: AppView; label: string; icon: React.ElementType; hodOnly?: boolean; teacherOnly?: boolean; adminOnly?: boolean }[] = [
-  { key: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { key: "coverage", label: "Standards Coverage", icon: CheckSquare },
-  { key: "long-term-plan", label: "Long Term Plan", icon: ClipboardList },
-  { key: "my-units", label: "My Units", icon: BookMarked, teacherOnly: true },
-  { key: "student-progress", label: "Student Progress", icon: Users },
-  { key: "hod-review", label: "HOD Review", icon: ClipboardCheck, hodOnly: true },
-  { key: "unit-assignments", label: "Unit Assignments", icon: BookMarked, hodOnly: true },
-  { key: "manage-classes", label: "Manage Classes", icon: GraduationCap, hodOnly: true },
-  { key: "manage-users", label: "Manage Users", icon: UserCog, hodOnly: true },
-  { key: "admin", label: "Admin Panel", icon: ShieldAlert, adminOnly: true },
+type NavItem = {
+  key: AppView;
+  label: string;
+  icon: React.ElementType;
+  hodOnly?: boolean;
+  teacherOnly?: boolean;
+  adminOnly?: boolean;
+};
+
+const NAV_ITEMS: NavItem[] = [
+  { key: "dashboard",       label: "Dashboard",          icon: LayoutDashboard },
+  { key: "my-class",        label: "My Class",           icon: School,       teacherOnly: true },
+  { key: "coverage",        label: "Standards Coverage", icon: CheckSquare },
+  { key: "long-term-plan",  label: "Master Plans",       icon: ClipboardList },
+  { key: "student-progress",label: "Student Progress",   icon: Users },
+  { key: "delivery-grid",   label: "Delivery Grid",      icon: Grid3X3,      hodOnly: true },
+  { key: "hod-admin",       label: "Admin Panel",        icon: Settings2,    hodOnly: true },
+  { key: "manage-users",    label: "Manage Users",       icon: UserCog,      hodOnly: true },
+  { key: "admin",           label: "Admin Panel",        icon: ShieldAlert,  adminOnly: true },
 ];
 
 interface AppSidebarProps {
@@ -35,16 +64,17 @@ interface AppSidebarProps {
   onViewChange: (v: AppView) => void;
   role: Role;
   email: string;
-  resubmittedCount?: number;
+  overdueCount?: number;
 }
 
-export function AppSidebar({ view, onViewChange, role, email, resubmittedCount = 0 }: AppSidebarProps) {
+export function AppSidebar({ view, onViewChange, role, email, overdueCount = 0 }: AppSidebarProps) {
   const { signOut } = useAuth();
 
-  const items = NAV_ITEMS.filter((item) =>
-    (!item.hodOnly || role === "hod") &&
-    (!item.teacherOnly || role === "teacher") &&
-    (!item.adminOnly || role === "admin")
+  const items = NAV_ITEMS.filter(
+    (item) =>
+      (!item.hodOnly || role === "hod") &&
+      (!item.teacherOnly || role === "teacher") &&
+      (!item.adminOnly || role === "admin")
   );
 
   return (
@@ -56,7 +86,7 @@ export function AppSidebar({ view, onViewChange, role, email, resubmittedCount =
           </div>
           <div>
             <p className="text-sm font-semibold text-sidebar-foreground leading-tight">Curriculum Tracker</p>
-            <p className="text-xs text-sidebar-foreground/60 leading-tight">Grade 6 English</p>
+            <p className="text-xs text-sidebar-foreground/60 leading-tight">Dubai Schools</p>
           </div>
         </div>
       </SidebarHeader>
@@ -74,9 +104,9 @@ export function AppSidebar({ view, onViewChange, role, email, resubmittedCount =
                   >
                     <item.icon className="h-4 w-4" />
                     <span>{item.label}</span>
-                    {item.key === "hod-review" && resubmittedCount > 0 && (
-                      <span className="ml-auto flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[10px] font-bold text-white">
-                        {resubmittedCount > 9 ? "9+" : resubmittedCount}
+                    {item.key === "delivery-grid" && overdueCount > 0 && (
+                      <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-[var(--status-overdue-text)] text-[10px] font-bold text-white">
+                        {overdueCount > 9 ? "9+" : overdueCount}
                       </span>
                     )}
                   </SidebarMenuButton>
