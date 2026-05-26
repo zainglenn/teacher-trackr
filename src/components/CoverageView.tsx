@@ -59,13 +59,13 @@ const STRAND_ACCENT_VAR: Record<string, string> = {
   L:  "--strand-l-accent",
 };
 
-const STRAND_ICON_BG: Record<string, string> = {
-  RL: "bg-blue-50 text-blue-600",
-  RI: "bg-violet-50 text-violet-600",
-  W: "bg-amber-50 text-amber-600",
-  SL: "bg-emerald-50 text-emerald-600",
-  L: "bg-rose-50 text-rose-600",
-};
+function strandIconStyle(code: string): React.CSSProperties {
+  const c = code.toLowerCase();
+  return {
+    background: `var(--strand-${c}-bg, var(--muted))`,
+    color: `var(--strand-${c}-text, var(--muted-foreground))`,
+  };
+}
 
 function StatusBadge({ status }: { status: CoverageStatus }) {
   const styles: Record<CoverageStatus, { bg: string; text: string; border: string; label: string }> = {
@@ -272,7 +272,7 @@ function CoverageGrid({
                   : "border-border bg-card hover:border-primary/40 hover:shadow-sm"
               }`}
             >
-              <div className={`inline-flex items-center justify-center w-9 h-9 rounded-lg mb-3 ${STRAND_ICON_BG[code] ?? "bg-muted text-muted-foreground"}`}>
+              <div className="inline-flex items-center justify-center w-9 h-9 rounded-lg mb-3" style={strandIconStyle(code)}>
                 {STRAND_ICON[code]}
               </div>
               <div className="text-xs text-muted-foreground mb-0.5">{strand}</div>
@@ -298,7 +298,7 @@ function CoverageGrid({
         <div className="flex-1 min-w-0">
           {/* Tab bar + strand select */}
           <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
-            <div className="flex items-center gap-1 border-b border-transparent">
+            <div className="flex items-center gap-1 overflow-x-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none] border-b border-transparent">
               {tabs.map((tab) => (
                 <button
                   key={tab.key}
@@ -422,7 +422,7 @@ function CoverageGrid({
                               <span className="line-clamp-2 text-sm">{standard.description}</span>
                             </td>
                             <td className="px-4 py-3 hidden md:table-cell">
-                              <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STRAND_ICON_BG[code] ?? "bg-muted text-muted-foreground"}`}>
+                              <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={strandIconStyle(code)}>
                                 {strand}
                               </span>
                             </td>
@@ -787,7 +787,7 @@ function DepartmentCoverageGrid({
                             <span className="line-clamp-2 text-sm">{standard.description}</span>
                           </td>
                           <td className="px-4 py-3 hidden md:table-cell">
-                            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STRAND_ICON_BG[code] ?? "bg-muted text-muted-foreground"}`}>
+                            <span className="text-xs px-2 py-0.5 rounded-full font-medium" style={strandIconStyle(code)}>
                               {strand}
                             </span>
                           </td>
