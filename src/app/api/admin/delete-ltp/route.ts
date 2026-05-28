@@ -19,7 +19,7 @@ export async function DELETE(req: NextRequest) {
   if (callerErr || !caller) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { data: profile } = await admin.from("profiles").select("role").eq("id", caller.id).single();
-  if (!["hod", "admin"].includes(profile?.role)) {
+  if (!["admin"].includes(profile?.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

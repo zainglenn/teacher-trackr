@@ -27,9 +27,10 @@ async function adminDelete(endpoint: string, body: Record<string, string>) {
 
 interface AdminViewProps {
   userId: string;
+  tab?: "platform" | "audit";
 }
 
-export function AdminView({ userId }: AdminViewProps) {
+export function AdminView({ userId, tab: activeSection = "audit" }: AdminViewProps) {
   const { plans, loading } = useLongTermPlans(userId, true);
   const [tab, setTab] = useState<AdminTab>("ltps");
   const [confirmLtp, setConfirmLtp] = useState<{ id: string; title: string } | null>(null);
@@ -85,8 +86,47 @@ export function AdminView({ userId }: AdminViewProps) {
     { key: "units", label: "Unit Plans", icon: BookOpen, count: allUnits.length },
   ];
 
+  if (activeSection === "platform") {
+    return (
+      <PageContainer title="Platform Settings" description="Configure school-wide settings for the curriculum tracker.">
+        <div className="max-w-lg space-y-6">
+          <div className="border rounded-lg p-5 space-y-4 bg-background">
+            <h3 className="text-sm font-semibold text-foreground">School Information</h3>
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground">School Name</label>
+                <input
+                  type="text"
+                  defaultValue="Dubai Schools Al Khawaneej"
+                  className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  disabled
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground">Current School Year</label>
+                <input
+                  type="text"
+                  defaultValue="2025-26"
+                  className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  disabled
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium text-foreground">Default Role for New Sign-ups</label>
+                <div className="flex items-center gap-2 h-9 px-3 rounded-md border border-input bg-muted/40 text-sm text-muted-foreground">
+                  Teacher
+                </div>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">Platform configuration is managed by your system administrator. Contact support to change these values.</p>
+          </div>
+        </div>
+      </PageContainer>
+    );
+  }
+
   return (
-    <PageContainer title="Admin Panel" description="Manage and delete Long Term Plans and Unit Plans across all teachers.">
+    <PageContainer title="Curriculum Audit" description="Read-only view of all plans and units across all teachers for support purposes.">
       <div className="space-y-4">
         {/* Tabs */}
         <div className="flex items-center gap-1 border-b">

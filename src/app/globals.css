@@ -266,10 +266,70 @@
   /* Opacity for upcoming (not yet active) unit lanes.                          */
   /* Applied as opacity on the entire lane so it degrades gracefully.           */
   --lane-upcoming-opacity: 0.55;
+
+  /* ── Subject Slot Colors ─────────────────────────────────────────────────── */
+  /* Subjects are user-defined so colors are assigned positionally.             */
+  /* Hues chosen to avoid conflicts with strand colors (blue/violet/amber/      */
+  /* emerald/rose) and the primary indigo. Apply via data-subject-slot="N".     */
+  /* Each slot: bg (100), text (800), border (200), accent (600)                */
+
+  --subject-slot-1-bg:      oklch(0.956 0.028 192);   /* teal-100  */
+  --subject-slot-1-text:    oklch(0.355 0.095 192);   /* teal-800  */
+  --subject-slot-1-border:  oklch(0.912 0.050 192);   /* teal-200  */
+  --subject-slot-1-accent:  oklch(0.520 0.145 192);   /* teal-600  */
+
+  --subject-slot-2-bg:      oklch(0.970 0.045 35);    /* orange-100 */
+  --subject-slot-2-text:    oklch(0.408 0.155 35);    /* orange-800 */
+  --subject-slot-2-border:  oklch(0.930 0.085 35);    /* orange-200 */
+  --subject-slot-2-accent:  oklch(0.620 0.200 35);    /* orange-600 */
+
+  --subject-slot-3-bg:      oklch(0.960 0.025 290);   /* fuchsia-100 */
+  --subject-slot-3-text:    oklch(0.370 0.130 290);   /* fuchsia-800 */
+  --subject-slot-3-border:  oklch(0.920 0.050 290);   /* fuchsia-200 */
+  --subject-slot-3-accent:  oklch(0.540 0.200 290);   /* fuchsia-600 */
+
+  --subject-slot-4-bg:      oklch(0.966 0.040 130);   /* lime-100  */
+  --subject-slot-4-text:    oklch(0.370 0.110 130);   /* lime-800  */
+  --subject-slot-4-border:  oklch(0.928 0.075 130);   /* lime-200  */
+  --subject-slot-4-accent:  oklch(0.545 0.160 130);   /* lime-600  */
+
+  --subject-slot-5-bg:      oklch(0.975 0.055 52);    /* yellow-100 */
+  --subject-slot-5-text:    oklch(0.400 0.110 52);    /* yellow-800 */
+  --subject-slot-5-border:  oklch(0.945 0.100 52);    /* yellow-200 */
+  --subject-slot-5-accent:  oklch(0.640 0.170 52);    /* yellow-600 */
+
+  --subject-slot-6-bg:      oklch(0.953 0.025 210);   /* sky-100   */
+  --subject-slot-6-text:    oklch(0.365 0.100 210);   /* sky-800   */
+  --subject-slot-6-border:  oklch(0.912 0.045 210);   /* sky-200   */
+  --subject-slot-6-accent:  oklch(0.530 0.155 210);   /* sky-600   */
 }
 
 /* ── Dark mode overrides for extended tokens ─────────────────────────────── */
 .dark {
+  /* Subject slot colors — darkened bg, lightened text */
+  --subject-slot-1-bg:      oklch(0.235 0.055 192);
+  --subject-slot-1-text:    oklch(0.820 0.085 192);
+  --subject-slot-1-border:  oklch(0.320 0.075 192);
+
+  --subject-slot-2-bg:      oklch(0.245 0.065 35);
+  --subject-slot-2-text:    oklch(0.870 0.120 35);
+  --subject-slot-2-border:  oklch(0.340 0.095 35);
+
+  --subject-slot-3-bg:      oklch(0.240 0.055 290);
+  --subject-slot-3-text:    oklch(0.825 0.095 290);
+  --subject-slot-3-border:  oklch(0.325 0.075 290);
+
+  --subject-slot-4-bg:      oklch(0.240 0.060 130);
+  --subject-slot-4-text:    oklch(0.830 0.090 130);
+  --subject-slot-4-border:  oklch(0.325 0.080 130);
+
+  --subject-slot-5-bg:      oklch(0.250 0.070 52);
+  --subject-slot-5-text:    oklch(0.875 0.115 52);
+  --subject-slot-5-border:  oklch(0.340 0.100 52);
+
+  --subject-slot-6-bg:      oklch(0.235 0.050 210);
+  --subject-slot-6-text:    oklch(0.820 0.085 210);
+  --subject-slot-6-border:  oklch(0.318 0.070 210);
   /* Delivery status — slightly desaturated on dark to avoid harsh vibrancy */
   --status-taught-bg:        oklch(0.230 0.060 155);
   --status-taught-text:      oklch(0.821 0.100 155);
@@ -366,6 +426,30 @@
     --term-1-accent:   oklch(0.70 0.16 264);
     --term-2-accent:   oklch(0.68 0.15 307);
     --term-3-accent:   oklch(0.65 0.13 163);
+
+    --subject-slot-1-bg:      oklch(0.235 0.055 192);
+    --subject-slot-1-text:    oklch(0.820 0.085 192);
+    --subject-slot-1-border:  oklch(0.320 0.075 192);
+
+    --subject-slot-2-bg:      oklch(0.245 0.065 35);
+    --subject-slot-2-text:    oklch(0.870 0.120 35);
+    --subject-slot-2-border:  oklch(0.340 0.095 35);
+
+    --subject-slot-3-bg:      oklch(0.240 0.055 290);
+    --subject-slot-3-text:    oklch(0.825 0.095 290);
+    --subject-slot-3-border:  oklch(0.325 0.075 290);
+
+    --subject-slot-4-bg:      oklch(0.240 0.060 130);
+    --subject-slot-4-text:    oklch(0.830 0.090 130);
+    --subject-slot-4-border:  oklch(0.325 0.080 130);
+
+    --subject-slot-5-bg:      oklch(0.250 0.070 52);
+    --subject-slot-5-text:    oklch(0.875 0.115 52);
+    --subject-slot-5-border:  oklch(0.340 0.100 52);
+
+    --subject-slot-6-bg:      oklch(0.235 0.050 210);
+    --subject-slot-6-text:    oklch(0.820 0.085 210);
+    --subject-slot-6-border:  oklch(0.318 0.070 210);
   }
 }
 

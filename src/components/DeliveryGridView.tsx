@@ -290,7 +290,7 @@ export function DeliveryGridView({ teacherId: _, onNavigate }: DeliveryGridViewP
             </p>
           </div>
           {onNavigate && (
-            <Button variant="outline" size="sm" onClick={() => onNavigate("hod-admin")} className="w-fit">
+            <Button variant="outline" size="sm" onClick={() => onNavigate("hod-settings")} className="w-fit">
               Go to Admin Panel
               <ArrowRight className="h-3.5 w-3.5 ml-1.5" />
             </Button>

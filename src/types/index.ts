@@ -1,10 +1,59 @@
 export type Role = "teacher" | "hod" | "admin";
 
+export interface School {
+  id: string;
+  name: string;
+  created_at: string;
+}
+
+export interface Subject {
+  id: string;
+  school_id: string | null;
+  name: string;
+  slot: 1 | 2 | 3 | 4 | 5 | 6;
+  created_at: string;
+}
+
+export interface GradeLevel {
+  id: string;
+  school_id: string | null;
+  name: string;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface StandardSet {
+  id: string;
+  school_id: string | null;
+  subject_id: string;
+  grade_level_id: string;
+  name: string;
+  created_at: string;
+  subject?: Subject;
+  grade_level?: GradeLevel;
+}
+
+export interface ClassAssignment {
+  id: string;
+  school_id: string | null;
+  teacher_id: string;
+  subject_id: string;
+  grade_level_id: string;
+  is_lead: boolean;
+  created_at: string;
+  teacher?: Pick<Profile, "id" | "full_name" | "username">;
+  subject?: Subject;
+  grade_level?: GradeLevel;
+}
+
 export interface Profile {
   id: string;
   email: string;
+  username: string;
   full_name: string | null;
   role: Role;
+  notification_email: string | null;
+  subject_id: string | null;
   created_at: string;
 }
 
@@ -13,6 +62,7 @@ export interface Standard {
   code: string;
   strand: string;
   description: string;
+  standard_set_id: string | null;
   created_at: string;
 }
 
@@ -25,7 +75,7 @@ export interface CoverageLog {
   created_at: string;
 }
 
-export type LTPStatus = "draft" | "submitted" | "approved" | "revision";
+export type LTPStatus = "draft" | "submitted" | "approved" | "revision" | "published";
 export type { UnitStatus, ComputedLTPStatus } from "@/lib/ltpStatus";
 
 export interface AssessmentRow {
@@ -59,6 +109,7 @@ export interface LTPUnit {
   created_at: string;
   status: import("@/lib/ltpStatus").UnitStatus;
   hod_feedback: string | null;
+  rejection_reason: string | null;
   submitted_at: string | null;
   reviewed_at: string | null;
   reviewed_by: string | null;
@@ -103,6 +154,9 @@ export interface LongTermPlan {
   school_year: string;
   status: LTPStatus;
   class_id: string | null;
+  school_id: string | null;
+  subject_id: string | null;
+  grade_level_id: string | null;
   hod_feedback: string | null;
   reviewed_by: string | null;
   reviewed_at: string | null;
@@ -111,6 +165,8 @@ export interface LongTermPlan {
   units?: LTPUnit[];
   teacher?: Profile;
   members?: LTPMember[];
+  subject?: Subject;
+  grade_level?: GradeLevel;
 }
 
 export interface Class {

@@ -7,39 +7,26 @@ import { Modal, ModalFooter, ModalCancel, ConfirmModal } from "@/components/ui/m
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Pencil, Search, Copy, Check } from "lucide-react";
+import { Plus, Trash2, Pencil, Search } from "lucide-react";
 import { useAdminUsers } from "@/hooks/useAdminUsers";
 import { Profile, Role } from "@/types";
 
-const ROLE_CONFIG: Record<Role, { label: string; className: string }> = {
-  hod:     { label: "Head of Department", className: "bg-violet-100 text-violet-700 border-violet-200" },
-  teacher: { label: "Teacher",            className: "bg-blue-100 text-blue-700 border-blue-200" },
-  admin:   { label: "Administrator",      className: "bg-rose-100 text-rose-700 border-rose-200" },
+const ROLE_CONFIG: Record<Role, { label: string; shortLabel: string; className: string }> = {
+  hod:     { label: "Head of Department", shortLabel: "HOD",     className: "bg-violet-100 text-violet-700 border-violet-200" },
+  teacher: { label: "Teacher",            shortLabel: "Teacher", className: "bg-blue-100 text-blue-700 border-blue-200" },
+  admin:   { label: "Admin",              shortLabel: "Admin",   className: "bg-rose-100 text-rose-700 border-rose-200" },
 };
 
-function userInitials(name: string | null, email: string) {
+const USERNAME_RE = /^[a-zA-Z0-9._]{2,30}$/;
+
+function userInitials(name: string | null, username: string) {
   if (name) {
     const parts = name.trim().split(" ");
     return parts.length >= 2
       ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
       : parts[0].slice(0, 2).toUpperCase();
   }
-  return email.slice(0, 2).toUpperCase();
-}
-
-function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
-  function copy() {
-    navigator.clipboard.writeText(text).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    });
-  }
-  return (
-    <button onClick={copy} className="ml-1 text-muted-foreground hover:text-foreground transition-colors" title="Copy email">
-      {copied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
-    </button>
-  );
+  return username.slice(0, 2).toUpperCase();
 }
 
 export function ManageUsersView({ currentUserId }: { currentUserId: string }) {
@@ -47,23 +34,30 @@ export function ManageUsersView({ currentUserId }: { currentUserId: string }) {
 
   // Add user dialog
   const [addOpen, setAddOpen] = useState(false);
-  const [newEmail, setNewEmail] = useState("");
+  const [newUsername, setNewUsername] = useState("");
   const [newName, setNewName] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [newRole, setNewRole] = useState<Role>("teacher");
+  const [newNotifEmail, setNewNotifEmail] = useState("");
   const [addError, setAddError] = useState("");
   const [addSaving, setAddSaving] = useState(false);
 
   // Edit user dialog
   const [editUser, setEditUser] = useState<Profile | null>(null);
+  const [editUsername, setEditUsername] = useState("");
   const [editName, setEditName] = useState("");
   const [editRole, setEditRole] = useState<Role>("teacher");
+  const [editNotifEmail, setEditNotifEmail] = useState("");
   const [editError, setEditError] = useState("");
   const [editSaving, setEditSaving] = useState(false);
 
   // Delete confirm
   const [confirmDelete, setConfirmDelete] = useState<Profile | null>(null);
   const [deleteSaving, setDeleteSaving] = useState(false);
+
+  // Role promotion confirm
+  const [confirmPromotion, setConfirmPromotion] = useState<{ user: Profile; newRole: Role } | null>(null);
+  const [promotionSaving, setPromotionSaving] = useState(false);
 
   // Search / filter
   const [search, setSearch] = useState("");
@@ -74,28 +68,35 @@ export function ManageUsersView({ currentUserId }: { currentUserId: string }) {
       const matchesRole = roleFilter === "all" || u.role === roleFilter;
       const q = search.toLowerCase();
       const matchesSearch = !q ||
-        (u.full_name ?? "").toLowerCase().includes(q) ||
-        u.email.toLowerCase().includes(q);
+        (u.username ?? "").toLowerCase().includes(q) ||
+        (u.full_name ?? "").toLowerCase().includes(q);
       return matchesRole && matchesSearch;
     });
   }, [users, search, roleFilter]);
 
   function resetAdd() {
-    setNewEmail(""); setNewName(""); setNewPassword(""); setNewRole("teacher"); setAddError("");
+    setNewUsername(""); setNewName(""); setNewPassword(""); setNewRole("teacher");
+    setNewNotifEmail(""); setAddError("");
   }
 
   function openEdit(user: Profile) {
     setEditUser(user);
+    setEditUsername(user.username ?? "");
     setEditName(user.full_name ?? "");
     setEditRole(user.role as Role);
+    setEditNotifEmail(user.notification_email ?? "");
     setEditError("");
   }
 
   async function handleAdd() {
-    if (!newEmail || !newPassword) return;
+    if (!newUsername || !newPassword) return;
+    if (!USERNAME_RE.test(newUsername)) {
+      setAddError("Username must be 2–30 chars: letters, numbers, dots or underscores.");
+      return;
+    }
     setAddSaving(true); setAddError("");
     try {
-      await createUser(newEmail, newPassword, newName, newRole);
+      await createUser(newUsername, newPassword, newName, newRole, newNotifEmail || undefined);
       setAddOpen(false); resetAdd();
     } catch (e) {
       setAddError(e instanceof Error ? e.message : "Failed to create user");
@@ -104,13 +105,47 @@ export function ManageUsersView({ currentUserId }: { currentUserId: string }) {
 
   async function handleEdit() {
     if (!editUser) return;
+    const roleChanged = editRole !== editUser.role;
+    const isPromotion = roleChanged && (editRole === "hod" || editRole === "admin");
+    if (isPromotion) {
+      setConfirmPromotion({ user: editUser, newRole: editRole });
+      return;
+    }
+    if (editUsername && !USERNAME_RE.test(editUsername)) {
+      setEditError("Invalid username format."); return;
+    }
     setEditSaving(true); setEditError("");
     try {
-      await updateUser(editUser.id, { full_name: editName || undefined, role: editRole });
+      await updateUser(editUser.id, {
+        username: editUsername || undefined,
+        full_name: editName || undefined,
+        role: editRole,
+        notification_email: editNotifEmail,
+      });
       setEditUser(null);
     } catch (e) {
       setEditError(e instanceof Error ? e.message : "Failed to update user");
     } finally { setEditSaving(false); }
+  }
+
+  async function handleConfirmPromotion() {
+    if (!confirmPromotion || !editUser) return;
+    if (editUsername && !USERNAME_RE.test(editUsername)) {
+      setEditError("Invalid username format."); return;
+    }
+    setPromotionSaving(true); setEditError("");
+    try {
+      await updateUser(editUser.id, {
+        username: editUsername || undefined,
+        full_name: editName || undefined,
+        role: confirmPromotion.newRole,
+        notification_email: editNotifEmail,
+      });
+      setConfirmPromotion(null);
+      setEditUser(null);
+    } catch (e) {
+      setEditError(e instanceof Error ? e.message : "Failed to update user");
+    } finally { setPromotionSaving(false); }
   }
 
   async function handleDelete() {
@@ -140,7 +175,7 @@ export function ManageUsersView({ currentUserId }: { currentUserId: string }) {
           <div className="relative flex-1 min-w-48">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <Input
-              placeholder="Search by name or email…"
+              placeholder="Search by username or name…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-8 h-8 text-sm"
@@ -154,7 +189,7 @@ export function ManageUsersView({ currentUserId }: { currentUserId: string }) {
               <SelectItem value="all">All Roles</SelectItem>
               <SelectItem value="teacher">Teacher</SelectItem>
               <SelectItem value="hod">Head of Department</SelectItem>
-              <SelectItem value="admin">Administrator</SelectItem>
+              <SelectItem value="admin">Admin</SelectItem>
             </SelectContent>
           </Select>
           <span className="text-xs text-muted-foreground">{filtered.length} of {users.length}</span>
@@ -166,9 +201,7 @@ export function ManageUsersView({ currentUserId }: { currentUserId: string }) {
             <thead>
               <tr className="border-b bg-muted/40">
                 <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">User</th>
-                <th className="text-left px-4 py-2.5 font-medium text-muted-foreground hidden sm:table-cell">
-                  Sign-in Email
-                </th>
+                <th className="text-left px-4 py-2.5 font-medium text-muted-foreground hidden sm:table-cell">Username</th>
                 <th className="text-left px-4 py-2.5 font-medium text-muted-foreground w-36">Role</th>
                 <th className="text-left px-4 py-2.5 font-medium text-muted-foreground w-28 hidden md:table-cell">Joined</th>
                 <th className="w-20 px-4" />
@@ -194,30 +227,26 @@ export function ManageUsersView({ currentUserId }: { currentUserId: string }) {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
                         <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-semibold text-muted-foreground shrink-0">
-                          {userInitials(user.full_name, user.email)}
+                          {userInitials(user.full_name, user.username ?? "")}
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
-                            <span className="font-medium truncate">{user.full_name ?? user.email}</span>
+                            <span className="font-medium truncate">{user.full_name ?? user.username}</span>
                             {isSelf && (
                               <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">you</span>
                             )}
                           </div>
-                          {/* Show email inline on small screens */}
-                          <div className="flex items-center sm:hidden text-xs text-muted-foreground mt-0.5">
-                            <span className="truncate">{user.email}</span>
-                            <CopyButton text={user.email} />
+                          {/* Show username inline on small screens */}
+                          <div className="sm:hidden text-xs text-muted-foreground mt-0.5 font-mono">
+                            {user.username}
                           </div>
                         </div>
                       </div>
                     </td>
 
-                    {/* Sign-in email */}
+                    {/* Username */}
                     <td className="px-4 py-3 hidden sm:table-cell">
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <span className="text-sm font-mono">{user.email}</span>
-                        <CopyButton text={user.email} />
-                      </div>
+                      <span className="text-sm font-mono text-muted-foreground">{user.username}</span>
                     </td>
 
                     {/* Role */}
@@ -267,26 +296,26 @@ export function ManageUsersView({ currentUserId }: { currentUserId: string }) {
       <Modal open={addOpen} onClose={() => { setAddOpen(false); resetAdd(); }} title="Add User">
         <div className="space-y-3 py-2">
           <div className="space-y-1.5">
+            <Label>Username <span className="text-rose-500">*</span></Label>
+            <Input
+              placeholder="e.g. jade.teacher"
+              value={newUsername}
+              onChange={(e) => setNewUsername(e.target.value)}
+              autoFocus
+              autoComplete="off"
+            />
+            <p className="text-xs text-muted-foreground">Letters, numbers, dots, underscores — 2–30 chars.</p>
+          </div>
+          <div className="space-y-1.5">
             <Label>Full Name</Label>
             <Input
-              placeholder="e.g. Sarah Al Mansoori"
+              placeholder="e.g. Jade Glenn"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              autoFocus
             />
           </div>
           <div className="space-y-1.5">
-            <Label>Sign-in Email</Label>
-            <Input
-              type="email"
-              placeholder="teacher@dubaischools.ae"
-              value={newEmail}
-              onChange={(e) => setNewEmail(e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">This is the email they'll use to log in.</p>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Temporary Password</Label>
+            <Label>Password <span className="text-rose-500">*</span></Label>
             <Input
               type="password"
               placeholder="Min. 6 characters"
@@ -295,42 +324,58 @@ export function ManageUsersView({ currentUserId }: { currentUserId: string }) {
             />
           </div>
           <div className="space-y-1.5">
-            <Label>Role</Label>
+            <Label>Role <span className="text-rose-500">*</span></Label>
             <Select value={newRole} onValueChange={(v) => setNewRole(v as Role)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="teacher">Teacher</SelectItem>
                 <SelectItem value="hod">Head of Department</SelectItem>
-                <SelectItem value="admin">Administrator</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Notification Email <span className="text-muted-foreground text-xs">(optional)</span></Label>
+            <Input
+              type="email"
+              placeholder="for future alerts only"
+              value={newNotifEmail}
+              onChange={(e) => setNewNotifEmail(e.target.value)}
+            />
           </div>
           {addError && <p className="text-sm text-rose-600 bg-rose-50 px-3 py-2 rounded-lg">{addError}</p>}
         </div>
         <ModalFooter>
           <ModalCancel onClick={() => { setAddOpen(false); resetAdd(); }} />
-          <Button onClick={handleAdd} disabled={addSaving || !newEmail || !newPassword}>
+          <Button onClick={handleAdd} disabled={addSaving || !newUsername || !newPassword}>
             {addSaving ? "Creating…" : "Create User"}
           </Button>
         </ModalFooter>
       </Modal>
 
       {/* Edit user dialog */}
-      <Modal
-        open={!!editUser}
-        onClose={() => setEditUser(null)}
-        title="Edit User"
-      >
+      <Modal open={!!editUser} onClose={() => setEditUser(null)} title="Edit User">
         {editUser && (
           <div className="space-y-3 py-2">
             <div className="flex items-center gap-3 p-3 bg-muted/40 rounded-lg mb-2">
               <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-sm font-semibold text-muted-foreground shrink-0">
-                {userInitials(editUser.full_name, editUser.email)}
+                {userInitials(editUser.full_name, editUser.username ?? "")}
               </div>
               <div>
-                <p className="text-sm font-medium">{editUser.full_name ?? editUser.email}</p>
-                <p className="text-xs text-muted-foreground font-mono">{editUser.email}</p>
+                <p className="text-sm font-medium">{editUser.full_name ?? editUser.username}</p>
+                <p className="text-xs text-muted-foreground font-mono">{editUser.username}</p>
               </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Username</Label>
+              <Input
+                placeholder="username"
+                value={editUsername}
+                onChange={(e) => setEditUsername(e.target.value)}
+                autoFocus
+                autoComplete="off"
+              />
+              <p className="text-xs text-muted-foreground">Changing username also updates their login credentials.</p>
             </div>
             <div className="space-y-1.5">
               <Label>Full Name</Label>
@@ -338,7 +383,6 @@ export function ManageUsersView({ currentUserId }: { currentUserId: string }) {
                 placeholder="Full name"
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
-                autoFocus
               />
             </div>
             <div className="space-y-1.5">
@@ -348,9 +392,18 @@ export function ManageUsersView({ currentUserId }: { currentUserId: string }) {
                 <SelectContent>
                   <SelectItem value="teacher">Teacher</SelectItem>
                   <SelectItem value="hod">Head of Department</SelectItem>
-                  <SelectItem value="admin">Administrator</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Notification Email <span className="text-muted-foreground text-xs">(optional)</span></Label>
+              <Input
+                type="email"
+                placeholder="for future alerts only"
+                value={editNotifEmail}
+                onChange={(e) => setEditNotifEmail(e.target.value)}
+              />
             </div>
             {editError && <p className="text-sm text-rose-600 bg-rose-50 px-3 py-2 rounded-lg">{editError}</p>}
           </div>
@@ -370,13 +423,29 @@ export function ManageUsersView({ currentUserId }: { currentUserId: string }) {
         title="Remove user?"
         description={
           confirmDelete
-            ? `This will permanently delete ${confirmDelete.full_name ?? confirmDelete.email}'s account and all associated data. This cannot be undone.`
+            ? `This will permanently delete ${confirmDelete.full_name ?? confirmDelete.username}'s account and all associated data. This cannot be undone.`
             : ""
         }
         confirmLabel="Remove User"
         variant="destructive"
         onConfirm={handleDelete}
         loading={deleteSaving}
+      />
+
+      {/* Role promotion confirm */}
+      <ConfirmModal
+        open={!!confirmPromotion}
+        onClose={() => setConfirmPromotion(null)}
+        title={`Promote to ${confirmPromotion ? (confirmPromotion.newRole === "hod" ? "Head of Department" : "Admin") : ""}?`}
+        description={
+          confirmPromotion
+            ? `This gives ${confirmPromotion.user.full_name ?? confirmPromotion.user.username} ${confirmPromotion.newRole === "hod" ? "Head of Department" : "Admin"} access. They will see all curriculum data on next login. This can be reversed by editing the user again.`
+            : ""
+        }
+        confirmLabel="Confirm Promotion"
+        variant="default"
+        onConfirm={handleConfirmPromotion}
+        loading={promotionSaving}
       />
     </PageContainer>
   );

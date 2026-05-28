@@ -39,21 +39,30 @@ export function useAdminUsers() {
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
-  async function createUser(email: string, password: string, full_name: string, role: Role) {
+  async function createUser(
+    username: string,
+    password: string,
+    full_name: string,
+    role: Role,
+    notification_email?: string,
+  ) {
     const token = await getFreshToken();
     if (!token) throw new Error("Not authenticated");
 
     const res = await fetch("/api/admin/create-user", {
       method: "POST",
       headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
-      body: JSON.stringify({ email, password, full_name, role }),
+      body: JSON.stringify({ username, password, full_name, role, notification_email }),
     });
     const json = await res.json();
     if (json.error) throw new Error(json.error);
     await fetchUsers();
   }
 
-  async function updateUser(userId: string, updates: { full_name?: string; role?: Role }) {
+  async function updateUser(
+    userId: string,
+    updates: { username?: string; full_name?: string; role?: Role; notification_email?: string },
+  ) {
     const token = await getFreshToken();
     if (!token) throw new Error("Not authenticated");
 

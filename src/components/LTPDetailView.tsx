@@ -11,7 +11,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import {
   ArrowLeft, Trash2,
   ChevronDown, ChevronUp, Sparkles, Loader2, AlertCircle, CheckCircle2,
-  UserPlus, UserCircle2,
+  UserPlus, UserCircle2, Lock,
 } from "lucide-react";
 import { LongTermPlan, LTPUnit, LTPStatus, LTPMemberRole, Standard, Profile } from "@/types";
 import { supabase } from "@/lib/supabase";
@@ -42,17 +42,20 @@ interface LTPDetailViewProps {
   setStatus: (id: string, status: LTPStatus, hodFeedback?: string) => Promise<void>;
   assignUnit: (unitId: string, teacherId: string | null) => Promise<void>;
   setMemberRole: (planId: string, memberId: string, role: LTPMemberRole) => Promise<void>;
+  publishPlan?: (planId: string) => Promise<void>;
   allLTPStandardIds: string[];
 }
 
 export function LTPDetailView({
   plan, isHod, myRole, standards, teachers, currentUserId, onBack, onOpenUnit,
-  addUnit, updateUnit, deleteUnit, setUnitStandards, setStatus, assignUnit, setMemberRole, allLTPStandardIds,
+  addUnit, updateUnit, deleteUnit, setUnitStandards, setStatus, assignUnit, setMemberRole, publishPlan, allLTPStandardIds,
 }: LTPDetailViewProps) {
-  // canEdit: HOD always, lead members can edit, contributors read-only
-  const canEdit = isHod || myRole === "lead";
+  // canEdit: HOD always, lead members can edit, contributors read-only. Published plans lock everyone.
+  const canEdit = (isHod || myRole === "lead") && plan.status !== "published";
 
   const [unitDialogState, setUnitDialogState] = useState<{ term: number } | null>(null);
+  const [publishConfirm, setPublishConfirm] = useState(false);
+  const [publishing, setPublishing] = useState(false);
 
   const [coverageMapOpen, setCoverageMapOpen] = useState(false);
   const [fillGapsLoading, setFillGapsLoading] = useState(false);
@@ -66,6 +69,9 @@ export function LTPDetailView({
   const [assignUnitTarget, setAssignUnitTarget] = useState<LTPUnit | null>(null);
   const [assignUnitTeacherId, setAssignUnitTeacherId] = useState("");
   const [assignUnitSaving, setAssignUnitSaving] = useState(false);
+
+  // Lead popover: tracks which member's badge was clicked
+  const [leadPopoverId, setLeadPopoverId] = useState<string | null>(null);
 
   // Coverage calculations
   const planMappedIds = new Set(plan.units?.flatMap((u) => u.standards?.map((s) => s.id) ?? []) ?? []);
@@ -187,8 +193,19 @@ export function LTPDetailView({
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {!canEdit && (
+          {plan.status === "published" && (
+            <Badge variant="outline" className="text-xs bg-indigo-50 text-indigo-700 border-indigo-200 gap-1">
+              <Lock className="h-3 w-3" aria-label="Plan is published and locked" /> Published
+            </Badge>
+          )}
+          {!canEdit && plan.status !== "published" && (
             <Badge variant="outline" className="text-xs bg-muted text-muted-foreground">View only</Badge>
+          )}
+          {isHod && computedStatus === "fully_approved" && publishPlan && (
+            <Button size="sm" className="h-8 text-xs bg-indigo-600 hover:bg-indigo-700 text-white"
+              onClick={() => setPublishConfirm(true)}>
+              <Lock className="h-3 w-3 mr-1" /> Publish Plan
+            </Button>
           )}
         </div>
       </div>
@@ -199,24 +216,53 @@ export function LTPDetailView({
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2.5">Members</p>
           <div className="flex flex-wrap gap-2">
             {(plan.members ?? []).map((m) => (
-              <div key={m.id} className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border bg-background text-xs">
+              <div key={m.id} className="relative flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border bg-background text-xs">
                 <UserCircle2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                 <span className="font-medium">{m.teacher?.full_name ?? m.teacher?.email ?? "Unknown"}</span>
                 <button
-                  onClick={() => setMemberRole(plan.id, m.id, m.role === "lead" ? "contributor" : "lead")}
+                  onClick={() => setLeadPopoverId(leadPopoverId === m.id ? null : m.id)}
                   className={`ml-1 px-1.5 py-0.5 rounded text-[10px] font-semibold transition-colors ${
                     m.role === "lead"
-                      ? "bg-violet-100 text-violet-700 hover:bg-violet-200"
+                      ? "bg-primary/10 text-primary hover:bg-primary/20"
                       : "bg-muted text-muted-foreground hover:bg-muted/80"
                   }`}
-                  title={m.role === "lead" ? "Click to set as Contributor" : "Click to promote to Lead"}
+                  aria-haspopup="true"
+                  aria-expanded={leadPopoverId === m.id}
                 >
                   {m.role === "lead" ? "Lead" : "Contributor"}
                 </button>
+                {leadPopoverId === m.id && (
+                  <div className="absolute left-0 top-full mt-1 z-20 min-w-[160px] rounded-lg border bg-popover shadow-md p-1"
+                    onMouseLeave={() => setLeadPopoverId(null)}>
+                    <button
+                      className="w-full text-left px-3 py-1.5 text-xs rounded-md hover:bg-muted transition-colors font-medium disabled:opacity-40 disabled:cursor-not-allowed"
+                      disabled={m.role === "lead"}
+                      onClick={async () => {
+                        // Demote any existing lead first, then promote this member
+                        const currentLead = (plan.members ?? []).find((x) => x.role === "lead" && x.id !== m.id);
+                        if (currentLead) await setMemberRole(plan.id, currentLead.id, "contributor");
+                        await setMemberRole(plan.id, m.id, "lead");
+                        setLeadPopoverId(null);
+                      }}
+                    >
+                      Set as Lead
+                    </button>
+                    <button
+                      className="w-full text-left px-3 py-1.5 text-xs rounded-md hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      disabled={m.role === "contributor"}
+                      onClick={async () => {
+                        await setMemberRole(plan.id, m.id, "contributor");
+                        setLeadPopoverId(null);
+                      }}
+                    >
+                      Set as Contributor
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </div>
-          <p className="text-[10px] text-muted-foreground mt-2">Click a role to toggle between Contributor and Lead.</p>
+          <p className="text-[10px] text-muted-foreground mt-2">Click a role badge to assign Lead or Contributor. Only one Lead per plan.</p>
         </div>
       )}
 
@@ -432,6 +478,43 @@ export function LTPDetailView({
           nextUnitNumber={(plan.units?.filter((u) => u.term === unitDialogState.term).length ?? 0) + 1}
           nextSortOrder={plan.units?.filter((u) => u.term === unitDialogState.term).length ?? 0}
         />
+      )}
+
+      {/* Publish plan confirmation */}
+      {publishConfirm && (
+        <Modal
+          open={publishConfirm}
+          onClose={() => setPublishConfirm(false)}
+          title="Publish this plan?"
+        >
+          <div className="space-y-3 py-2">
+            <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3 text-xs text-indigo-800">
+              <p className="font-semibold">{plan.title}</p>
+              <p className="text-indigo-600 mt-0.5">{plan.school_year}</p>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Publishing locks this plan permanently. All teachers will be able to view it, but no one will be able to edit it — including you.
+            </p>
+            <p className="text-xs text-muted-foreground">This action cannot be undone.</p>
+          </div>
+          <ModalFooter>
+            <ModalCancel onClick={() => setPublishConfirm(false)} />
+            <Button
+              className="bg-indigo-600 hover:bg-indigo-700 text-white"
+              disabled={publishing}
+              onClick={async () => {
+                if (!publishPlan) return;
+                setPublishing(true);
+                await publishPlan(plan.id);
+                setPublishing(false);
+                setPublishConfirm(false);
+              }}
+              aria-label="Confirm plan publication"
+            >
+              {publishing ? "Publishing..." : "Publish Plan"}
+            </Button>
+          </ModalFooter>
+        </Modal>
       )}
     </div>
   );

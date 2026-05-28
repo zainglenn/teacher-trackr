@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useMemo } from "react";
 import { PageContainer } from "@/components/PageContainer";
 import { StatCard } from "@/components/StatCard";
 import { Progress } from "@/components/ui/progress";
@@ -8,7 +9,9 @@ import { CheckSquare, ClipboardList, Users, ClipboardCheck, AlertTriangle, Clock
 import { Standard, CoverageLog, LongTermPlan, Student } from "@/types";
 import { AttainmentCounts } from "@/hooks/useClassProgress";
 import { useDepartmentStats } from "@/hooks/useDepartmentStats";
+import { useGradeLevels } from "@/hooks/useGradeLevels";
 import { strandFromCode, STRAND_COLORS } from "@/components/ltp/StrandBadge";
+import { GradeFilter } from "@/components/GradeFilter";
 import { AppView } from "@/components/AppSidebar";
 
 interface DashboardViewProps {
@@ -30,20 +33,31 @@ function HodDashboard({ standards, ltps, onNavigate }: {
   onNavigate: (view: AppView) => void;
 }) {
   const { teachers, coverageByTeacher, loading } = useDepartmentStats();
+  const { gradeLevels } = useGradeLevels();
+  const [activeGradeId, setActiveGradeId] = useState<string>("");
+
+  useMemo(() => {
+    if (gradeLevels.length > 0 && !activeGradeId) setActiveGradeId(gradeLevels[0].id);
+  }, [gradeLevels, activeGradeId]);
+
+  const filteredLtps = useMemo(() => {
+    if (!activeGradeId || gradeLevels.length === 0) return ltps;
+    return ltps.filter(p => !p.grade_level_id || p.grade_level_id === activeGradeId);
+  }, [ltps, activeGradeId, gradeLevels]);
 
   // Compute approved-this-week count from units
   const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-  const approvedThisWeek = ltps.flatMap((p) => p.units ?? [])
+  const approvedThisWeek = filteredLtps.flatMap((p) => p.units ?? [])
     .filter((u) => u.status === "approved" && (u.reviewed_at ?? "") >= oneWeekAgo).length;
 
   // Plans needing attention: submitted (oldest first) + revision (most recent first)
-  const submitted = ltps.filter((p) => (p.units ?? []).some((u) => u.status === "submitted"))
+  const submitted = filteredLtps.filter((p) => (p.units ?? []).some((u) => u.status === "submitted"))
     .sort((a, b) => {
       const aDate = Math.min(...(a.units ?? []).filter(u => u.status === "submitted").map(u => new Date(u.submitted_at ?? 0).getTime()));
       const bDate = Math.min(...(b.units ?? []).filter(u => u.status === "submitted").map(u => new Date(u.submitted_at ?? 0).getTime()));
       return aDate - bDate;
     });
-  const revision = ltps.filter((p) => (p.units ?? []).some((u) => u.status === "revision") && !(p.units ?? []).some(u => u.status === "submitted"))
+  const revision = filteredLtps.filter((p) => (p.units ?? []).some((u) => u.status === "revision") && !(p.units ?? []).some(u => u.status === "submitted"))
     .sort((a, b) => {
       const aDate = Math.max(...(a.units ?? []).filter(u => u.status === "revision").map(u => new Date(u.reviewed_at ?? 0).getTime()));
       const bDate = Math.max(...(b.units ?? []).filter(u => u.status === "revision").map(u => new Date(u.reviewed_at ?? 0).getTime()));
@@ -52,7 +66,7 @@ function HodDashboard({ standards, ltps, onNavigate }: {
   const attention = [...submitted, ...revision].slice(0, 6);
 
   // Pending units count
-  const pendingUnits = ltps.flatMap((p) => p.units ?? []).filter((u) => u.status === "submitted").length;
+  const pendingUnits = filteredLtps.flatMap((p) => p.units ?? []).filter((u) => u.status === "submitted").length;
 
   // Heatmap: teachers × strands
   // strand code → standards IDs in that strand
@@ -69,11 +83,19 @@ function HodDashboard({ standards, ltps, onNavigate }: {
   };
 
   return (
-    <PageContainer title="Dashboard" description="Department overview — Grade 6 English">
+    <PageContainer
+      title="Dashboard"
+      description="Department overview"
+      action={
+        gradeLevels.length > 0 ? (
+          <GradeFilter grades={gradeLevels} activeGradeId={activeGradeId} onChange={setActiveGradeId} />
+        ) : undefined
+      }
+    >
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard label="Teachers" value={loading ? "—" : teachers.length} sub="in department" icon={Users} iconColor="text-violet-500" />
-        <StatCard label="Long Term Plans" value={ltps.length} sub="across all teachers" icon={ClipboardList} iconColor="text-blue-500" />
+        <StatCard label="Long Term Plans" value={filteredLtps.length} sub="across all teachers" icon={ClipboardList} iconColor="text-blue-500" />
         <StatCard
           label="Pending Review"
           value={pendingUnits}

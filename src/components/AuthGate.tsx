@@ -8,9 +8,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { useAuth } from "@/hooks/useAuth";
 import { Loader2, BookOpen } from "lucide-react";
 
+const USERNAME_RE = /^[a-zA-Z0-9._]{2,30}$/;
+
 export function AuthGate() {
   const { signIn } = useAuth();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -18,10 +20,14 @@ export function AuthGate() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    if (!USERNAME_RE.test(username)) {
+      setError("Username must be 2–30 characters: letters, numbers, dots or underscores.");
+      return;
+    }
     setSubmitting(true);
-    const err = await signIn(email, password);
+    const err = await signIn(username, password);
     setSubmitting(false);
-    if (err) setError(err.message);
+    if (err) setError("Invalid username or password.");
   }
 
   return (
@@ -39,15 +45,16 @@ export function AuthGate() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+              <Label htmlFor="username" className="text-sm font-medium">Username</Label>
               <Input
-                id="email"
-                type="email"
-                placeholder="you@dubaischools.ae"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="username"
+                type="text"
+                placeholder="e.g. jade.teacher"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 required
                 autoFocus
+                autoComplete="username"
                 className="h-11 text-base"
               />
             </div>
@@ -60,6 +67,7 @@ export function AuthGate() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                autoComplete="current-password"
                 className="h-11 text-base"
               />
             </div>

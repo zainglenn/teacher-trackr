@@ -1,14 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { PageContainer } from "@/components/PageContainer";
+import { GradeFilter } from "@/components/GradeFilter";
+import { useGradeLevels } from "@/hooks/useGradeLevels";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Modal, ModalFooter, ModalCancel } from "@/components/ui/modal";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Check, RotateCcw, ClipboardCheck, ChevronDown, ChevronRight } from "lucide-react";
+import { Check, RotateCcw, ClipboardCheck, ChevronDown, ChevronRight, XCircle } from "lucide-react";
 import { LongTermPlan, LTPUnit, Standard } from "@/types";
 import { UnitPlanView } from "@/components/ltp/UnitPlanView";
 import { useLongTermPlans } from "@/hooks/useLongTermPlans";
@@ -98,12 +100,27 @@ function strandCounts(unit: LTPUnit): Record<string, number> {
 }
 
 export function HODReviewView({ teacherId, standards }: HODReviewViewProps) {
-  const { plans, loading, approveUnit, requestUnitRevision, reopenUnit } = useLongTermPlans(teacherId, true);
+  const { plans, loading, approveUnit, requestUnitRevision, reopenUnit, rejectUnit } = useLongTermPlans(teacherId, true);
+  const { gradeLevels } = useGradeLevels();
+  const [activeGradeId, setActiveGradeId] = useState<string>("");
+
+  // Default to first grade level once loaded
+  useMemo(() => {
+    if (gradeLevels.length > 0 && !activeGradeId) setActiveGradeId(gradeLevels[0].id);
+  }, [gradeLevels, activeGradeId]);
+
+  const filteredPlans = useMemo(() => {
+    if (!activeGradeId || gradeLevels.length === 0) return plans;
+    return plans.filter(p => !p.grade_level_id || p.grade_level_id === activeGradeId);
+  }, [plans, activeGradeId, gradeLevels]);
 
   const [selectedUnitId, setSelectedUnitId] = useState<string | null>(null);
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(null);
   const [revisionUnit, setRevisionUnit] = useState<UnitWithPlan | null>(null);
+  const [rejectingUnit, setRejectingUnit] = useState<UnitWithPlan | null>(null);
   const [feedback, setFeedback] = useState("");
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [rejectionTouched, setRejectionTouched] = useState(false);
   const [saving, setSaving] = useState(false);
 
   if (loading) return null;
@@ -132,7 +149,7 @@ export function HODReviewView({ teacherId, standards }: HODReviewViewProps) {
   }
 
   // Collect submitted units sorted FIFO
-  const pending: UnitWithPlan[] = plans
+  const pending: UnitWithPlan[] = filteredPlans
     .flatMap((p) => (p.units ?? []).filter((u) => u.status === "submitted").map((u) => ({ unit: u, plan: p })))
     .sort((a, b) => (a.unit.submitted_at ?? "").localeCompare(b.unit.submitted_at ?? ""));
 
@@ -144,9 +161,9 @@ export function HODReviewView({ teacherId, standards }: HODReviewViewProps) {
     else pendingByPlan.push({ plan, units: [unit] });
   }
 
-  // Recently reviewed (approved or revision)
-  const reviewed: UnitWithPlan[] = plans
-    .flatMap((p) => (p.units ?? []).filter((u) => u.status === "approved" || u.status === "revision").map((u) => ({ unit: u, plan: p })))
+  // Recently reviewed (approved, revision, or rejected)
+  const reviewed: UnitWithPlan[] = filteredPlans
+    .flatMap((p) => (p.units ?? []).filter((u) => u.status === "approved" || u.status === "revision" || u.status === "rejected").map((u) => ({ unit: u, plan: p })))
     .sort((a, b) => (b.unit.reviewed_at ?? "").localeCompare(a.unit.reviewed_at ?? ""))
     .slice(0, 20);
 
@@ -159,10 +176,26 @@ export function HODReviewView({ teacherId, standards }: HODReviewViewProps) {
     setFeedback("");
   }
 
+  async function handleReject() {
+    setRejectionTouched(true);
+    if (!rejectingUnit || !rejectionReason.trim()) return;
+    setSaving(true);
+    await rejectUnit(rejectingUnit.unit.id, rejectingUnit.plan.id, rejectionReason.trim());
+    setSaving(false);
+    setRejectingUnit(null);
+    setRejectionReason("");
+    setRejectionTouched(false);
+  }
+
   return (
     <PageContainer
-      title="HOD Review"
+      title="Plan Reviews"
       description={`${pending.length} unit${pending.length !== 1 ? "s" : ""} awaiting review`}
+      action={
+        gradeLevels.length > 0 ? (
+          <GradeFilter grades={gradeLevels} activeGradeId={activeGradeId} onChange={setActiveGradeId} />
+        ) : undefined
+      }
     >
       {pending.length === 0 && (
         <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -232,6 +265,10 @@ export function HODReviewView({ teacherId, standards }: HODReviewViewProps) {
                               onClick={() => { setRevisionUnit({ unit, plan }); setFeedback(""); }}>
                               <RotateCcw className="h-3 w-3 mr-1" /> Revise
                             </Button>
+                            <Button size="sm" variant="outline" className="h-7 text-xs border-red-300 text-red-700 hover:bg-red-50"
+                              onClick={() => { setRejectingUnit({ unit, plan }); setRejectionReason(""); setRejectionTouched(false); }}>
+                              <XCircle className="h-3 w-3 mr-1" /> Reject
+                            </Button>
                           </div>
                         </div>
                       );
@@ -264,6 +301,9 @@ export function HODReviewView({ teacherId, standards }: HODReviewViewProps) {
                     {unit.hod_feedback && (
                       <p className="text-xs text-muted-foreground italic mt-0.5 truncate">"{unit.hod_feedback}"</p>
                     )}
+                    {unit.rejection_reason && (
+                      <p className="text-xs text-red-600 italic mt-0.5 truncate">Rejected: "{unit.rejection_reason}"</p>
+                    )}
                   </div>
                   <div className="flex gap-1.5 shrink-0">
                     <Button size="sm" variant="ghost" className="h-7 text-xs"
@@ -283,6 +323,52 @@ export function HODReviewView({ teacherId, standards }: HODReviewViewProps) {
           })}
         </div>
       )}
+
+      <Modal open={!!rejectingUnit} onClose={() => { setRejectingUnit(null); setRejectionReason(""); setRejectionTouched(false); }} title="Reject Unit">
+        <div className="space-y-3 py-2">
+          {rejectingUnit && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-2.5 text-xs">
+              <p className="font-medium text-red-800">{rejectingUnit.unit.title}</p>
+              <p className="text-red-600 mt-0.5">
+                {rejectingUnit.plan.title} · Term {rejectingUnit.unit.term} · {rejectingUnit.plan.teacher?.full_name ?? rejectingUnit.plan.teacher?.email}
+              </p>
+            </div>
+          )}
+          <p className="text-xs text-muted-foreground">
+            Rejection is permanent. The teacher cannot edit this unit and must contact you to reopen it.
+          </p>
+          <div className="space-y-1.5">
+            <Label htmlFor="rejection-reason">
+              Reason for rejection <span className="text-red-600">*</span>
+            </Label>
+            <Textarea
+              id="rejection-reason"
+              placeholder="Explain why this unit is being rejected..."
+              value={rejectionReason}
+              onChange={(e) => { setRejectionReason(e.target.value); setRejectionTouched(true); }}
+              rows={4}
+              autoFocus
+              aria-required="true"
+              aria-invalid={rejectionTouched && rejectionReason.trim() === "" ? "true" : undefined}
+              aria-describedby={rejectionTouched && rejectionReason.trim() === "" ? "rejection-reason-error" : undefined}
+            />
+            {rejectionTouched && rejectionReason.trim() === "" && (
+              <p id="rejection-reason-error" className="text-xs text-red-600" role="alert">A reason is required before rejecting.</p>
+            )}
+          </div>
+        </div>
+        <ModalFooter>
+          <ModalCancel onClick={() => { setRejectingUnit(null); setRejectionReason(""); setRejectionTouched(false); }} />
+          <Button
+            variant="destructive"
+            onClick={handleReject}
+            disabled={saving || !rejectionReason.trim()}
+            aria-label="Confirm unit rejection"
+          >
+            {saving ? "Rejecting..." : "Reject Unit"}
+          </Button>
+        </ModalFooter>
+      </Modal>
 
       <Modal open={!!revisionUnit} onClose={() => setRevisionUnit(null)} title="Request Revision">
         <div className="space-y-3 py-2">

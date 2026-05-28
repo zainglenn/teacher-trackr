@@ -198,8 +198,10 @@ function StudentList({
 
         <div className="lg:col-span-3">
           {!selectedStudent ? (
-            <div className="flex flex-col items-center justify-center h-48 text-center">
-              <p className="text-muted-foreground text-sm">Select a student to view their progress</p>
+            <div className="flex flex-col items-center justify-center h-64 text-center rounded-xl border border-dashed border-border bg-muted/20">
+              <GraduationCap className="h-8 w-8 text-muted-foreground/30 mb-3" />
+              <p className="text-sm font-medium text-muted-foreground">Select a student</p>
+              <p className="text-xs text-muted-foreground/70 mt-1 max-w-[200px]">Choose a student from the list to view and update their attainment</p>
             </div>
           ) : (
             <ProgressGrid

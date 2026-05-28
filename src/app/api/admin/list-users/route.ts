@@ -26,13 +26,13 @@ export async function GET(req: NextRequest) {
     .eq("id", caller.id)
     .single();
 
-  if (!["hod", "admin"].includes(profile?.role)) {
+  if (!["admin"].includes(profile?.role)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const { data } = await admin
     .from("profiles")
-    .select("id, email, full_name, role, created_at")
+    .select("id, email, username, full_name, role, notification_email, created_at")
     .order("created_at", { ascending: true });
 
   return NextResponse.json({ users: data ?? [] });

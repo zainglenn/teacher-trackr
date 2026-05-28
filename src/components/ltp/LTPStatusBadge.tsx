@@ -8,6 +8,7 @@ export const LTP_STATUS_CONFIG: Record<LTPStatus, { label: string; className: st
   submitted: { label: "Submitted",      className: "bg-amber-100 text-amber-700" },
   approved:  { label: "Approved",       className: "bg-emerald-100 text-emerald-700" },
   revision:  { label: "Needs Revision", className: "bg-rose-100 text-rose-700" },
+  published: { label: "Published",      className: "bg-indigo-100 text-indigo-700" },
 };
 
 export function LTPStatusBadge({ status }: { status: LTPStatus }) {

@@ -9,6 +9,7 @@ import { CoverageView } from "@/components/CoverageView";
 import { LongTermPlanView } from "@/components/LongTermPlanView";
 import { StudentProgressView } from "@/components/StudentProgressView";
 import { ManageUsersView } from "@/components/ManageUsersView";
+import { SchoolSetupView } from "@/components/SchoolSetupView";
 import { AdminView } from "@/components/AdminView";
 import { DeliveryGridView } from "@/components/DeliveryGridView";
 import { HODAdminPanel } from "@/components/HODAdminPanel";
@@ -22,6 +23,7 @@ import { useLongTermPlans } from "@/hooks/useLongTermPlans";
 import { useTeachers } from "@/hooks/useTeachers";
 import { useStudents } from "@/hooks/useStudents";
 import { useClassProgress } from "@/hooks/useClassProgress";
+import { useActiveContext } from "@/hooks/useActiveContext";
 import { Loader2 } from "lucide-react";
 
 function CurriculumApp({ userId }: { userId: string }) {
@@ -37,9 +39,16 @@ function CurriculumApp({ userId }: { userId: string }) {
   }, [role, profileLoading]);
   const isHod = role === "hod";
   const isAdmin = role === "admin";
+  const showContext = role === "teacher" || role === "hod";
+  const { activeContext, setActiveContext, assignments: contextAssignments } = useActiveContext(
+    showContext ? userId : null
+  );
   const { standards, byStrand, loading: standardsLoading } = useStandards();
   const { logs: coverageLogs } = useCoverage(userId);
-  const { plans: ltps, assignUnit } = useLongTermPlans(userId, isHod);
+  const { plans: ltps, assignUnit } = useLongTermPlans(userId, isHod, {
+    subjectId: activeContext?.subjectId,
+    gradeLevelId: activeContext?.gradeLevelId,
+  });
   const { teachers } = useTeachers();
   const { students } = useStudents(userId);
   const { progress: classProgress } = useClassProgress(userId);
@@ -56,7 +65,16 @@ function CurriculumApp({ userId }: { userId: string }) {
 
   return (
     <SidebarProvider>
-      <AppSidebar view={view} onViewChange={setView} role={role} username={username} overdueCount={overdueCount} />
+      <AppSidebar
+        view={view}
+        onViewChange={setView}
+        role={role}
+        username={username}
+        overdueCount={overdueCount}
+        activeContext={activeContext}
+        contextAssignments={showContext ? contextAssignments : []}
+        onContextChange={setActiveContext}
+      />
       <SidebarInset className="flex flex-col min-h-svh bg-slate-50/60">
         <header className="flex items-center h-10 px-3 border-b border-border/40 shrink-0 bg-background/80 backdrop-blur-sm sticky top-0 z-10">
           <SidebarTrigger className="h-7 w-7 text-muted-foreground hover:text-foreground md:hidden" />
@@ -104,6 +122,9 @@ function CurriculumApp({ userId }: { userId: string }) {
           )}
           {view === "manage-users" && isAdmin && (
             <ManageUsersView currentUserId={userId} />
+          )}
+          {view === "school-setup" && isAdmin && (
+            <SchoolSetupView />
           )}
           {view === "my-units" && role === "teacher" && (
             <MyUnitsView

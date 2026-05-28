@@ -22,5 +22,10 @@ export function useProfile(userId: string | null) {
       });
   }, [userId]);
 
-  return { profile, loading, role: profile?.role ?? "teacher" };
+  return {
+    profile,
+    loading,
+    role: profile?.role ?? "teacher",
+    username: profile?.username ?? "",
+  };
 }

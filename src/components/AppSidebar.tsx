@@ -24,9 +24,14 @@ import {
   ShieldCheck,
   Search,
   ClipboardCheck,
+  Building2,
 } from "lucide-react";
 import { Role } from "@/types";
 import { useAuth } from "@/hooks/useAuth";
+import { SubjectGradeContext } from "@/components/SubjectGradeContext";
+import { SidebarSeparator } from "@/components/ui/sidebar";
+import type { ActiveContext } from "@/hooks/useActiveContext";
+import type { ClassAssignment } from "@/types";
 
 export type AppView =
   | "dashboard"
@@ -39,7 +44,8 @@ export type AppView =
   | "manage-users"
   | "my-units"
   | "platform-settings"
-  | "curriculum-audit";
+  | "curriculum-audit"
+  | "school-setup";
 
 type NavItem = {
   key: AppView;
@@ -58,6 +64,7 @@ const NAV_ITEMS: NavItem[] = [
   { key: "student-progress", label: "Student Progress",   icon: Users,           roles: ["teacher", "hod"] },
   { key: "hod-settings",     label: "HOD Settings",       icon: Settings2,       roles: ["hod"] },
   { key: "manage-users",     label: "Manage Users",       icon: UserCog,         roles: ["admin"] },
+  { key: "school-setup",     label: "School Setup",       icon: Building2,       roles: ["admin"] },
   { key: "platform-settings",label: "Platform Settings",  icon: ShieldCheck,     roles: ["admin"] },
   { key: "curriculum-audit", label: "Curriculum Audit",   icon: Search,          roles: ["admin"] },
 ];
@@ -68,22 +75,36 @@ interface AppSidebarProps {
   role: Role;
   username: string;
   overdueCount?: number;
+  activeContext?: ActiveContext | null;
+  contextAssignments?: ClassAssignment[];
+  onContextChange?: (ctx: ActiveContext) => void;
 }
 
-export function AppSidebar({ view, onViewChange, role, username, overdueCount = 0 }: AppSidebarProps) {
+export function AppSidebar({ view, onViewChange, role, username, overdueCount = 0, activeContext, contextAssignments, onContextChange }: AppSidebarProps) {
   const { signOut } = useAuth();
 
   const items = NAV_ITEMS.filter((item) => item.roles.includes(role));
 
   return (
     <Sidebar collapsible="offcanvas" className="border-r border-sidebar-border w-[220px]">
-      <SidebarHeader className="px-3 py-3 border-b border-sidebar-border">
-        <div className="flex items-center gap-2">
+      <SidebarHeader className="border-b border-sidebar-border">
+        <div className="flex items-center gap-2 px-3 py-3">
           <div className="bg-sidebar-primary rounded p-1">
             <BookOpen className="h-3.5 w-3.5 text-sidebar-primary-foreground" />
           </div>
           <p className="text-sm font-semibold text-sidebar-foreground leading-tight">Curriculum Tracker</p>
         </div>
+        {contextAssignments && contextAssignments.length > 0 && onContextChange && (
+          <>
+            <SidebarSeparator />
+            <SubjectGradeContext
+              activeContext={activeContext ?? null}
+              assignments={contextAssignments}
+              onContextChange={onContextChange}
+            />
+            <SidebarSeparator />
+          </>
+        )}
       </SidebarHeader>
 
       <SidebarContent>

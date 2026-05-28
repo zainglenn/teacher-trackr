@@ -5,14 +5,21 @@ import { supabase } from "@/lib/supabase";
 import { LongTermPlan, LTPStatus, LTPUnit, LTPMemberRole, Standard } from "@/types";
 import { ltpAggregateStatus } from "@/lib/ltpStatus";
 
-export function useLongTermPlans(teacherId: string, isHod: boolean) {
+interface UseLongTermPlansOptions {
+  subjectId?: string | null;
+  gradeLevelId?: string | null;
+}
+
+export function useLongTermPlans(teacherId: string, isHod: boolean, options: UseLongTermPlansOptions = {}) {
   const [plans, setPlans] = useState<LongTermPlan[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const { subjectId, gradeLevelId } = options;
 
   const fetch = useCallback(async () => {
     // RLS handles visibility: HOD sees all, teachers see plans they're members of.
     // No teacher_id filter needed here.
-    const { data } = await supabase
+    let query = supabase
       .from("long_term_plans")
       .select(`
         *,
@@ -21,6 +28,11 @@ export function useLongTermPlans(teacherId: string, isHod: boolean) {
         members:ltp_members(id,teacher_id,role,teacher:profiles(id,email,full_name))
       `)
       .order("created_at", { ascending: false });
+
+    if (subjectId) query = query.eq("subject_id", subjectId);
+    if (gradeLevelId) query = query.eq("grade_level_id", gradeLevelId);
+
+    const { data } = await query;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const normalized = (data ?? []).map((p: any) => ({
@@ -36,7 +48,7 @@ export function useLongTermPlans(teacherId: string, isHod: boolean) {
     }));
     setPlans(normalized as LongTermPlan[]);
     setLoading(false);
-  }, []);
+  }, [subjectId, gradeLevelId]);
 
   useEffect(() => { fetch(); }, [fetch]);
 
@@ -186,11 +198,41 @@ export function useLongTermPlans(teacherId: string, isHod: boolean) {
       reviewed_at: null,
       reviewed_by: null,
       hod_feedback: null,
+      rejection_reason: null,
     }).eq("id", unitId);
     await fetch();
     await syncPlanStatus(planId);
     await fetch();
   }
 
-  return { plans, loading, createLTP, updateLTP, setStatus, deleteLTP, addUnit, updateUnit, deleteUnit, setUnitStandards, batchAddUnits, assignUnit, submitUnit, withdrawUnit, approveUnit, requestUnitRevision, reopenUnit, getMyRole, setMemberRole };
+  async function rejectUnit(unitId: string, planId: string, reason: string) {
+    if (!reason.trim()) throw new Error("Rejection reason is required");
+    await supabase.from("ltp_units").update({
+      status: "rejected",
+      rejection_reason: reason,
+      reviewed_at: new Date().toISOString(),
+      reviewed_by: teacherId,
+    }).eq("id", unitId);
+    await fetch();
+    await syncPlanStatus(planId);
+    await fetch();
+  }
+
+  async function publishPlan(planId: string) {
+    const plan = plans.find((p) => p.id === planId);
+    if (!plan) return;
+    const allApproved = (plan.units ?? []).every((u) => u.status === "approved");
+    if (!allApproved) throw new Error("All units must be approved before publishing");
+    const unitIds = (plan.units ?? []).map((u) => u.id);
+    if (unitIds.length > 0) {
+      await supabase.from("ltp_units").update({ status: "published" }).in("id", unitIds);
+    }
+    await supabase.from("long_term_plans").update({
+      status: "published",
+      updated_at: new Date().toISOString(),
+    }).eq("id", planId);
+    await fetch();
+  }
+
+  return { plans, loading, createLTP, updateLTP, setStatus, deleteLTP, addUnit, updateUnit, deleteUnit, setUnitStandards, batchAddUnits, assignUnit, submitUnit, withdrawUnit, approveUnit, requestUnitRevision, reopenUnit, rejectUnit, publishPlan, getMyRole, setMemberRole };
 }

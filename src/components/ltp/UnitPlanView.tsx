@@ -11,7 +11,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Modal, ModalFooter, ModalCancel, ConfirmModal } from "@/components/ui/modal";
 import {
   ArrowLeft, Sparkles, Loader2, Save, UserCircle2, ChevronDown, ChevronUp, Plus, X,
-  AlertTriangle, Send, Check, RotateCcw, Clock, FileText, BookOpen, Video,
+  AlertTriangle, Send, Check, RotateCcw, Clock, FileText, BookOpen, Video, Lock,
   Target, CheckCircle2, Wand2, Pencil, ClipboardList, Globe,
 } from "lucide-react";
 import { LongTermPlan, LTPUnit, Standard, AssessmentRow, LessonWeek } from "@/types";
@@ -426,6 +426,31 @@ export function UnitPlanView({
           <div>
             <p className="text-xs font-semibold text-amber-700">Revision requested by HOD</p>
             <p className="text-sm text-amber-800 mt-1">{unit.hod_feedback}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Published banner */}
+      {unit.status === "published" && (
+        <div className="rounded-xl bg-indigo-50 border border-indigo-200 px-4 py-3 flex items-start gap-2 mb-4">
+          <Lock className="h-4 w-4 text-indigo-600 shrink-0 mt-0.5" aria-label="Plan is published and locked" />
+          <div>
+            <p className="text-xs font-semibold text-indigo-700">This plan is published and locked</p>
+            <p className="text-sm text-indigo-600 mt-0.5">No further edits can be made to this unit.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Rejected banner */}
+      {unit.status === "rejected" && (
+        <div className="rounded-xl bg-red-50 border border-red-200 px-4 py-3 flex items-start gap-2 mb-4">
+          <AlertTriangle className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-xs font-semibold text-red-700">This unit has been rejected</p>
+            {unit.rejection_reason && (
+              <p className="text-sm text-red-700 mt-0.5">{unit.rejection_reason}</p>
+            )}
+            <p className="text-xs text-red-500 mt-1">Contact your HOD to have this unit reopened.</p>
           </div>
         </div>
       )}
