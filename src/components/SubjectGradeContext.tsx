@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import { ChevronDown, Check } from "lucide-react";
 import { ClassAssignment, Subject, GradeLevel } from "@/types";
 import { getSubjectSlotStyle, type SubjectSlot } from "@/lib/subjectSlot";
@@ -20,7 +20,9 @@ function getLabel(assignment: ClassAssignment): string {
 
 export function SubjectGradeContext({ activeContext, assignments, onContextChange }: SubjectGradeContextProps) {
   const [open, setOpen] = useState(false);
+  const [focusIndex, setFocusIndex] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
+  const optionRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   useEffect(() => {
     if (!open) return;
@@ -30,6 +32,32 @@ export function SubjectGradeContext({ activeContext, assignments, onContextChang
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, [open]);
+
+  useEffect(() => {
+    if (open) optionRefs.current[focusIndex]?.focus();
+  }, [open, focusIndex]);
+
+  const handleTriggerKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      setFocusIndex(0);
+      setOpen(true);
+    }
+  }, []);
+
+  const handleOptionKeyDown = useCallback((e: React.KeyboardEvent, index: number) => {
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      const next = Math.min(index + 1, assignments.length - 1);
+      setFocusIndex(next);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      const prev = Math.max(index - 1, 0);
+      setFocusIndex(prev);
+    } else if (e.key === "Escape" || e.key === "Tab") {
+      setOpen(false);
+    }
+  }, [assignments.length]);
 
   if (!assignments.length || !activeContext) return null;
 
@@ -48,6 +76,7 @@ export function SubjectGradeContext({ activeContext, assignments, onContextChang
         onClick={() => !isSingleAssignment && setOpen((v) => !v)}
         aria-haspopup={isSingleAssignment ? undefined : "listbox"}
         aria-expanded={isSingleAssignment ? undefined : open}
+        onKeyDown={isSingleAssignment ? undefined : handleTriggerKeyDown}
         className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-left text-xs font-medium transition-colors
           ${isSingleAssignment
             ? "cursor-default"
@@ -75,7 +104,7 @@ export function SubjectGradeContext({ activeContext, assignments, onContextChang
           aria-label="Switch context"
           className="absolute left-3 right-3 top-full mt-1 z-50 rounded-md border border-sidebar-border bg-sidebar shadow-md overflow-hidden"
         >
-          {assignments.map((a) => {
+          {assignments.map((a, idx) => {
             const isActive =
               a.subject_id === activeContext.subjectId &&
               a.grade_level_id === activeContext.gradeLevelId;
@@ -86,12 +115,14 @@ export function SubjectGradeContext({ activeContext, assignments, onContextChang
             return (
               <button
                 key={a.id}
+                ref={(el) => { optionRefs.current[idx] = el; }}
                 role="option"
                 aria-selected={isActive}
                 onClick={() => {
                   onContextChange({ subjectId: a.subject_id, gradeLevelId: a.grade_level_id });
                   setOpen(false);
                 }}
+                onKeyDown={(e) => handleOptionKeyDown(e, idx)}
                 className="w-full flex items-center gap-2 px-3 py-2 text-xs text-left hover:bg-sidebar-accent/60 transition-colors focus-visible:outline-none focus-visible:bg-sidebar-accent/60"
               >
                 <span

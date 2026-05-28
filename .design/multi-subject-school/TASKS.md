@@ -62,19 +62,19 @@ Date: 2026-05-28
 
 ## Context Scoping — Teacher & HOD Views
 
-- [ ] **18. Scope teacher views to active context**: Pass `activeContext` from `useActiveContext` into `LongTermPlanView`, `CoverageView` (teacher branch), and `StudentProgressView`. Each view shows a context label in its page header (`Grade 6 · English`). Plan lists and coverage data filter to the active `subjectId` + `gradeLevelId`. If no context is set (new user with no assignments), show an empty state: "No classes assigned — contact your administrator." _Modifies: 3 existing views._
+- [x] **18. Scope teacher views to active context**: Pass `activeContext` from `useActiveContext` into `LongTermPlanView`, `CoverageView` (teacher branch), and `StudentProgressView`. Each view shows a context label in its page header (`Grade 6 · English`). Plan lists and coverage data filter to the active `subjectId` + `gradeLevelId`. If no context is set (new user with no assignments), show an empty state: "No classes assigned — contact your administrator." _Modifies: 3 existing views._
 
-- [ ] **19. Update `ManageUsersView` — HOD subject assignment**: Add a Subject column to the users table for HOD-role rows. Inline edit: clicking the subject cell opens a select of available subjects; saving calls `update-user` API route with the new `subject_id`. _Modifies: `ManageUsersView.tsx` and `src/app/api/admin/update-user/route.ts`._
+- [x] **19. Update `ManageUsersView` — HOD subject assignment**: Add a Subject column to the users table for HOD-role rows. Inline edit: clicking the subject cell opens a select of available subjects; saving calls `update-user` API route with the new `subject_id`. _Modifies: `ManageUsersView.tsx` and `src/app/api/admin/update-user/route.ts`._
 
 ---
 
 ## Responsive & Polish
 
-- [ ] **20. Mobile responsive pass**: Verify at 375px: context switcher pill truncates gracefully (grade+subject abbreviated or icon-only), grade filter tabs collapse to select dropdown (already handled in `GradeFilter` component), School Setup tabs scroll horizontally, standard sets table scrolls horizontally. Fix any overflow. _Breakpoints: 375px, 768px._
+- [x] **20. Mobile responsive pass**: Verify at 375px: context switcher pill truncates gracefully (grade+subject abbreviated or icon-only), grade filter tabs collapse to select dropdown (already handled in `GradeFilter` component), School Setup tabs scroll horizontally, standard sets table scrolls horizontally. Fix any overflow. _Breakpoints: 375px, 768px._
 
-- [ ] **21. Accessibility pass**: Context switcher dropdown: `aria-expanded`, `aria-haspopup="listbox"`, keyboard navigation (arrow keys to move, Enter to select, Escape to close). School Setup Tabs: `role="tablist"`, `role="tab"`, `aria-selected`, `role="tabpanel"`. All new form inputs: `<label>` association, `aria-describedby` for errors. Grade filter tabs: same keyboard pattern. _Checks: keyboard nav, focus ring visibility, screen reader labels._
+- [x] **21. Accessibility pass**: Context switcher dropdown: `aria-expanded`, `aria-haspopup="listbox"`, keyboard navigation (arrow keys to move, Enter to select, Escape to close). School Setup Tabs: `role="tablist"`, `role="tab"`, `aria-selected`, `role="tabpanel"`. All new form inputs: `<label>` association, `aria-describedby` for errors. Grade filter tabs: same keyboard pattern. _Checks: keyboard nav, focus ring visibility, screen reader labels._
 
-- [ ] **22. Update seed script for multi-subject DSK data**: Update `scripts/seed-sample-school.mjs` to seed: 1 school record (Dubai Schools Al Khawaneej), 1 subject (English, slot 1), 3 grade levels (Grade 6, Grade 7, Grade 8), 1 standard set (NYSED Grade 6 ELA — 41 standards already in DB), class assignments (Jade → G6 English lead, Marcus → G6 English, Priya → G6 English), HOD subject assignment (Sarah Mitchell → English). All existing LTP data remains — just linked to new subject/grade FK values. _Modifies: `scripts/seed-sample-school.mjs`._
+- [x] **22. Update seed script for multi-subject DSK data**: Update `scripts/seed-sample-school.mjs` to seed: 1 school record (Dubai Schools Al Khawaneej), 1 subject (English, slot 1), 3 grade levels (Grade 6, Grade 7, Grade 8), 1 standard set (NYSED Grade 6 ELA — 41 standards already in DB), class assignments (Jade → G6 English lead, Marcus → G6 English, Priya → G6 English), HOD subject assignment (Sarah Mitchell → English). All existing LTP data remains — just linked to new subject/grade FK values. _Modifies: `scripts/seed-sample-school.mjs`._
 
 ---
 

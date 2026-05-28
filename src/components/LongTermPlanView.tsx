@@ -25,11 +25,14 @@ interface LongTermPlanViewProps {
   initialPlanId?: string | null;
   initialUnitId?: string | null;
   onInitialConsumed?: () => void;
+  contextLabel?: string | null;
+  subjectId?: string | null;
+  gradeLevelId?: string | null;
 }
 
-export function LongTermPlanView({ teacherId, isHod, standards, initialPlanId, initialUnitId, onInitialConsumed }: LongTermPlanViewProps) {
+export function LongTermPlanView({ teacherId, isHod, standards, initialPlanId, initialUnitId, onInitialConsumed, contextLabel, subjectId, gradeLevelId }: LongTermPlanViewProps) {
   const { plans, loading, createLTP, updateLTP, setStatus, deleteLTP, addUnit, updateUnit, deleteUnit, setUnitStandards, batchAddUnits, assignUnit, submitUnit, withdrawUnit, approveUnit, requestUnitRevision, reopenUnit, rejectUnit, publishPlan, getMyRole, setMemberRole } =
-    useLongTermPlans(teacherId, isHod);
+    useLongTermPlans(teacherId, isHod, { subjectId, gradeLevelId });
   const { teachers } = useTeachers();
 
   const [selectedPlanId, setSelectedPlanId] = useState<string | null>(initialPlanId ?? null);
@@ -175,7 +178,7 @@ export function LongTermPlanView({ teacherId, isHod, standards, initialPlanId, i
   return (
     <PageContainer
       title="Master Plans"
-      description="Year-long curriculum overview organised by term and unit"
+      description={contextLabel ?? "Year-long curriculum overview organised by term and unit"}
       action={
         isHod && (
           <Button size="sm" variant="outline" onClick={() => setNewLTPOpen(true)}>

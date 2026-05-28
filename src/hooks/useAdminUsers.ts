@@ -61,7 +61,7 @@ export function useAdminUsers() {
 
   async function updateUser(
     userId: string,
-    updates: { username?: string; full_name?: string; role?: Role; notification_email?: string },
+    updates: { username?: string; full_name?: string; role?: Role; notification_email?: string; subject_id?: string | null },
   ) {
     const token = await getFreshToken();
     if (!token) throw new Error("Not authenticated");

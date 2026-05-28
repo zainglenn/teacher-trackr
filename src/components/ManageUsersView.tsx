@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2, Pencil, Search } from "lucide-react";
 import { useAdminUsers } from "@/hooks/useAdminUsers";
+import { useSubjects } from "@/hooks/useSubjects";
 import { Profile, Role } from "@/types";
 
 const ROLE_CONFIG: Record<Role, { label: string; shortLabel: string; className: string }> = {
@@ -31,6 +32,21 @@ function userInitials(name: string | null, username: string) {
 
 export function ManageUsersView({ currentUserId }: { currentUserId: string }) {
   const { users, loading, createUser, updateUser, deleteUser } = useAdminUsers();
+  const { subjects } = useSubjects();
+
+  // Inline subject edit state: userId → "editing" | null
+  const [editingSubjectFor, setEditingSubjectFor] = useState<string | null>(null);
+  const [subjectEditSaving, setSubjectEditSaving] = useState(false);
+
+  async function handleSubjectChange(userId: string, subjectId: string | null) {
+    setSubjectEditSaving(true);
+    try {
+      await updateUser(userId, { subject_id: subjectId });
+    } finally {
+      setSubjectEditSaving(false);
+      setEditingSubjectFor(null);
+    }
+  }
 
   // Add user dialog
   const [addOpen, setAddOpen] = useState(false);
@@ -203,6 +219,7 @@ export function ManageUsersView({ currentUserId }: { currentUserId: string }) {
                 <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">User</th>
                 <th className="text-left px-4 py-2.5 font-medium text-muted-foreground hidden sm:table-cell">Username</th>
                 <th className="text-left px-4 py-2.5 font-medium text-muted-foreground w-36">Role</th>
+                <th className="text-left px-4 py-2.5 font-medium text-muted-foreground w-40 hidden lg:table-cell">Subject</th>
                 <th className="text-left px-4 py-2.5 font-medium text-muted-foreground w-28 hidden md:table-cell">Joined</th>
                 <th className="w-20 px-4" />
               </tr>
@@ -210,7 +227,7 @@ export function ManageUsersView({ currentUserId }: { currentUserId: string }) {
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                  <td colSpan={6} className="px-4 py-8 text-center text-sm text-muted-foreground">
                     No users match your search.
                   </td>
                 </tr>
@@ -254,6 +271,47 @@ export function ManageUsersView({ currentUserId }: { currentUserId: string }) {
                       <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${config.className}`}>
                         {config.label}
                       </span>
+                    </td>
+
+                    {/* Subject — HOD only */}
+                    <td className="px-4 py-3 hidden lg:table-cell">
+                      {user.role === "hod" ? (
+                        editingSubjectFor === user.id ? (
+                          <Select
+                            value={user.subject_id ?? "none"}
+                            onValueChange={(v) => v && handleSubjectChange(user.id, v === "none" ? null : v)}
+                            onOpenChange={(open) => { if (!open && !subjectEditSaving) setEditingSubjectFor(null); }}
+                            disabled={subjectEditSaving}
+                          >
+                            <SelectTrigger className="h-7 text-xs w-36" autoFocus>
+                              <SelectValue placeholder="No subject" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">No subject</SelectItem>
+                              {subjects.map((s) => (
+                                <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        ) : (
+                          <button
+                            className="text-xs text-left group flex items-center gap-1 hover:text-foreground transition-colors"
+                            onClick={() => setEditingSubjectFor(user.id)}
+                            title="Click to assign subject"
+                          >
+                            {(() => {
+                              const subjectId = user.subject_id;
+                              const subject = subjects.find((s) => s.id === subjectId);
+                              return subject
+                                ? <span className="font-medium text-foreground">{subject.name}</span>
+                                : <span className="text-muted-foreground italic">Assign subject</span>;
+                            })()}
+                            <Pencil className="h-2.5 w-2.5 opacity-0 group-hover:opacity-60 shrink-0" />
+                          </button>
+                        )
+                      ) : (
+                        <span className="text-muted-foreground/30 text-xs">—</span>
+                      )}
                     </td>
 
                     {/* Joined */}

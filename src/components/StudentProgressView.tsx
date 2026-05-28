@@ -30,9 +30,10 @@ interface StudentProgressViewProps {
   standards: Standard[];
   byStrand: Record<string, Standard[]>;
   isHod?: boolean;
+  contextLabel?: string | null;
 }
 
-export function StudentProgressView({ teacherId, standards, byStrand, isHod }: StudentProgressViewProps) {
+export function StudentProgressView({ teacherId, standards, byStrand, isHod, contextLabel }: StudentProgressViewProps) {
   const { teachers, loading: teachersLoading } = useTeachers();
   const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(null);
 
@@ -46,7 +47,7 @@ export function StudentProgressView({ teacherId, standards, byStrand, isHod }: S
   return (
     <PageContainer
       title="Student Progress"
-      description={isHod ? "View student attainment across all teachers" : "Track attainment per student across all standards"}
+      description={contextLabel ?? (isHod ? "View student attainment across all teachers" : "Track attainment per student across all standards")}
     >
       {/* HOD teacher selector */}
       {isHod && (

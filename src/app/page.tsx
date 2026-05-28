@@ -24,7 +24,7 @@ import { useTeachers } from "@/hooks/useTeachers";
 import { useStudents } from "@/hooks/useStudents";
 import { useClassProgress } from "@/hooks/useClassProgress";
 import { useActiveContext } from "@/hooks/useActiveContext";
-import { Loader2 } from "lucide-react";
+import { Loader2, BookOpen } from "lucide-react";
 
 function CurriculumApp({ userId }: { userId: string }) {
   const [view, setView] = useState<AppView>("dashboard");
@@ -40,9 +40,20 @@ function CurriculumApp({ userId }: { userId: string }) {
   const isHod = role === "hod";
   const isAdmin = role === "admin";
   const showContext = role === "teacher" || role === "hod";
-  const { activeContext, setActiveContext, assignments: contextAssignments } = useActiveContext(
+  const { activeContext, setActiveContext, assignments: contextAssignments, loading: contextLoading } = useActiveContext(
     showContext ? userId : null
   );
+
+  const contextLabel = (() => {
+    if (!activeContext || !contextAssignments.length) return null;
+    const match = contextAssignments.find(
+      (a) => a.subject_id === activeContext.subjectId && a.grade_level_id === activeContext.gradeLevelId
+    );
+    if (!match) return null;
+    const grade = match.grade_level?.name ?? "";
+    const subject = match.subject?.name ?? "";
+    return grade && subject ? `${grade} · ${subject}` : grade || subject || null;
+  })();
   const { standards, byStrand, loading: standardsLoading } = useStandards();
   const { logs: coverageLogs } = useCoverage(userId);
   const { plans: ltps, assignUnit } = useLongTermPlans(userId, isHod, {
@@ -54,6 +65,16 @@ function CurriculumApp({ userId }: { userId: string }) {
   const { progress: classProgress } = useClassProgress(userId);
 
   const overdueCount = 0; // will be computed from class_lesson_deliveries once DB migration is applied
+  // HODs are scoped by subject_id on their profile — they don't need class assignments
+  const noContextAssigned = role === "teacher" && !contextLoading && contextAssignments.length === 0;
+
+  const NoAssignmentState = () => (
+    <div className="flex flex-col items-center justify-center py-20 text-center">
+      <BookOpen className="h-8 w-8 text-muted-foreground/25 mb-3" />
+      <p className="text-sm font-medium text-foreground">No classes assigned</p>
+      <p className="text-xs text-muted-foreground mt-1">Contact your administrator to be assigned to a class.</p>
+    </div>
+  );
 
   if (standardsLoading) {
     return (
@@ -92,20 +113,23 @@ function CurriculumApp({ userId }: { userId: string }) {
             />
           )}
           {view === "coverage" && (
-            <CoverageView standards={standards} byStrand={byStrand} teacherId={userId} isHod={isHod} />
+            noContextAssigned ? <NoAssignmentState /> : <CoverageView standards={standards} byStrand={byStrand} teacherId={userId} isHod={isHod} contextLabel={contextLabel} />
           )}
           {view === "long-term-plan" && (
-            <LongTermPlanView
+            noContextAssigned ? <NoAssignmentState /> : <LongTermPlanView
               teacherId={userId}
               isHod={isHod}
               standards={standards}
               initialPlanId={ltpInitialPlanId}
               initialUnitId={ltpInitialUnitId}
               onInitialConsumed={() => { setLtpInitialPlanId(null); setLtpInitialUnitId(null); }}
+              contextLabel={contextLabel}
+              subjectId={activeContext?.subjectId ?? null}
+              gradeLevelId={activeContext?.gradeLevelId ?? null}
             />
           )}
           {view === "student-progress" && (
-            <StudentProgressView teacherId={userId} standards={standards} byStrand={byStrand} isHod={isHod} />
+            noContextAssigned ? <NoAssignmentState /> : <StudentProgressView teacherId={userId} standards={standards} byStrand={byStrand} isHod={isHod} contextLabel={contextLabel} />
           )}
           {view === "delivery-grid" && isHod && (
             <DeliveryGridView teacherId={userId} onNavigate={setView} />

@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "@/components/ui/separator";
 import { SubjectBadge } from "@/components/ltp/SubjectBadge";
 import { adminFetch } from "@/lib/authToken";
-import { nextAvailableSlot, SUBJECT_SLOTS, getSlotLabel, type SubjectSlot } from "@/lib/subjectSlot";
+import { nextAvailableSlot, SUBJECT_SLOTS, getSlotLabel, getSubjectSlotStyle, type SubjectSlot } from "@/lib/subjectSlot";
 import { Subject, GradeLevel, StandardSet, Standard, ClassAssignment, Profile } from "@/types";
 import { useTeachers } from "@/hooks/useTeachers";
 
@@ -115,11 +115,19 @@ function SubjectsTab() {
             onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); if (e.key === "Escape") setAdding(false); }}
             autoFocus
           />
-          {subjects.length < SUBJECT_SLOTS.length && (
-            <p className="text-xs text-muted-foreground">
-              Colour slot auto-assigned: <strong>{getSlotLabel(nextAvailableSlot(subjects.map(s => s.slot) as SubjectSlot[]))}</strong>
-            </p>
-          )}
+          {subjects.length < SUBJECT_SLOTS.length && (() => {
+            const nextSlot = nextAvailableSlot(subjects.map(s => s.slot) as SubjectSlot[]);
+            const style = getSubjectSlotStyle(nextSlot);
+            return (
+              <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                Colour slot auto-assigned:
+                <span className="inline-flex items-center gap-1 font-medium" style={{ color: style.color }}>
+                  <span className="inline-block w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: style.accentColor }} />
+                  {getSlotLabel(nextSlot)}
+                </span>
+              </p>
+            );
+          })()}
           {error && <p className="text-xs text-destructive">{error}</p>}
           <div className="flex gap-2">
             <Button size="sm" onClick={handleAdd} disabled={saving || !newName.trim()} className="h-7 text-xs">
@@ -420,7 +428,8 @@ function StandardSetsTab() {
               </div>
 
               {standards.length > 0 && (
-                <div className="border border-border rounded-md overflow-hidden">
+                <div className="border border-border rounded-md overflow-x-auto">
+                  <div className="min-w-[480px]">
                   <div className="grid grid-cols-[80px_48px_1fr_32px] gap-0 px-3 py-1.5 bg-muted/40 text-xs font-medium text-muted-foreground border-b border-border">
                     <span>Code</span>
                     <span>Strand</span>
@@ -444,6 +453,7 @@ function StandardSetsTab() {
                       </div>
                     </div>
                   ))}
+                  </div>
                 </div>
               )}
 
@@ -559,6 +569,7 @@ function ClassAssignmentsTab() {
   }
 
   async function handleRemove(id: string) {
+    if (!confirm("Remove this teacher from the class assignment?")) return;
     await adminFetch("/api/admin/delete-class-assignment", { method: "DELETE", body: JSON.stringify({ id }) });
     await loadAssignments(selectedSubjectId, selectedGradeId);
   }
@@ -707,10 +718,13 @@ export function SchoolSetupView() {
       description="Configure subjects, grade levels, standard sets, and teacher assignments."
     >
       <div className="border border-border rounded-md overflow-hidden">
-        {/* Tab bar */}
+        {/* Tab bar — overflow-x-auto with right-edge fade hint for narrow screens */}
+        <div className="relative border-b border-border bg-muted/30">
+          {/* Right-edge scroll hint — hidden on sm+ where all tabs fit */}
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l from-background to-transparent sm:hidden" aria-hidden="true" />
         <div
           role="tablist"
-          className="flex border-b border-border bg-muted/30 overflow-x-auto"
+          className="flex overflow-x-auto scrollbar-none"
         >
           {TABS.map(t => (
             <button
@@ -728,6 +742,7 @@ export function SchoolSetupView() {
               {t.label}
             </button>
           ))}
+        </div>
         </div>
 
         {/* Tab panel */}

@@ -29,7 +29,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { userId, username, full_name, role, notification_email } = await req.json();
+  const { userId, username, full_name, role, notification_email, subject_id } = await req.json();
   if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
 
   if (username !== undefined && !USERNAME_RE.test(username)) {
@@ -40,6 +40,7 @@ export async function PATCH(req: NextRequest) {
   if (full_name !== undefined) profileUpdates.full_name = full_name;
   if (role !== undefined) profileUpdates.role = role;
   if (notification_email !== undefined) profileUpdates.notification_email = notification_email || null;
+  if (subject_id !== undefined) profileUpdates.subject_id = subject_id || null;
 
   // If username is changing, update the Supabase auth email too
   if (username !== undefined) {

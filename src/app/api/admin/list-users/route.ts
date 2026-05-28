@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
 
   const { data } = await admin
     .from("profiles")
-    .select("id, email, username, full_name, role, notification_email, created_at")
+    .select("id, email, username, full_name, role, notification_email, created_at, subject_id, subjects:subject_id(id, name, slot)")
     .order("created_at", { ascending: true });
 
   return NextResponse.json({ users: data ?? [] });

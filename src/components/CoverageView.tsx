@@ -31,6 +31,7 @@ interface CoverageViewProps {
   byStrand: Record<string, Standard[]>;
   teacherId: string;
   isHod?: boolean;
+  contextLabel?: string | null;
 }
 
 type StatusFilter = "all" | "covered" | "in_progress" | "planned" | "gap";
@@ -87,7 +88,7 @@ function StatusBadge({ status }: { status: CoverageStatus }) {
   );
 }
 
-export function CoverageView({ standards, byStrand, teacherId, isHod }: CoverageViewProps) {
+export function CoverageView({ standards, byStrand, teacherId, isHod, contextLabel }: CoverageViewProps) {
   const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(null);
   const { teachers } = useTeachers();
 
@@ -104,7 +105,7 @@ export function CoverageView({ standards, byStrand, teacherId, isHod }: Coverage
   return (
     <PageContainer
       title="Standards Coverage"
-      description="Coverage is computed from your class delivery — no extra steps needed."
+      description={contextLabel ?? "Coverage is computed from your class delivery — no extra steps needed."}
     >
       <div className="space-y-4">
         {isHod && (

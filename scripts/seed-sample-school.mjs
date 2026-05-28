@@ -234,7 +234,93 @@ async function main() {
   await db.from("profiles").update({ full_name: "Sarah Mitchell" }).eq("id", HOD);
   console.log("  ✓ Sarah Mitchell (hod.test)");
 
-  // Clear existing LTP data for these teachers
+  // ── 1. School ──────────────────────────────────────────────────────────────
+  console.log("\nSeeding school structure...");
+  let { data: school } = await db.from("schools").select("id").eq("name", "Dubai Schools Al Khawaneej").maybeSingle();
+  if (!school) {
+    const { data: s, error } = await db.from("schools").insert({ name: "Dubai Schools Al Khawaneej" }).select().single();
+    if (error) { console.error("  School error:", error.message); process.exit(1); }
+    school = s;
+  }
+  console.log(`  ✓ School: Dubai Schools Al Khawaneej (${school.id})`);
+
+  // ── 2. Subject: English ────────────────────────────────────────────────────
+  let { data: subject } = await db.from("subjects").select("id").eq("name", "English").eq("school_id", school.id).maybeSingle();
+  if (!subject) {
+    const { data: s, error } = await db.from("subjects").insert({ name: "English", slot: 1, school_id: school.id }).select().single();
+    if (error) { console.error("  Subject error:", error.message); process.exit(1); }
+    subject = s;
+  }
+  console.log(`  ✓ Subject: English slot 1 (${subject.id})`);
+
+  // ── 3. Grade Levels ────────────────────────────────────────────────────────
+  const gradeDefs = [
+    { name: "Grade 6", sort_order: 1 },
+    { name: "Grade 7", sort_order: 2 },
+    { name: "Grade 8", sort_order: 3 },
+  ];
+  const grades = {};
+  for (const gd of gradeDefs) {
+    let { data: g } = await db.from("grade_levels").select("id").eq("name", gd.name).eq("school_id", school.id).maybeSingle();
+    if (!g) {
+      const { data: created, error } = await db.from("grade_levels").insert({ name: gd.name, sort_order: gd.sort_order, school_id: school.id }).select().single();
+      if (error) { console.error(`  Grade level error (${gd.name}):`, error.message); process.exit(1); }
+      g = created;
+    }
+    grades[gd.name] = g.id;
+    console.log(`  ✓ Grade: ${gd.name} (${g.id})`);
+  }
+  const grade6Id = grades["Grade 6"];
+
+  // ── 4. Standard Set: NYSED Grade 6 ELA ────────────────────────────────────
+  let { data: stdSet } = await db.from("standard_sets").select("id").eq("subject_id", subject.id).eq("grade_level_id", grade6Id).maybeSingle();
+  if (!stdSet) {
+    const { data: s, error } = await db.from("standard_sets").insert({
+      name: "NYSED Grade 6 ELA",
+      subject_id: subject.id,
+      grade_level_id: grade6Id,
+      school_id: school.id,
+    }).select().single();
+    if (error) { console.error("  Standard set error:", error.message); process.exit(1); }
+    stdSet = s;
+  }
+  console.log(`  ✓ Standard Set: NYSED Grade 6 ELA (${stdSet.id})`);
+
+  // ── 5. Link existing standards to the standard set ────────────────────────
+  const allStandardIds = Object.values(S);
+  const { error: stdUpdateErr } = await db.from("standards").update({ standard_set_id: stdSet.id }).in("id", allStandardIds);
+  if (stdUpdateErr) { console.error("  Standards update error:", stdUpdateErr.message); process.exit(1); }
+  console.log(`  ✓ Linked ${allStandardIds.length} standards to standard set`);
+
+  // ── 6. Class Assignments ───────────────────────────────────────────────────
+  const assignmentDefs = [
+    { teacher_id: JADE,   is_lead: true  },
+    { teacher_id: MARCUS, is_lead: false },
+    { teacher_id: PRIYA,  is_lead: false },
+  ];
+  for (const ad of assignmentDefs) {
+    const { data: existing } = await db.from("class_assignments")
+      .select("id").eq("teacher_id", ad.teacher_id).eq("subject_id", subject.id).eq("grade_level_id", grade6Id).maybeSingle();
+    if (!existing) {
+      const { error } = await db.from("class_assignments").insert({
+        teacher_id: ad.teacher_id,
+        subject_id: subject.id,
+        grade_level_id: grade6Id,
+        is_lead: ad.is_lead,
+        school_id: school.id,
+      });
+      if (error) { console.error("  Class assignment error:", error.message); process.exit(1); }
+    } else {
+      await db.from("class_assignments").update({ is_lead: ad.is_lead }).eq("id", existing.id);
+    }
+  }
+  console.log(`  ✓ Class assignments: Jade (lead), Marcus, Priya → Grade 6 English`);
+
+  // ── 7. HOD subject assignment ──────────────────────────────────────────────
+  await db.from("profiles").update({ subject_id: subject.id }).eq("id", HOD);
+  console.log(`  ✓ HOD Sarah Mitchell assigned to English`);
+
+  // ── Clear existing LTP data for these teachers ─────────────────────────────
   console.log("\nClearing existing LTP data...");
   const { data: existingPlans } = await db
     .from("long_term_plans")
@@ -273,7 +359,15 @@ async function main() {
 
     const { data: plan, error: planErr } = await db
       .from("long_term_plans")
-      .insert({ teacher_id: HOD, title: cfg.title, school_year: "2025–2026", status: "draft" })
+      .insert({
+        teacher_id: HOD,
+        title: cfg.title,
+        school_year: "2025–2026",
+        status: "draft",
+        school_id: school.id,
+        subject_id: subject.id,
+        grade_level_id: grade6Id,
+      })
       .select()
       .single();
 

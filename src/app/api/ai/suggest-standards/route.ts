@@ -35,15 +35,15 @@ export async function POST(req: NextRequest) {
   // Fill-gaps mode: distribute unmapped standards across existing units
   if (mode === "fill-gaps" && existingUnits?.length > 0) {
     const unitsList = existingUnits
-      .map((u: { title: string; term: number; currentCodes: string[] }) =>
-        `- "${u.title}" (Term ${u.term}): currently covers [${u.currentCodes.join(", ")}]`)
+      .map((u: { id: string; title: string; term: number; currentCodes: string[] }) =>
+        `- id: "${u.id}" | title: "${u.title}" (Term ${u.term}): currently covers [${u.currentCodes.join(", ")}]`)
       .join("\n");
 
     const prompt = `You are a Grade 6 ELA curriculum expert. A teacher has unmapped standards that need to be distributed across their existing Long Term Plan units.
 
 Unmapped standards to distribute: ${uncoveredCodes.join(", ")}
 
-Existing units:
+Existing units (use the exact id value in your response):
 ${unitsList}
 
 All available standards for reference:
@@ -51,11 +51,11 @@ ${standardsList}
 
 Task: Distribute the unmapped standards across the existing units in the most thematically sensible way. Each unmapped standard should go to exactly one unit. Prioritise thematic fit — for example, narrative writing standards go to narrative units, language standards can be spread across units where they fit naturally.
 
-Return ONLY valid JSON:
+Return ONLY valid JSON. The unitId field MUST be the exact id value from the unit list above (a UUID), not the title:
 {
   "allocations": [
     {
-      "unitId": "<unit id>",
+      "unitId": "<exact id UUID from the unit list>",
       "suggestions": [
         { "code": "RL.6.2", "reason": "Theme and central idea fits the narrative analysis focus of this unit." }
       ]

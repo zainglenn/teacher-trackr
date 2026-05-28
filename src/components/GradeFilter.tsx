@@ -21,14 +21,19 @@ export function GradeFilter({ grades, activeGradeId, onChange, className }: Grad
         aria-label="Filter by grade level"
         className={`hidden sm:flex items-center gap-0.5 ${className ?? ""}`}
       >
-        {grades.map((g) => {
+        {grades.map((g, idx) => {
           const isActive = g.id === activeGradeId;
           return (
             <button
               key={g.id}
               role="tab"
               aria-selected={isActive}
+              tabIndex={isActive ? 0 : -1}
               onClick={() => onChange(g.id)}
+              onKeyDown={(e) => {
+                if (e.key === "ArrowRight") { e.preventDefault(); onChange(grades[Math.min(idx + 1, grades.length - 1)].id); }
+                if (e.key === "ArrowLeft")  { e.preventDefault(); onChange(grades[Math.max(idx - 1, 0)].id); }
+              }}
               className={`px-3 py-1.5 text-xs font-medium rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50
                 ${isActive
                   ? "bg-primary text-primary-foreground"

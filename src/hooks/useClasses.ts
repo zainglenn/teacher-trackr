@@ -9,6 +9,11 @@ export function useClasses(teacherId: string) {
   const [loading, setLoading] = useState(true);
 
   const fetch = useCallback(async () => {
+    if (!teacherId) {
+      setClasses([]);
+      setLoading(false);
+      return;
+    }
     const { data } = await supabase
       .from("classes")
       .select("*")
