@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, BookMarked, ChevronRight } from "lucide-react";
+import { Loader2, BookMarked, ChevronRight, Lock, XCircle } from "lucide-react";
 import { Standard } from "@/types";
 import { useAssignedUnits } from "@/hooks/useAssignedUnits";
 import { UnitPlanView } from "@/components/ltp/UnitPlanView";
@@ -72,61 +72,66 @@ export function MyUnitsView({ teacherId, standards }: MyUnitsViewProps) {
     );
   }
 
+  // Group by term
+  const byTerm = [1, 2, 3].map((term) => ({
+    term,
+    label: TERM_LABEL[term],
+    units: allAssignedUnits.filter(({ unit }) => unit.term === term),
+  })).filter(({ units }) => units.length > 0);
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-semibold">My Assigned Units</h1>
+        <h1 className="text-lg font-semibold tracking-tight">My Units</h1>
         <p className="text-sm text-muted-foreground mt-0.5">
           {allAssignedUnits.length} unit{allAssignedUnits.length !== 1 ? "s" : ""} assigned to you
         </p>
       </div>
 
-      <div className="space-y-2">
-        {allAssignedUnits.map(({ unit, plan }) => {
-          const mappedCount = unit.standards?.length ?? 0;
-          return (
-            <button
-              key={unit.id}
-              onClick={() => setSelectedUnitId(unit.id)}
-              className="w-full text-left rounded-lg border bg-card p-4 hover:bg-muted/30 transition-colors group"
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0 flex-1 space-y-1.5">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs text-muted-foreground">{plan.title}</span>
-                    <Badge variant="outline" className={`text-xs py-0 ${UNIT_STATUS_CONFIG[unit.status ?? "draft"].className}`}>
-                      {UNIT_STATUS_CONFIG[unit.status ?? "draft"].label}
-                    </Badge>
-                    <Badge variant="outline" className="text-xs py-0">{TERM_LABEL[unit.term]}</Badge>
-                  </div>
-                  <p className="font-medium text-sm leading-snug">{unit.title}</p>
-                  {unit.big_idea && (
-                    <p className="text-xs text-muted-foreground line-clamp-2">{unit.big_idea}</p>
-                  )}
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-xs text-muted-foreground">{unit.duration_weeks}w</span>
-                    <span className="text-xs text-muted-foreground">·</span>
-                    <span className="text-xs text-muted-foreground capitalize">{unit.assessment_type}</span>
-                    <span className="text-xs text-muted-foreground">·</span>
-                    <span className="text-xs text-muted-foreground">{mappedCount} standard{mappedCount !== 1 ? "s" : ""}</span>
-                  </div>
-                  {unit.standards && unit.standards.length > 0 && (
-                    <div className="flex flex-wrap gap-1 pt-0.5">
-                      {unit.standards.slice(0, 8).map((s) => (
-                        <StrandBadge key={s.id} code={s.code} />
-                      ))}
-                      {unit.standards.length > 8 && (
-                        <span className="text-xs text-muted-foreground self-center">+{unit.standards.length - 8}</span>
-                      )}
+      {byTerm.map(({ term, label, units }) => (
+        <div key={term}>
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">{label}</p>
+          <div className="border border-border rounded-[var(--radius)] divide-y divide-border bg-card">
+            {units.map(({ unit, plan }) => {
+              const statusCfg = UNIT_STATUS_CONFIG[unit.status ?? "draft"];
+              const strands = [...new Set((unit.standards ?? []).map((s) => s.code.split(".")[0]))];
+              const isRejected = unit.status === "rejected";
+              return (
+                <div key={unit.id}>
+                  {isRejected && (
+                    <div className="flex items-start gap-2 px-3 py-1.5 bg-red-50 border-b border-red-100">
+                      <XCircle className="h-3.5 w-3.5 text-red-600 shrink-0 mt-0.5" />
+                      <p className="text-xs text-red-600">
+                        <span className="font-semibold text-red-700">Rejected</span>
+                        {unit.rejection_reason && ` — ${unit.rejection_reason}`}
+                      </p>
                     </div>
                   )}
+                  <button
+                    onClick={() => setSelectedUnitId(unit.id)}
+                    className="w-full text-left flex items-center gap-3 px-3 h-11 hover:bg-muted/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset"
+                  >
+                    <span className="text-xs text-muted-foreground shrink-0 w-16 truncate hidden sm:block">{plan.title}</span>
+                    <span className="text-sm font-medium flex-1 min-w-0 truncate">{unit.title}</span>
+                    <span className="flex items-center gap-1.5 shrink-0">
+                      {strands.map((strand) => (
+                        <StrandBadge key={strand} code={strand} variant="muted" />
+                      ))}
+                    </span>
+                    <Badge variant="outline" className={`text-xs shrink-0 ${statusCfg.className}`}>
+                      {statusCfg.label}
+                    </Badge>
+                    {unit.status === "published"
+                      ? <Lock className="h-3.5 w-3.5 text-indigo-400 shrink-0" aria-label="Plan is published and locked" />
+                      : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0" aria-hidden="true" />
+                    }
+                  </button>
                 </div>
-                <ChevronRight className="h-4 w-4 text-muted-foreground/50 shrink-0 mt-1 group-hover:text-muted-foreground transition-colors" />
-              </div>
-            </button>
-          );
-        })}
-      </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

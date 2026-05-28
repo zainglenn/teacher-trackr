@@ -25,10 +25,11 @@ export function strandFromCode(code: string) {
 
 interface StrandBadgeProps {
   code: string;
+  variant?: "default" | "muted";
   className?: string;
 }
 
-export function StrandBadge({ code, className }: StrandBadgeProps) {
+export function StrandBadge({ code, variant = "default", className }: StrandBadgeProps) {
   const strand = strandFromCode(code);
   const vars = STRAND_VARS[strand];
 
@@ -37,6 +38,21 @@ export function StrandBadge({ code, className }: StrandBadgeProps) {
       <Badge variant="outline" className={`font-mono text-xs px-1.5 py-0 ${className ?? ""}`}>
         {code}
       </Badge>
+    );
+  }
+
+  if (variant === "muted") {
+    return (
+      <span
+        className={`inline-flex items-center gap-1 text-xs font-mono ${className ?? ""}`}
+        style={{ color: vars.text }}
+      >
+        <span
+          className="inline-block h-1.5 w-1.5 rounded-full shrink-0"
+          style={{ backgroundColor: vars.text }}
+        />
+        {strand}
+      </span>
     );
   }
 

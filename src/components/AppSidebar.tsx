@@ -5,12 +5,10 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
-  SidebarGroupContent,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarTrigger,
 } from "@/components/ui/sidebar";
 import {
   BookOpen,
@@ -23,7 +21,9 @@ import {
   School,
   Grid3X3,
   Settings2,
-  ShieldAlert,
+  ShieldCheck,
+  Search,
+  ClipboardCheck,
 } from "lucide-react";
 import { Role } from "@/types";
 import { useAuth } from "@/hooks/useAuth";
@@ -34,104 +34,109 @@ export type AppView =
   | "long-term-plan"
   | "student-progress"
   | "delivery-grid"
-  | "hod-admin"
+  | "hod-review"
+  | "hod-settings"
   | "manage-users"
-  | "my-class"
-  | "admin";
+  | "my-units"
+  | "platform-settings"
+  | "curriculum-audit";
 
 type NavItem = {
   key: AppView;
   label: string;
   icon: React.ElementType;
-  hodOnly?: boolean;
-  teacherOnly?: boolean;
-  adminOnly?: boolean;
+  roles: Role[];
 };
 
 const NAV_ITEMS: NavItem[] = [
-  { key: "dashboard",       label: "Dashboard",          icon: LayoutDashboard,  hodOnly: true },
-  { key: "my-class",        label: "My Class",           icon: School,       teacherOnly: true },
-  { key: "coverage",        label: "Standards Coverage", icon: CheckSquare },
-  { key: "long-term-plan",  label: "Master Plans",       icon: ClipboardList },
-  { key: "student-progress",label: "Student Progress",   icon: Users },
-  { key: "delivery-grid",   label: "Delivery Grid",      icon: Grid3X3,      hodOnly: true },
-  { key: "hod-admin",       label: "Admin Panel",        icon: Settings2,    hodOnly: true },
-  { key: "manage-users",    label: "Manage Users",       icon: UserCog,      hodOnly: true },
-  { key: "admin",           label: "Admin Panel",        icon: ShieldAlert,  adminOnly: true },
+  { key: "dashboard",        label: "Dashboard",          icon: LayoutDashboard, roles: ["hod"] },
+  { key: "my-units",         label: "My Units",           icon: School,          roles: ["teacher"] },
+  { key: "long-term-plan",   label: "Master Plans",       icon: ClipboardList,   roles: ["teacher", "hod"] },
+  { key: "delivery-grid",    label: "Delivery Grid",      icon: Grid3X3,         roles: ["hod"] },
+  { key: "hod-review",       label: "Plan Reviews",       icon: ClipboardCheck,  roles: ["hod"] },
+  { key: "coverage",         label: "Standards Coverage", icon: CheckSquare,     roles: ["teacher", "hod"] },
+  { key: "student-progress", label: "Student Progress",   icon: Users,           roles: ["teacher", "hod"] },
+  { key: "hod-settings",     label: "HOD Settings",       icon: Settings2,       roles: ["hod"] },
+  { key: "manage-users",     label: "Manage Users",       icon: UserCog,         roles: ["admin"] },
+  { key: "platform-settings",label: "Platform Settings",  icon: ShieldCheck,     roles: ["admin"] },
+  { key: "curriculum-audit", label: "Curriculum Audit",   icon: Search,          roles: ["admin"] },
 ];
 
 interface AppSidebarProps {
   view: AppView;
   onViewChange: (v: AppView) => void;
   role: Role;
-  email: string;
+  username: string;
   overdueCount?: number;
 }
 
-export function AppSidebar({ view, onViewChange, role, email, overdueCount = 0 }: AppSidebarProps) {
+export function AppSidebar({ view, onViewChange, role, username, overdueCount = 0 }: AppSidebarProps) {
   const { signOut } = useAuth();
 
-  const items = NAV_ITEMS.filter(
-    (item) =>
-      (!item.hodOnly || role === "hod") &&
-      (!item.teacherOnly || role === "teacher") &&
-      (!item.adminOnly || role === "admin")
-  );
+  const items = NAV_ITEMS.filter((item) => item.roles.includes(role));
 
   return (
-    <Sidebar collapsible="offcanvas" className="border-r border-sidebar-border">
-      <SidebarHeader className="px-4 py-4 border-b border-sidebar-border">
+    <Sidebar collapsible="offcanvas" className="border-r border-sidebar-border w-[220px]">
+      <SidebarHeader className="px-3 py-3 border-b border-sidebar-border">
         <div className="flex items-center gap-2">
-          <div className="bg-sidebar-primary rounded-lg p-1.5">
-            <BookOpen className="h-4 w-4 text-sidebar-primary-foreground" />
+          <div className="bg-sidebar-primary rounded p-1">
+            <BookOpen className="h-3.5 w-3.5 text-sidebar-primary-foreground" />
           </div>
-          <div>
-            <p className="text-sm font-semibold text-sidebar-foreground leading-tight">Curriculum Tracker</p>
-            <p className="text-xs text-sidebar-foreground/60 leading-tight">Dubai Schools</p>
-          </div>
+          <p className="text-sm font-semibold text-sidebar-foreground leading-tight">Curriculum Tracker</p>
         </div>
       </SidebarHeader>
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {items.map((item) => (
+          <SidebarMenu>
+            {items.map((item) => {
+              const isActive = view === item.key;
+              return (
                 <SidebarMenuItem key={item.key}>
                   <SidebarMenuButton
-                    isActive={view === item.key}
+                    isActive={isActive}
                     onClick={() => onViewChange(item.key)}
-                    className="cursor-pointer"
+                    className={`cursor-pointer h-8 text-sm rounded-none border-l-2 px-3 ${
+                      isActive
+                        ? "border-l-primary bg-sidebar-accent/60 font-medium text-sidebar-foreground"
+                        : "border-l-transparent font-normal text-sidebar-foreground/70 hover:bg-muted/50 hover:text-sidebar-foreground"
+                    }`}
                   >
-                    <item.icon className="h-4 w-4" />
+                    <item.icon className="h-3.5 w-3.5 shrink-0" />
                     <span>{item.label}</span>
                     {item.key === "delivery-grid" && overdueCount > 0 && (
-                      <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-[var(--status-overdue-text)] text-[10px] font-bold text-white">
+                      <span className="ml-auto flex h-4 w-4 items-center justify-center rounded-full bg-[var(--status-overdue-text)] text-[9px] font-bold text-white">
                         {overdueCount > 9 ? "9+" : overdueCount}
                       </span>
                     )}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
+              );
+            })}
+          </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border px-4 py-3">
+      <SidebarFooter className="border-t border-sidebar-border px-3 py-2.5">
         <div className="flex items-center justify-between gap-2">
-          <div className="min-w-0">
-            <p className="text-xs font-medium text-sidebar-foreground truncate">{email}</p>
-            <p className="text-xs text-sidebar-foreground/60 capitalize">
-              {role === "hod" ? "Head of Department" : role === "admin" ? "Administrator" : "Teacher"}
-            </p>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <p className="text-xs font-medium text-sidebar-foreground truncate">{username}</p>
+            <span className={`inline-flex shrink-0 items-center px-1 py-0.5 rounded text-[10px] font-semibold border ${
+              role === "hod"
+                ? "bg-violet-100 text-violet-700 border-violet-200"
+                : role === "admin"
+                ? "bg-rose-100 text-rose-700 border-rose-200"
+                : "bg-blue-100 text-blue-700 border-blue-200"
+            }`}>
+              {role === "hod" ? "HOD" : role === "admin" ? "Admin" : "Teacher"}
+            </span>
           </div>
           <button
             onClick={signOut}
-            className="text-sidebar-foreground/60 hover:text-sidebar-foreground transition-colors shrink-0"
-            title="Sign out"
+            aria-label="Sign out"
+            className="text-sidebar-foreground/50 hover:text-sidebar-foreground transition-colors shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 rounded-sm"
           >
-            <LogOut className="h-4 w-4" />
+            <LogOut className="h-3.5 w-3.5" />
           </button>
         </div>
       </SidebarFooter>

@@ -2,7 +2,6 @@
 
 import { PageContainer } from "@/components/PageContainer";
 import { StatCard } from "@/components/StatCard";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { CheckSquare, ClipboardList, Users, ClipboardCheck, AlertTriangle, Clock } from "lucide-react";
@@ -72,7 +71,7 @@ function HodDashboard({ standards, ltps, onNavigate }: {
   return (
     <PageContainer title="Dashboard" description="Department overview — Grade 6 English">
       {/* Stat cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard label="Teachers" value={loading ? "—" : teachers.length} sub="in department" icon={Users} iconColor="text-violet-500" />
         <StatCard label="Long Term Plans" value={ltps.length} sub="across all teachers" icon={ClipboardList} iconColor="text-blue-500" />
         <StatCard
@@ -87,104 +86,100 @@ function HodDashboard({ standards, ltps, onNavigate }: {
 
       {/* Plans needing attention */}
       {attention.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
-              <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
-              Plans Needing Attention
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="divide-y">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1 flex items-center gap-1.5">
+            <AlertTriangle className="h-3 w-3 text-amber-500" aria-hidden="true" />
+            Plans Needing Attention
+          </p>
+          <div className="border border-border rounded-[var(--radius)] divide-y divide-border bg-card">
             {attention.map((p) => {
               const hasSubmitted = (p.units ?? []).some((u) => u.status === "submitted");
               const badge = STATUS_BADGE[hasSubmitted ? "submitted" : "revision"];
+              const oldestMs = hasSubmitted
+                ? Math.min(...(p.units ?? []).filter(u => u.status === "submitted").map(u => new Date(u.submitted_at ?? 0).getTime()))
+                : 0;
+              const daysAgo = oldestMs ? Math.floor((Date.now() - oldestMs) / 86400000) : null;
               return (
                 <button
                   key={p.id}
-                  className="flex items-center justify-between py-2.5 first:pt-0 last:pb-0 w-full text-left hover:bg-muted/30 -mx-2 px-2 rounded transition-colors"
+                  className="flex items-center gap-3 px-3 h-12 w-full text-left hover:bg-muted/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset"
                   onClick={() => onNavigate("delivery-grid")}
                 >
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium truncate">{p.title}</p>
-                    <p className="text-xs text-muted-foreground">{p.teacher?.full_name ?? p.teacher?.email} · {p.school_year}</p>
-                  </div>
-                  <Badge className={`text-xs ml-2 shrink-0 ${badge.className}`}>{badge.label}</Badge>
+                  <span className="text-sm font-medium truncate flex-1 min-w-0">{p.title}</span>
+                  <span className="text-xs text-muted-foreground shrink-0 hidden sm:block">{p.teacher?.full_name ?? p.teacher?.email}</span>
+                  {daysAgo !== null && (
+                    <span className="text-xs text-muted-foreground shrink-0 hidden sm:block">{daysAgo}d ago</span>
+                  )}
+                  <Badge className={`text-xs shrink-0 ${badge.className}`}>{badge.label}</Badge>
                 </button>
               );
             })}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {/* Department coverage heatmap: rows=teachers, cols=strands */}
       {!loading && teachers.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold">Coverage by Teacher &amp; Strand</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr>
-                    <th className="text-left font-medium text-muted-foreground pb-2 pr-3 whitespace-nowrap">Teacher</th>
-                    {STRAND_ORDER.map((sc) => (
-                      <th key={sc} className="text-center font-medium text-muted-foreground pb-2 px-1 whitespace-nowrap">
-                        <span className={`inline-block px-1.5 py-0.5 rounded font-mono ${STRAND_COLORS[sc] ?? ""}`}>{sc}</span>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {teachers.map((t) => {
-                    const covered = coverageByTeacher.get(t.id) ?? new Set<string>();
-                    return (
-                      <tr key={t.id}>
-                        <td className="py-2 pr-3 font-medium whitespace-nowrap">{t.full_name ?? t.email}</td>
-                        {STRAND_ORDER.map((sc) => {
-                          const total = strandStandardIds[sc]?.size ?? 0;
-                          const count = total === 0 ? 0 : [...(strandStandardIds[sc] ?? [])].filter((id) => covered.has(id)).length;
-                          const pct = total === 0 ? 0 : Math.round((count / total) * 100);
-                          const color = pct >= 80 ? "bg-emerald-100 text-emerald-700" : pct >= 40 ? "bg-amber-100 text-amber-700" : "bg-rose-100 text-rose-700";
-                          return (
-                            <td key={sc} className="py-2 px-1 text-center">
-                              <span className={`inline-block px-2 py-0.5 rounded font-mono ${color}`} title={`${count}/${total} standards`}>
-                                {pct}%
-                              </span>
-                            </td>
-                          );
-                        })}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Coverage by Teacher &amp; Strand</p>
+          <div className="border border-border rounded-[var(--radius)] bg-card overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="text-left font-medium text-muted-foreground py-2 px-3 whitespace-nowrap">Teacher</th>
+                  {STRAND_ORDER.map((sc) => (
+                    <th key={sc} className="text-center font-medium text-muted-foreground py-2 px-2 whitespace-nowrap">
+                      <span className={`inline-block px-1 py-0.5 rounded-sm font-mono text-[11px] ${STRAND_COLORS[sc] ?? ""}`}>{sc}</span>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {teachers.map((t) => {
+                  const covered = coverageByTeacher.get(t.id) ?? new Set<string>();
+                  return (
+                    <tr key={t.id} className="hover:bg-muted/30 transition-colors">
+                      <td className="py-2 px-3 font-medium whitespace-nowrap">{t.full_name ?? t.email}</td>
+                      {STRAND_ORDER.map((sc) => {
+                        const total = strandStandardIds[sc]?.size ?? 0;
+                        const count = total === 0 ? 0 : [...(strandStandardIds[sc] ?? [])].filter((id) => covered.has(id)).length;
+                        const pct = total === 0 ? 0 : Math.round((count / total) * 100);
+                        const color = pct >= 80 ? "bg-emerald-100 text-emerald-700" : pct >= 40 ? "bg-amber-100 text-amber-700" : "bg-rose-100 text-rose-700";
+                        return (
+                          <td key={sc} className="py-2 px-2 text-center">
+                            <span className={`inline-block px-1.5 py-0.5 rounded-sm font-mono ${color}`} title={`${count}/${total} standards`}>
+                              {pct}%
+                            </span>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
 
       {/* All LTPs overview */}
       {ltps.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold">Long Term Plans</CardTitle>
-          </CardHeader>
-          <CardContent className="divide-y">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Long Term Plans</p>
+          <div className="border border-border rounded-[var(--radius)] divide-y divide-border bg-card">
             {ltps.slice(0, 8).map((p) => {
-              const badge = { draft: { label: "Draft", className: "bg-muted text-muted-foreground" }, submitted: { label: "Submitted", className: "bg-amber-100 text-amber-700" }, approved: { label: "Approved", className: "bg-emerald-100 text-emerald-700" }, revision: { label: "Needs Revision", className: "bg-rose-100 text-rose-700" } }[p.status] ?? { label: p.status, className: "bg-muted text-muted-foreground" };
+              const badge = { draft: { label: "Draft", className: "bg-muted text-muted-foreground" }, submitted: { label: "Submitted", className: "bg-amber-100 text-amber-700" }, approved: { label: "Approved", className: "bg-emerald-100 text-emerald-700" }, revision: { label: "Needs Revision", className: "bg-rose-100 text-rose-700" }, published: { label: "Published", className: "bg-indigo-100 text-indigo-700" } }[p.status] ?? { label: p.status, className: "bg-muted text-muted-foreground" };
               return (
-                <div key={p.id} className="flex items-center justify-between py-2.5 first:pt-0 last:pb-0">
-                  <div>
-                    <p className="text-sm font-medium">{p.title}</p>
-                    <p className="text-xs text-muted-foreground">{p.teacher?.full_name ?? p.teacher?.email} · {p.school_year}</p>
-                  </div>
-                  <Badge className={`text-xs ${badge.className}`}>{badge.label}</Badge>
+                <div key={p.id} className="flex items-center gap-3 px-3 h-12">
+                  <span className="text-sm font-medium flex-1 min-w-0 truncate">{p.title}</span>
+                  <span className="text-xs text-muted-foreground shrink-0 hidden sm:block">{p.teacher?.full_name ?? p.teacher?.email}</span>
+                  <span className="text-xs text-muted-foreground shrink-0 hidden sm:block">{p.school_year}</span>
+                  <Badge className={`text-xs shrink-0 ${badge.className}`}>{badge.label}</Badge>
                 </div>
               );
             })}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
     </PageContainer>
   );
@@ -223,7 +218,7 @@ export function DashboardView({ standards, coverageLogs, ltps, students, isHod, 
       title="Dashboard"
       description="Overview of Grade 6 English curriculum progress"
     >
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard
           label="Coverage"
           value={`${coveragePct}%`}
@@ -247,38 +242,34 @@ export function DashboardView({ standards, coverageLogs, ltps, students, isHod, 
         />
       </div>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold">Coverage by Strand</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Coverage by Strand</p>
+        <div className="border border-border rounded-[var(--radius)] bg-card divide-y divide-border">
           {strands.map((strand) => {
             const strandStandards = standards.filter((s) => s.strand === strand);
             const covered = strandStandards.filter((s) => coveredIds.has(s.id)).length;
             const pct = Math.round((covered / strandStandards.length) * 100);
             return (
-              <div key={strand} className="space-y-1">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium">{strand}</span>
-                  <span className="text-muted-foreground text-xs">{covered}/{strandStandards.length}</span>
+              <div key={strand} className="flex items-center gap-3 px-3 h-11">
+                <span className="text-sm font-medium w-32 shrink-0">{strand}</span>
+                <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                  <Progress value={pct} className="h-1.5" />
                 </div>
-                <Progress value={pct} className="h-2" />
+                <span className="text-xs text-muted-foreground shrink-0 tabular-nums w-16 text-right">{covered}/{strandStandards.length}</span>
               </div>
             );
           })}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       {/* Mastery Alerts — only for teachers with students */}
       {!isHod && students.length > 0 && masteryAlerts.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold flex items-center gap-1.5">
-              <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
-              Needs Attention ({masteryAlerts.length})
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="divide-y">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1 flex items-center gap-1.5">
+            <AlertTriangle className="h-3 w-3 text-amber-500" aria-hidden="true" />
+            Needs Attention ({masteryAlerts.length})
+          </p>
+          <div className="border border-border rounded-[var(--radius)] divide-y divide-border bg-card">
             {masteryAlerts.slice(0, 6).map((s) => {
               const counts = classProgress.get(s.id);
               const assessed = counts ? counts.below + counts.approaching + counts.meeting + counts.exceeding : 0;
@@ -287,16 +278,12 @@ export function DashboardView({ standards, coverageLogs, ltps, students, isHod, 
               return (
                 <button
                   key={s.id}
-                  className="flex items-center justify-between py-2.5 first:pt-0 last:pb-0 w-full text-left hover:bg-muted/30 -mx-2 px-2 rounded transition-colors"
+                  className="flex items-center gap-3 px-3 h-11 w-full text-left hover:bg-muted/50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset"
                   onClick={() => onNavigate("student-progress")}
                 >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className="font-mono text-xs shrink-0">{s.code}</Badge>
-                      <span className="text-xs text-muted-foreground truncate">{s.description}</span>
-                    </div>
-                  </div>
-                  <div className="shrink-0 ml-3">
+                  <Badge variant="outline" className="font-mono text-xs shrink-0">{s.code}</Badge>
+                  <span className="text-xs text-muted-foreground flex-1 min-w-0 truncate">{s.description}</span>
+                  <div className="shrink-0">
                     {notAssessed ? (
                       <div className="flex items-center gap-1 text-xs text-amber-600">
                         <Clock className="h-3 w-3" />
@@ -304,7 +291,7 @@ export function DashboardView({ standards, coverageLogs, ltps, students, isHod, 
                       </div>
                     ) : (
                       <div className="flex items-center gap-1">
-                        <div className="flex h-2 w-16 rounded-full overflow-hidden">
+                        <div className="flex h-1.5 w-16 rounded-full overflow-hidden">
                           <div className="bg-rose-400" style={{ width: `${(counts!.below / assessed) * 100}%` }} />
                           <div className="bg-amber-400" style={{ width: `${(counts!.approaching / assessed) * 100}%` }} />
                           <div className="bg-emerald-400" style={{ width: `${((counts!.meeting + counts!.exceeding) / assessed) * 100}%` }} />
@@ -316,31 +303,27 @@ export function DashboardView({ standards, coverageLogs, ltps, students, isHod, 
                 </button>
               );
             })}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       {ltps.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold">Long Term Plans</CardTitle>
-          </CardHeader>
-          <CardContent className="divide-y">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Long Term Plans</p>
+          <div className="border border-border rounded-[var(--radius)] divide-y divide-border bg-card">
             {ltps.slice(0, 5).map((p) => {
               const badge = STATUS_BADGE[p.status] ?? STATUS_BADGE.draft;
               const unitCount = p.units?.length ?? 0;
               return (
-                <div key={p.id} className="flex items-center justify-between py-2.5 first:pt-0 last:pb-0">
-                  <div>
-                    <p className="text-sm font-medium">{p.title}</p>
-                    <p className="text-xs text-muted-foreground">{p.school_year} · {unitCount} unit{unitCount !== 1 ? "s" : ""}</p>
-                  </div>
-                  <Badge className={`text-xs ${badge.className}`}>{badge.label}</Badge>
+                <div key={p.id} className="flex items-center gap-3 px-3 h-12">
+                  <span className="text-sm font-medium flex-1 min-w-0 truncate">{p.title}</span>
+                  <span className="text-xs text-muted-foreground shrink-0 hidden sm:block">{p.school_year} · {unitCount} unit{unitCount !== 1 ? "s" : ""}</span>
+                  <Badge className={`text-xs shrink-0 ${badge.className}`}>{badge.label}</Badge>
                 </div>
               );
             })}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
     </PageContainer>
   );

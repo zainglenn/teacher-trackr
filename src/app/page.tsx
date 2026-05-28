@@ -12,7 +12,8 @@ import { ManageUsersView } from "@/components/ManageUsersView";
 import { AdminView } from "@/components/AdminView";
 import { DeliveryGridView } from "@/components/DeliveryGridView";
 import { HODAdminPanel } from "@/components/HODAdminPanel";
-import { MyClassView } from "@/components/MyClassView";
+import { MyUnitsView } from "@/components/MyUnitsView";
+import { HODReviewView } from "@/components/HODReviewView";
 import { useAuth } from "@/hooks/useAuth";
 import { useProfile } from "@/hooks/useProfile";
 import { useStandards } from "@/hooks/useStandards";
@@ -23,16 +24,17 @@ import { useStudents } from "@/hooks/useStudents";
 import { useClassProgress } from "@/hooks/useClassProgress";
 import { Loader2 } from "lucide-react";
 
-function CurriculumApp({ userId, email }: { userId: string; email: string }) {
+function CurriculumApp({ userId }: { userId: string }) {
   const [view, setView] = useState<AppView>("dashboard");
   const [ltpInitialPlanId, setLtpInitialPlanId] = useState<string | null>(null);
   const [ltpInitialUnitId, setLtpInitialUnitId] = useState<string | null>(null);
-  const { role } = useProfile(userId);
+  const { role, username, loading: profileLoading } = useProfile(userId);
 
-  // Redirect teachers away from dashboard (which is HOD-only) to My Class
   useEffect(() => {
-    if (role === "teacher") setView("my-class");
-  }, [role]);
+    if (profileLoading) return;
+    if (role === "teacher") setView("my-units");
+    else if (role === "admin") setView("manage-users");
+  }, [role, profileLoading]);
   const isHod = role === "hod";
   const isAdmin = role === "admin";
   const { standards, byStrand, loading: standardsLoading } = useStandards();
@@ -54,10 +56,10 @@ function CurriculumApp({ userId, email }: { userId: string; email: string }) {
 
   return (
     <SidebarProvider>
-      <AppSidebar view={view} onViewChange={setView} role={role} email={email} overdueCount={overdueCount} />
+      <AppSidebar view={view} onViewChange={setView} role={role} username={username} overdueCount={overdueCount} />
       <SidebarInset className="flex flex-col min-h-svh bg-slate-50/60">
         <header className="flex items-center h-10 px-3 border-b border-border/40 shrink-0 bg-background/80 backdrop-blur-sm sticky top-0 z-10">
-          <SidebarTrigger className="h-7 w-7 text-muted-foreground hover:text-foreground" />
+          <SidebarTrigger className="h-7 w-7 text-muted-foreground hover:text-foreground md:hidden" />
         </header>
         <main className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4">
           {view === "dashboard" && (
@@ -90,29 +92,30 @@ function CurriculumApp({ userId, email }: { userId: string; email: string }) {
           {view === "delivery-grid" && isHod && (
             <DeliveryGridView teacherId={userId} onNavigate={setView} />
           )}
-          {view === "hod-admin" && isHod && (
+          {view === "hod-review" && isHod && (
+            <HODReviewView teacherId={userId} standards={standards} />
+          )}
+          {view === "hod-settings" && isHod && (
             <HODAdminPanel
               teachers={teachers}
               plans={ltps}
               assignUnit={assignUnit}
             />
           )}
-          {view === "manage-users" && isHod && (
+          {view === "manage-users" && isAdmin && (
             <ManageUsersView currentUserId={userId} />
           )}
-          {view === "my-class" && !isHod && (
-            <MyClassView
+          {view === "my-units" && role === "teacher" && (
+            <MyUnitsView
               teacherId={userId}
               standards={standards}
-              onNavigateToUnit={(planId, unitId) => {
-                setLtpInitialPlanId(planId);
-                setLtpInitialUnitId(unitId);
-                setView("long-term-plan");
-              }}
             />
           )}
-          {view === "admin" && isAdmin && (
-            <AdminView userId={userId} />
+          {view === "platform-settings" && isAdmin && (
+            <AdminView userId={userId} tab="platform" />
+          )}
+          {view === "curriculum-audit" && isAdmin && (
+            <AdminView userId={userId} tab="audit" />
           )}
         </main>
       </SidebarInset>
@@ -132,5 +135,5 @@ export default function Home() {
   }
 
   if (!user) return <AuthGate />;
-  return <CurriculumApp userId={user.id} email={user.email ?? ""} />;
+  return <CurriculumApp userId={user.id} />;
 }

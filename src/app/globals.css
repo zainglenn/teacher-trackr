@@ -49,7 +49,7 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
+  --background: oklch(0.985 0.002 264);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
@@ -64,22 +64,22 @@
   --accent: oklch(0.94 0.03 264);
   --accent-foreground: oklch(0.35 0.12 264);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
+  --border: oklch(0.930 0.003 264);
+  --input: oklch(0.930 0.003 264);
   --ring: oklch(0.65 0.12 264);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
+  --radius: 0.5rem;
   --sidebar: oklch(1 0 0);
   --sidebar-foreground: oklch(0.28 0.01 264);
   --sidebar-primary: oklch(0.49 0.20 264);
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.94 0.03 264);
   --sidebar-accent-foreground: oklch(0.35 0.12 264);
-  --sidebar-border: oklch(0.925 0 0);
+  --sidebar-border: oklch(0.930 0.003 264);
   --sidebar-ring: oklch(0.65 0.10 264);
 }
 
@@ -156,29 +156,29 @@
 
   /* ── Strand Colors ────────────────────────────────────────────────────────── */
   /* Used in: StrandBadge, standards table, coverage view, PPT slides          */
-  --strand-rl-bg:            oklch(0.932 0.032 254);   /* blue-100    Reading Literature */
+  --strand-rl-bg:            oklch(0.952 0.013 254);   /* blue-100    Reading Literature */
   --strand-rl-text:          oklch(0.379 0.146 254);   /* blue-800 */
-  --strand-rl-border:        oklch(0.872 0.065 254);   /* blue-200 */
+  --strand-rl-border:        oklch(0.918 0.022 254);   /* blue-200 */
   --strand-rl-accent:        oklch(0.546 0.245 263);   /* blue-600 */
 
-  --strand-ri-bg:            oklch(0.931 0.034 307);   /* violet-100  Reading Informational */
+  --strand-ri-bg:            oklch(0.951 0.014 307);   /* violet-100  Reading Informational */
   --strand-ri-text:          oklch(0.380 0.120 307);   /* violet-800 */
-  --strand-ri-border:        oklch(0.869 0.075 307);   /* violet-200 */
+  --strand-ri-border:        oklch(0.916 0.025 307);   /* violet-200 */
   --strand-ri-accent:        oklch(0.541 0.185 308);   /* violet-600 */
 
-  --strand-w-bg:             oklch(0.962 0.059 95);    /* amber-100   Writing */
+  --strand-w-bg:             oklch(0.972 0.022 95);    /* amber-100   Writing */
   --strand-w-text:           oklch(0.421 0.123 75);    /* amber-800 */
-  --strand-w-border:         oklch(0.924 0.120 90);    /* amber-200 */
+  --strand-w-border:         oklch(0.944 0.044 90);    /* amber-200 */
   --strand-w-accent:         oklch(0.666 0.179 58);    /* amber-600 */
 
-  --strand-sl-bg:            oklch(0.952 0.054 163);   /* emerald-100 Speaking & Listening */
+  --strand-sl-bg:            oklch(0.965 0.020 163);   /* emerald-100 Speaking & Listening */
   --strand-sl-text:          oklch(0.366 0.115 152);   /* emerald-800 */
-  --strand-sl-border:        oklch(0.880 0.094 163);   /* emerald-200 */
+  --strand-sl-border:        oklch(0.924 0.035 163);   /* emerald-200 */
   --strand-sl-accent:        oklch(0.532 0.157 150);   /* emerald-600 */
 
-  --strand-l-bg:             oklch(0.941 0.041 11);    /* rose-100    Language */
+  --strand-l-bg:             oklch(0.956 0.016 11);    /* rose-100    Language */
   --strand-l-text:           oklch(0.444 0.177 9);     /* rose-800 */
-  --strand-l-border:         oklch(0.892 0.090 11);    /* rose-200 */
+  --strand-l-border:         oklch(0.922 0.032 11);    /* rose-200 */
   --strand-l-accent:         oklch(0.596 0.241 10);    /* rose-600 */
 
   /* ── Spacing Scale ────────────────────────────────────────────────────────── */
