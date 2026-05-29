@@ -13,9 +13,10 @@ import { useSubjects } from "@/hooks/useSubjects";
 import { Profile, Role } from "@/types";
 
 const ROLE_CONFIG: Record<Role, { label: string; shortLabel: string; className: string }> = {
-  hod:     { label: "Head of Department", shortLabel: "HOD",     className: "bg-violet-100 text-violet-700 border-violet-200" },
-  teacher: { label: "Teacher",            shortLabel: "Teacher", className: "bg-blue-100 text-blue-700 border-blue-200" },
-  admin:   { label: "Admin",              shortLabel: "Admin",   className: "bg-rose-100 text-rose-700 border-rose-200" },
+  hod:            { label: "Head of Department", shortLabel: "HOD",      className: "bg-violet-100 text-violet-700 border-violet-200" },
+  teacher:        { label: "Teacher",            shortLabel: "Teacher",  className: "bg-blue-100 text-blue-700 border-blue-200" },
+  admin:          { label: "Admin",              shortLabel: "Admin",    className: "bg-rose-100 text-rose-700 border-rose-200" },
+  platform_admin: { label: "Platform Admin",     shortLabel: "Platform", className: "bg-slate-100 text-slate-700 border-slate-200" },
 };
 
 const USERNAME_RE = /^[a-zA-Z0-9._]{2,30}$/;

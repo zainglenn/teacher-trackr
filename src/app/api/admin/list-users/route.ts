@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
 
   const { data: profile } = await admin
     .from("profiles")
-    .select("role")
+    .select("role, school_id")
     .eq("id", caller.id)
     .single();
 
@@ -30,10 +30,16 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { data } = await admin
+  let query = admin
     .from("profiles")
-    .select("id, email, username, full_name, role, notification_email, created_at, subject_id, subjects:subject_id(id, name, slot)")
+    .select("id, email, username, full_name, role, notification_email, created_at, subject_id, school_id, subjects:subject_id(id, name, slot)")
+    .not("role", "eq", "platform_admin")
     .order("created_at", { ascending: true });
+
+  // Scope to same school as the calling admin
+  if (profile?.school_id) query = query.eq("school_id", profile.school_id);
+
+  const { data } = await query;
 
   return NextResponse.json({ users: data ?? [] });
 }

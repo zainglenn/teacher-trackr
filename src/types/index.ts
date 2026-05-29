@@ -1,8 +1,9 @@
-export type Role = "teacher" | "hod" | "admin";
+export type Role = "teacher" | "hod" | "admin" | "platform_admin";
 
 export interface School {
   id: string;
   name: string;
+  is_active: boolean;
   created_at: string;
 }
 
@@ -54,6 +55,7 @@ export interface Profile {
   role: Role;
   notification_email: string | null;
   subject_id: string | null;
+  school_id: string | null;
   created_at: string;
 }
 

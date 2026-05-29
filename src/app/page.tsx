@@ -27,21 +27,27 @@ import { useActiveContext } from "@/hooks/useActiveContext";
 import { useStandardPipeline } from "@/hooks/useStandardPipeline";
 import { useDepartmentPipeline } from "@/hooks/useDepartmentPipeline";
 import { useTeacherNotifications, useHodNotifications } from "@/hooks/useNotifications";
+import { PlatformAdminView } from "@/components/PlatformAdminView";
+import { SuspendedSchoolMessage } from "@/components/SuspendedSchoolMessage";
+import { useSchool } from "@/hooks/useSchool";
 import { Loader2, BookOpen } from "lucide-react";
 
 function CurriculumApp({ userId }: { userId: string }) {
   const [view, setView] = useState<AppView>("dashboard");
   const [ltpInitialPlanId, setLtpInitialPlanId] = useState<string | null>(null);
   const [ltpInitialUnitId, setLtpInitialUnitId] = useState<string | null>(null);
-  const { role, username, loading: profileLoading, subjectId: profileSubjectId } = useProfile(userId);
+  const { profile, role, username, loading: profileLoading, subjectId: profileSubjectId } = useProfile(userId);
 
   useEffect(() => {
     if (profileLoading) return;
     if (role === "teacher") setView("my-units");
     else if (role === "admin") setView("manage-users");
+    else if (role === "platform_admin") setView("schools");
   }, [role, profileLoading]);
   const isHod = role === "hod";
   const isAdmin = role === "admin";
+  const isPlatformAdmin = role === "platform_admin";
+  const { isActive: schoolIsActive } = useSchool(!isPlatformAdmin ? profile?.school_id : null);
   const showContext = role === "teacher" || role === "hod";
   const { activeContext, setActiveContext, assignments: contextAssignments, loading: contextLoading } = useActiveContext(
     showContext ? userId : null
@@ -91,6 +97,26 @@ function CurriculumApp({ userId }: { userId: string }) {
       <p className="text-xs text-muted-foreground mt-1">Contact your administrator to be assigned to a class.</p>
     </div>
   );
+
+  // Suspended school guard
+  if (schoolIsActive === false) return <SuspendedSchoolMessage />;
+
+  // Platform admin — skip all curriculum loading, render directly
+  if (isPlatformAdmin) {
+    return (
+      <SidebarProvider>
+        <AppSidebar view={view} onViewChange={setView} role={role} username={username} notifications={[]} />
+        <SidebarInset className="flex flex-col min-h-svh bg-slate-50/60">
+          <header className="flex items-center h-10 px-3 border-b border-border/40 shrink-0 bg-background/80 backdrop-blur-sm sticky top-0 z-10">
+            <SidebarTrigger className="h-7 w-7 text-muted-foreground hover:text-foreground md:hidden" />
+          </header>
+          <main className="flex-1 overflow-y-auto p-4 sm:p-6">
+            <PlatformAdminView />
+          </main>
+        </SidebarInset>
+      </SidebarProvider>
+    );
+  }
 
   if (standardsLoading) {
     return (

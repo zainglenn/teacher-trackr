@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
 
   const { data: profile } = await admin
     .from("profiles")
-    .select("role")
+    .select("role, school_id")
     .eq("id", caller.id)
     .single();
 
@@ -63,6 +63,7 @@ export async function POST(req: NextRequest) {
     full_name: full_name ?? null,
     role,
     notification_email: notification_email ?? null,
+    school_id: profile?.school_id ?? null,
   });
 
   return NextResponse.json({ success: true, userId: data.user.id });

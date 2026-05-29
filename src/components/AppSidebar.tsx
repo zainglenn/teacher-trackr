@@ -47,7 +47,8 @@ export type AppView =
   | "my-units"
   | "platform-settings"
   | "curriculum-audit"
-  | "school-setup";
+  | "school-setup"
+  | "schools";
 
 type NavItem = {
   key: AppView;
@@ -69,6 +70,7 @@ const NAV_ITEMS: NavItem[] = [
   { key: "school-setup",     label: "School Setup",       icon: Building2,       roles: ["admin"] },
   { key: "platform-settings",label: "Platform Settings",  icon: ShieldCheck,     roles: ["admin"] },
   { key: "curriculum-audit", label: "Curriculum Audit",   icon: Search,          roles: ["admin"] },
+  { key: "schools",          label: "Schools",            icon: Building2,       roles: ["platform_admin"] },
 ];
 
 interface AppSidebarProps {
@@ -153,7 +155,7 @@ export function AppSidebar({ view, onViewChange, role, username, overdueCount = 
                 ? "bg-rose-100 text-rose-700 border-rose-200"
                 : "bg-blue-100 text-blue-700 border-blue-200"
             }`}>
-              {role === "hod" ? "HOD" : role === "admin" ? "Admin" : "Teacher"}
+              {role === "hod" ? "HOD" : role === "admin" ? "Admin" : role === "platform_admin" ? "Platform" : "Teacher"}
             </span>
           </div>
           <button

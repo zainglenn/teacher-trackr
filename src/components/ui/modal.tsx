@@ -60,9 +60,12 @@ interface ConfirmModalProps {
   title: string
   description: React.ReactNode
   confirmLabel?: string
+  confirmClassName?: string
   variant?: "default" | "destructive"
   onConfirm: () => void
   loading?: boolean
+  disabled?: boolean
+  children?: React.ReactNode
 }
 
 function ConfirmModal({
@@ -71,16 +74,20 @@ function ConfirmModal({
   title,
   description,
   confirmLabel = "Confirm",
+  confirmClassName,
   variant = "default",
   onConfirm,
   loading = false,
+  disabled = false,
+  children,
 }: ConfirmModalProps) {
   return (
     <Modal open={open} onClose={onClose} title={title}>
       <p className="text-sm text-muted-foreground">{description}</p>
+      {children}
       <ModalFooter>
         <ModalCancel onClick={onClose} />
-        <Button variant={variant} onClick={onConfirm} disabled={loading}>
+        <Button variant={variant} className={confirmClassName} onClick={onConfirm} disabled={loading || disabled}>
           {loading ? "Please wait…" : confirmLabel}
         </Button>
       </ModalFooter>
