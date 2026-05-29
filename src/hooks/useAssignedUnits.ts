@@ -28,7 +28,7 @@ export function useAssignedUnits(teacherId: string) {
 
     const { data } = await supabase
       .from("long_term_plans")
-      .select(`*, teacher:profiles(id,email,full_name,role), units:ltp_units(*, assignedTeacher:profiles!ltp_units_assigned_to_fkey(id,email,full_name,role), standards:ltp_unit_standards(standard:standards(*)))`)
+      .select(`*, teacher:profiles(id,email,full_name,role), units:ltp_units(*, assignedTeacher:profiles!ltp_units_assigned_to_fkey(id,email,full_name,role), standards:ltp_unit_standards(is_priority, standard:standards(*)))`)
       .in("id", planIds)
       .order("created_at", { ascending: false });
 
@@ -39,7 +39,7 @@ export function useAssignedUnits(teacherId: string) {
       units: (p.units ?? []).map((u: any) => ({
         ...u,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        standards: u.standards?.map((s: any) => s.standard) ?? [],
+        standards: u.standards?.map((s: any) => ({ ...s.standard, is_priority: s.is_priority ?? false })) ?? [],
         assignedTeacher: u.assignedTeacher ?? null,
       })),
     }));

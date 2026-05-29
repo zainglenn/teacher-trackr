@@ -12,9 +12,9 @@ import { Modal, ModalFooter, ModalCancel, ConfirmModal } from "@/components/ui/m
 import {
   ArrowLeft, Sparkles, Loader2, Save, UserCircle2, ChevronDown, ChevronUp, Plus, X,
   AlertTriangle, Send, Check, RotateCcw, Clock, FileText, BookOpen, Video, Lock,
-  Target, CheckCircle2, Circle, Wand2, Pencil, ClipboardList, Globe,
+  Target, CheckCircle2, Circle, Wand2, Pencil, ClipboardList, Globe, Star,
 } from "lucide-react";
-import { LongTermPlan, LTPUnit, Standard, AssessmentRow, LessonWeek } from "@/types";
+import { LongTermPlan, LTPUnit, Standard, AssessmentRow, LessonWeek, AnchorText, StandardAssessment } from "@/types";
 import { supabase } from "@/lib/supabase";
 import { useDeliveryLog } from "@/hooks/useDeliveryLog";
 import { STRAND_COLORS, strandFromCode } from "@/components/ltp/StrandBadge";
@@ -178,6 +178,8 @@ export function UnitPlanView({
   const [teacherReflection, setTeacherReflection] = useState(unit.teacher_reflection ?? "");
   const [studentSelfAssessment, setStudentSelfAssessment] = useState(unit.student_self_assessment ?? "");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set(unit.standards?.map(s => s.id) ?? []));
+  const [priorityIds, setPriorityIds] = useState<Set<string>>(new Set(unit.standards?.filter(s => s.is_priority).map(s => s.id) ?? []));
+  const [anchorTextDetails, setAnchorTextDetails] = useState<AnchorText[]>(unit.anchor_text_details ?? []);
 
   // UI state
   const [saving, setSaving] = useState(false);
@@ -229,6 +231,8 @@ export function UnitPlanView({
     setTeacherReflection(unit.teacher_reflection ?? "");
     setStudentSelfAssessment(unit.student_self_assessment ?? "");
     setSelectedIds(new Set(unit.standards?.map(s => s.id) ?? []));
+    setPriorityIds(new Set(unit.standards?.filter(s => s.is_priority).map(s => s.id) ?? []));
+    setAnchorTextDetails(unit.anchor_text_details ?? []);
     setSuggestions([]);
     setAcceptedSuggestions(new Set());
     setCollapsedStrands(new Set());
@@ -239,6 +243,33 @@ export function UnitPlanView({
     setTab("view");
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [unit.id]);
+
+  function togglePriority(standardId: string) {
+    setPriorityIds(prev => {
+      const n = new Set(prev);
+      n.has(standardId) ? n.delete(standardId) : n.add(standardId);
+      return n;
+    });
+  }
+
+  async function savePriorities() {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    const originalPriorityIds = new Set(unit.standards?.filter(s => s.is_priority).map(s => s.id) ?? []);
+    const allSelected = [...selectedIds];
+    const toUpdate = allSelected.filter(id => {
+      const wasP = originalPriorityIds.has(id);
+      const isP = priorityIds.has(id);
+      return wasP !== isP;
+    });
+    await Promise.all(toUpdate.map(standardId =>
+      fetch("/api/admin/set-standard-priority", {
+        method: "POST",
+        headers: { "content-type": "application/json", ...(token ? { authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ unitId: unit.id, standardId, isPriority: priorityIds.has(standardId) }),
+      })
+    ));
+  }
 
   async function handleSave() {
     setSaving(true);
@@ -266,8 +297,10 @@ export function UnitPlanView({
       final_product: finalProduct.trim() || null,
       teacher_reflection: teacherReflection.trim() || null,
       student_self_assessment: studentSelfAssessment.trim() || null,
+      anchor_text_details: anchorTextDetails.length ? anchorTextDetails : null,
     });
     await setUnitStandards(unit.id, [...selectedIds]);
+    await savePriorities();
     setSaving(false);
     setTab("view");
   }
@@ -743,8 +776,32 @@ export function UnitPlanView({
               <CardContent className="p-5">
                 <SectionHeading>5. Texts & Resources</SectionHeading>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-5">
+                  <div>
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <span className="rounded p-1 bg-blue-50"><BookOpen className="h-3 w-3 text-blue-600" /></span>
+                      <p className="text-xs font-semibold">Anchor Texts</p>
+                    </div>
+                    {unit.anchor_text_details && unit.anchor_text_details.length > 0 ? (
+                      <ul className="space-y-1">
+                        {unit.anchor_text_details.map((at: AnchorText, i: number) => (
+                          <li key={i} className="flex flex-col gap-0.5">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-xs text-muted-foreground">• {at.title}</span>
+                              <span className={`inline-flex items-center rounded-full px-1.5 py-0 text-[10px] font-medium ${at.type === "literary" ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"}`}>
+                                {at.type === "literary" ? "Literary" : "Informational"}
+                              </span>
+                            </div>
+                            {at.complexity && <span className="text-[10px] text-muted-foreground/60 pl-3">{at.complexity}</span>}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : unit.anchor_texts && unit.anchor_texts.length > 0 ? (
+                      <ul className="space-y-0.5">{unit.anchor_texts.map((item, i) => <li key={i} className="text-xs text-muted-foreground">• {item}</li>)}</ul>
+                    ) : (
+                      <Empty text="None added" />
+                    )}
+                  </div>
                   {([
-                    { label: "Anchor Texts",  Icon: BookOpen, items: unit.anchor_texts,  accent: "bg-blue-50 text-blue-600" },
                     { label: "Mentor Texts",  Icon: FileText, items: unit.mentor_texts,  accent: "bg-violet-50 text-violet-600" },
                     { label: "Multimedia",    Icon: Video,    items: unit.multimedia,    accent: "bg-emerald-50 text-emerald-600" },
                     { label: "Vocabulary",    Icon: Target,   items: unit.vocabulary,    accent: "bg-amber-50 text-amber-600" },
@@ -826,25 +883,88 @@ export function UnitPlanView({
           </div>
 
           {/* 9 · Standards */}
-          <Card className="rounded-2xl shadow-none">
-            <CardContent className="p-5">
+          <Card className="rounded-2xl shadow-none overflow-hidden">
+            <CardContent className="p-5 pb-3">
               <SectionHeading>9. Standards Covered</SectionHeading>
-              {viewStandards.length === 0 ? (
-                <Empty text="No standards mapped yet." />
-              ) : (
-                <div className="flex flex-wrap gap-1.5">
-                  {viewStandards.map(s => {
-                    const sc = strandFromCode(s.code);
-                    const theme = STRAND_THEME[sc] ?? STRAND_THEME_DEFAULT;
-                    return (
-                      <span key={s.id} className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-mono font-medium ${theme.item} ${theme.text}`}>
-                        {s.code}
-                      </span>
-                    );
-                  })}
-                </div>
-              )}
             </CardContent>
+            {viewStandards.length === 0 ? (
+              <div className="border-t px-5 py-8 text-center"><Empty text="No standards mapped yet." /></div>
+            ) : (
+              <div className="border-t">
+                <table className="w-full text-sm border-collapse">
+                  <thead>
+                    <tr className="bg-muted/40 border-b">
+                      <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground">Code</th>
+                      <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground">Strand</th>
+                      <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground">Description</th>
+                      <th className="text-center px-4 py-2.5 text-xs font-semibold text-muted-foreground">Priority</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {viewStandards.map(s => {
+                      const sc = strandFromCode(s.code);
+                      const theme = STRAND_THEME[sc] ?? STRAND_THEME_DEFAULT;
+                      return (
+                        <tr key={s.id} className="hover:bg-muted/20">
+                          <td className="px-4 py-2.5">
+                            <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-mono font-medium ${theme.item} ${theme.text}`}>
+                              {s.code}
+                            </span>
+                          </td>
+                          <td className="px-4 py-2.5 text-xs text-muted-foreground whitespace-nowrap">{s.strand}</td>
+                          <td className="px-4 py-2.5 text-xs text-muted-foreground leading-snug">{s.description}</td>
+                          <td className="px-4 py-2.5 text-center">
+                            {s.is_priority
+                              ? <Star className="h-3.5 w-3.5 text-amber-400 fill-current inline-block" />
+                              : <Star className="h-3.5 w-3.5 text-muted-foreground/30 inline-block" />
+                            }
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
+
+          {/* 10 · Standards Alignment */}
+          <Card className="rounded-2xl shadow-none overflow-hidden">
+            <CardContent className="p-5 pb-3">
+              <SectionHeading>10. Standards Alignment</SectionHeading>
+            </CardContent>
+            {!unit.standard_assessments || unit.standard_assessments.length === 0 ? (
+              <div className="border-t px-5 py-8 text-center"><Empty text="No standards alignment added yet." /></div>
+            ) : (
+              <div className="border-t">
+                <table className="w-full text-sm border-collapse">
+                  <thead>
+                    <tr className="bg-muted/40 border-b">
+                      <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground">Standard</th>
+                      <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground">Task</th>
+                      <th className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground">Type</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {unit.standard_assessments.map((sa: StandardAssessment) => (
+                      <tr key={sa.standard_id} className="hover:bg-muted/20">
+                        <td className="px-4 py-2.5">
+                          <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-mono font-medium bg-muted/30 text-muted-foreground">
+                            {sa.standard_code}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2.5 text-xs text-muted-foreground">{sa.task}</td>
+                        <td className="px-4 py-2.5">
+                          <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${sa.assessment_type === "summative" ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"}`}>
+                            {sa.assessment_type.charAt(0).toUpperCase() + sa.assessment_type.slice(1)}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </Card>
         </div>
       )}
@@ -1049,9 +1169,45 @@ export function UnitPlanView({
               <CardContent className="p-5 space-y-4">
                 <SectionHeading>5. Texts & Resources</SectionHeading>
                 <div className="grid grid-cols-2 gap-5">
-                  <div className="space-y-1.5">
+                  <div className="col-span-2 space-y-1.5">
                     <Label className="flex items-center gap-1.5 text-xs"><BookOpen className="h-3.5 w-3.5 text-blue-500" /> Anchor Texts</Label>
-                    <EditableList items={anchorTexts} onChange={setAnchorTexts} placeholder="Add anchor text…" />
+                    <div className="space-y-1.5">
+                      {anchorTextDetails.map((at, i) => (
+                        <div key={i} className="flex items-center gap-2 rounded-md border bg-muted/20 px-3 py-1.5">
+                          <input
+                            value={at.title}
+                            onChange={e => setAnchorTextDetails(prev => prev.map((a, j) => j === i ? { ...a, title: e.target.value } : a))}
+                            placeholder="Title…"
+                            className="flex-1 text-sm bg-transparent outline-none min-w-0"
+                          />
+                          <select
+                            value={at.type}
+                            onChange={e => setAnchorTextDetails(prev => prev.map((a, j) => j === i ? { ...a, type: e.target.value as "literary" | "informational" } : a))}
+                            className="text-xs bg-transparent border border-muted rounded px-1.5 py-0.5 outline-none shrink-0"
+                          >
+                            <option value="literary">Literary</option>
+                            <option value="informational">Informational</option>
+                          </select>
+                          <input
+                            value={at.complexity ?? ""}
+                            onChange={e => setAnchorTextDetails(prev => prev.map((a, j) => j === i ? { ...a, complexity: e.target.value || undefined } : a))}
+                            placeholder="Complexity…"
+                            className="w-24 text-xs bg-transparent outline-none text-muted-foreground shrink-0"
+                          />
+                          <button type="button" onClick={() => setAnchorTextDetails(prev => prev.filter((_, j) => j !== i))}
+                            className="text-muted-foreground/40 hover:text-rose-500 transition-colors shrink-0">
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => setAnchorTextDetails(prev => [...prev, { title: "", type: "literary" }])}
+                        className="flex items-center gap-2 rounded-md border border-dashed px-3 py-1.5 text-xs text-muted-foreground/60 hover:border-muted-foreground/40 transition-colors w-full"
+                      >
+                        <Plus className="h-3.5 w-3.5 shrink-0" /> Add Anchor Text
+                      </button>
+                    </div>
                   </div>
                   <div className="space-y-1.5">
                     <Label className="flex items-center gap-1.5 text-xs"><FileText className="h-3.5 w-3.5 text-violet-500" /> Mentor Texts</Label>
@@ -1199,15 +1355,28 @@ export function UnitPlanView({
                       <div className="border-t px-4 pb-2 pt-2 space-y-0.5 bg-muted/10">
                         {ss.map(s => {
                           const selected = selectedIds.has(s.id);
+                          const isPriority = priorityIds.has(s.id);
                           return (
-                            <label key={s.id} className={`flex items-start gap-2.5 p-2 rounded-md border cursor-pointer transition-colors ${selected ? `${c.item} border` : "border-transparent hover:bg-muted/40"}`}>
-                              <input type="checkbox" className="mt-0.5 shrink-0" checked={selected}
-                                onChange={() => setSelectedIds(prev => { const n = new Set(prev); n.has(s.id) ? n.delete(s.id) : n.add(s.id); return n; })} />
-                              <div className="min-w-0">
-                                <span className={`font-mono text-xs font-semibold ${selected ? c.text : "text-muted-foreground"}`}>{s.code}</span>
-                                <p className="text-xs text-muted-foreground leading-snug mt-0.5">{s.description}</p>
-                              </div>
-                            </label>
+                            <div key={s.id} className={`flex items-start gap-2.5 p-2 rounded-md border transition-colors ${selected ? `${c.item} border` : "border-transparent hover:bg-muted/40"}`}>
+                              <label className="flex items-start gap-2.5 flex-1 cursor-pointer min-w-0">
+                                <input type="checkbox" className="mt-0.5 shrink-0" checked={selected}
+                                  onChange={() => setSelectedIds(prev => { const n = new Set(prev); n.has(s.id) ? n.delete(s.id) : n.add(s.id); return n; })} />
+                                <div className="min-w-0">
+                                  <span className={`font-mono text-xs font-semibold ${selected ? c.text : "text-muted-foreground"}`}>{s.code}</span>
+                                  <p className="text-xs text-muted-foreground leading-snug mt-0.5">{s.description}</p>
+                                </div>
+                              </label>
+                              {selected && (
+                                <button
+                                  type="button"
+                                  onClick={() => togglePriority(s.id)}
+                                  title={isPriority ? "Remove priority" : "Mark as priority"}
+                                  className="shrink-0 mt-0.5 transition-colors"
+                                >
+                                  <Star className={`h-3.5 w-3.5 ${isPriority ? "text-amber-400 fill-current" : "text-muted-foreground/30 hover:text-amber-400"}`} />
+                                </button>
+                              )}
+                            </div>
                           );
                         })}
                       </div>

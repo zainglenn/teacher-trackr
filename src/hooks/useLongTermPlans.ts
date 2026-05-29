@@ -24,7 +24,7 @@ export function useLongTermPlans(teacherId: string, isHod: boolean, options: Use
       .select(`
         *,
         teacher:profiles(id,email,full_name,role),
-        units:ltp_units(*, assignedTeacher:profiles!ltp_units_assigned_to_fkey(id,email,full_name,role), standards:ltp_unit_standards(standard:standards(*))),
+        units:ltp_units(*, assignedTeacher:profiles!ltp_units_assigned_to_fkey(id,email,full_name,role), standards:ltp_unit_standards(is_priority, standard:standards(*))),
         members:ltp_members(id,teacher_id,role,teacher:profiles(id,email,full_name))
       `)
       .order("created_at", { ascending: false });
@@ -41,7 +41,7 @@ export function useLongTermPlans(teacherId: string, isHod: boolean, options: Use
       units: (p.units ?? []).map((u: any) => ({
         ...u,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        standards: u.standards?.map((s: any) => s.standard) ?? [],
+        standards: u.standards?.map((s: any) => ({ ...s.standard, is_priority: s.is_priority ?? false })) ?? [],
         assignedTeacher: u.assignedTeacher ?? null,
       })),
       members: p.members ?? [],

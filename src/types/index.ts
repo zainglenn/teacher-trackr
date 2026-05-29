@@ -64,6 +64,8 @@ export interface Standard {
   description: string;
   standard_set_id: string | null;
   created_at: string;
+  // present when fetched via ltp_unit_standards join
+  is_priority?: boolean;
 }
 
 export interface CoverageLog {
@@ -85,6 +87,19 @@ export interface AssessmentRow {
   assessment: string;
   purpose: string;
   tool: string;
+}
+
+export interface StandardAssessment {
+  standard_id: string;
+  standard_code: string;
+  task: string;
+  assessment_type: "formative" | "summative";
+}
+
+export interface AnchorText {
+  title: string;
+  type: "literary" | "informational";
+  complexity?: string;
 }
 
 export interface LessonWeek {
@@ -122,6 +137,8 @@ export interface LTPUnit {
   assessment_plan: AssessmentRow[] | null;
   lesson_sequence: LessonWeek[] | null;
   anchor_texts: string[] | null;
+  anchor_text_details: AnchorText[] | null;
+  standard_assessments: StandardAssessment[] | null;
   mentor_texts: string[] | null;
   multimedia: string[] | null;
   vocabulary: string[] | null;
