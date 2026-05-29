@@ -5,8 +5,10 @@ import { Check, Circle, X, ChevronRight, Grid3X3 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { StrandBadge } from "@/components/ltp/StrandBadge";
 import { useDeliveryGrid, DeliveryStatus, GridClass, GridWeek, DeliveryRecord } from "@/hooks/useDeliveryGrid";
+import { useGradeLevels } from "@/hooks/useGradeLevels";
 
 // ── Status helpers ────────────────────────────────────────────────────────────
 
@@ -148,10 +150,16 @@ interface DeliveryGridViewProps {
   onNavigate?: (view: import("@/components/AppSidebar").AppView) => void;
 }
 
-export function DeliveryGridView({ teacherId: _, subjectId, gradeLevelId, onNavigate: __ }: DeliveryGridViewProps) {
+export function DeliveryGridView({ teacherId: _, subjectId, gradeLevelId: gradeLevelIdProp, onNavigate: __ }: DeliveryGridViewProps) {
+  const { gradeLevels } = useGradeLevels();
+  const [selectedGradeId, setSelectedGradeId] = useState<string | null>(null);
+
+  // For HOD: no gradeLevelId from context — let them pick inline
+  const gradeLevelId = gradeLevelIdProp ?? selectedGradeId ?? (gradeLevels[0]?.id ?? null);
+
   const { classes, weeks, loading, getCellStatus, getDelivery } = useDeliveryGrid(
     subjectId ?? null,
-    gradeLevelId ?? null
+    gradeLevelId
   );
   const [activeTerm, setActiveTerm] = useState<1 | 2 | 3>(1);
   const [sheet, setSheet] = useState<{ planId: string; unitNumber: number; weekNumber: number } | null>(null);
@@ -218,7 +226,7 @@ export function DeliveryGridView({ teacherId: _, subjectId, gradeLevelId, onNavi
   if (termWeeks.length === 0) {
     return (
       <div className="flex flex-col h-full">
-        <GridHeader activeTerm={activeTerm} onTermChange={setActiveTerm} classes={classes} />
+        <GridHeader activeTerm={activeTerm} onTermChange={setActiveTerm} classes={classes} gradeLevels={gradeLevels} selectedGradeId={selectedGradeId} onGradeChange={setSelectedGradeId} />
         <div className="flex-1 flex items-center justify-center py-16 text-center px-6">
           <p className="text-sm text-muted-foreground">
             No lesson weeks planned for Term {activeTerm} yet.
@@ -230,7 +238,7 @@ export function DeliveryGridView({ teacherId: _, subjectId, gradeLevelId, onNavi
 
   return (
     <div className="flex flex-col h-full">
-      <GridHeader activeTerm={activeTerm} onTermChange={setActiveTerm} classes={classes} />
+      <GridHeader activeTerm={activeTerm} onTermChange={setActiveTerm} classes={classes} gradeLevels={gradeLevels} selectedGradeId={selectedGradeId} onGradeChange={setSelectedGradeId} />
 
       {/* ── Grid ──────────────────────────────────────────────────────────────── */}
       <div className="flex-1 overflow-auto">
@@ -392,18 +400,38 @@ function GridHeader({
   activeTerm,
   onTermChange,
   classes,
+  gradeLevels,
+  selectedGradeId,
+  onGradeChange,
 }: {
   activeTerm: 1 | 2 | 3;
   onTermChange: (t: 1 | 2 | 3) => void;
   classes: GridClass[];
+  gradeLevels: { id: string; name: string }[];
+  selectedGradeId: string | null;
+  onGradeChange: (id: string) => void;
 }) {
   return (
     <div className="px-4 sm:px-6 pt-5 pb-4 border-b flex flex-col sm:flex-row sm:items-end gap-3">
-      <div className="flex-1">
-        <h1 className="text-lg font-semibold tracking-tight">Delivery Grid</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">
-          {classes.length} teacher{classes.length !== 1 ? "s" : ""} · lesson delivery status
-        </p>
+      <div className="flex-1 flex items-end gap-3">
+        <div>
+          <h1 className="text-lg font-semibold tracking-tight">Delivery Grid</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {classes.length} teacher{classes.length !== 1 ? "s" : ""} · lesson delivery status
+          </p>
+        </div>
+        {gradeLevels.length > 1 && (
+          <Select value={selectedGradeId ?? gradeLevels[0]?.id ?? ""} onValueChange={(v) => v && onGradeChange(v)}>
+            <SelectTrigger className="h-8 w-32 text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {gradeLevels.map((g) => (
+                <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
       </div>
       <div className="flex gap-1 bg-muted rounded-lg p-1 w-fit">
         {([1, 2, 3] as const).map((term) => (

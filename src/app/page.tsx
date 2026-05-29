@@ -30,7 +30,7 @@ function CurriculumApp({ userId }: { userId: string }) {
   const [view, setView] = useState<AppView>("dashboard");
   const [ltpInitialPlanId, setLtpInitialPlanId] = useState<string | null>(null);
   const [ltpInitialUnitId, setLtpInitialUnitId] = useState<string | null>(null);
-  const { role, username, loading: profileLoading } = useProfile(userId);
+  const { role, username, loading: profileLoading, subjectId: profileSubjectId } = useProfile(userId);
 
   useEffect(() => {
     if (profileLoading) return;
@@ -134,7 +134,7 @@ function CurriculumApp({ userId }: { userId: string }) {
           {view === "delivery-grid" && isHod && (
             <DeliveryGridView
               teacherId={userId}
-              subjectId={activeContext?.subjectId ?? null}
+              subjectId={activeContext?.subjectId ?? profileSubjectId ?? null}
               gradeLevelId={activeContext?.gradeLevelId ?? null}
               onNavigate={setView}
             />

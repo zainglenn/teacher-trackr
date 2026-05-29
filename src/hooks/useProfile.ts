@@ -27,5 +27,6 @@ export function useProfile(userId: string | null) {
     loading,
     role: profile?.role ?? "teacher",
     username: profile?.username ?? "",
+    subjectId: profile?.subject_id ?? null,
   };
 }

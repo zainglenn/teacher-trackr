@@ -19,9 +19,9 @@ import {
 } from "lucide-react";
 import { Standard } from "@/types";
 import { useStandardPipeline, PipelineStatus } from "@/hooks/useStandardPipeline";
+import { useDepartmentPipeline } from "@/hooks/useDepartmentPipeline";
 import { useAllSkills } from "@/hooks/useAllSkills";
 import { useTeachers } from "@/hooks/useTeachers";
-import { useDepartmentCoverage } from "@/hooks/useDepartmentCoverage";
 import { StandardContextView } from "@/components/StandardDetailView";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { STRAND_COLORS, StrandBadge } from "@/components/ltp/StrandBadge";
@@ -180,7 +180,7 @@ export function CoverageView({ standards, byStrand, teacherId, isHod, contextLab
         )}
 
         {showAllTeachers ? (
-          <DepartmentCoverageGrid standards={standards} byStrand={byStrand} teachers={teachers} />
+          <DepartmentCoverageGrid standards={standards} byStrand={byStrand} subjectId={subjectId} gradeLevelId={gradeLevelId} />
         ) : (
           <CoverageGrid
             key={`${effectiveTeacherId}-${subjectId ?? "none"}-${gradeLevelId ?? "none"}`}
@@ -617,96 +617,83 @@ function readinessLabel(pct: number) {
 function DepartmentCoverageGrid({
   standards,
   byStrand,
-  teachers,
+  subjectId,
+  gradeLevelId,
 }: {
   standards: Standard[];
   byStrand: Record<string, Standard[]>;
-  teachers: { id: string; full_name: string | null; email: string }[];
+  subjectId?: string | null;
+  gradeLevelId?: string | null;
 }) {
-  const { coverageByTeacher, loading } = useDepartmentCoverage();
-  const { byStandardId } = useAllSkills();
+  const { results, loading } = useDepartmentPipeline(subjectId ?? null, gradeLevelId ?? null, standards);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [focusTeacherId, setFocusTeacherId] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<"all" | "covered" | "partial" | "not_covered">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "taught" | "scheduled" | "unmapped">("all");
   const [strandFilter, setStrandFilter] = useState<string>("all");
 
   const strandKeys = Object.keys(byStrand);
 
-  const teacherStats = teachers.map((t) => {
-    const covered = coverageByTeacher.get(t.id) ?? new Set<string>();
-    const totalSkills = standards.reduce((sum, s) => sum + (byStandardId[s.id]?.length ?? 0), 0);
-    const coveredCount = standards.reduce((sum, s) => {
-      return sum + (byStandardId[s.id] ?? []).filter((sk) => covered.has(sk.id)).length;
-    }, 0);
-    const pct = totalSkills > 0 ? Math.round((coveredCount / totalSkills) * 100) : 0;
-    const standardsCovered = standards.filter((s) => {
-      const skills = byStandardId[s.id] ?? [];
-      return skills.length > 0 && skills.every((sk) => covered.has(sk.id));
-    }).length;
-    return { teacher: t, pct, coveredSkills: coveredCount, totalSkills, standardsCovered };
+  const teacherStats = results.map((r) => {
+    const taughtCount = r.summary.taught;
+    const pct = standards.length > 0 ? Math.round((taughtCount / standards.length) * 100) : 0;
+    return { teacherId: r.teacherId, teacherName: r.teacherName, pct, taughtCount, summary: r.summary };
   });
 
-  const activeSkillIds: Set<string> = focusTeacherId
-    ? (coverageByTeacher.get(focusTeacherId) ?? new Set())
-    : new Set(teachers.flatMap((t) => [...(coverageByTeacher.get(t.id) ?? new Set())]));
-
-  type DeptStatus = "covered" | "partial" | "not_covered";
-  function skillStatus(covered: number, total: number): DeptStatus {
-    if (total === 0 || covered === 0) return "not_covered";
-    if (covered === total) return "covered";
-    return "partial";
-  }
-
+  // For the standards table: aggregate across all teachers (or focus on one)
   const standardStats = standards.map((s) => {
-    const skills = byStandardId[s.id] ?? [];
-    const covered = skills.filter((sk) => activeSkillIds.has(sk.id)).length;
-    const total = skills.length;
-    const status = skillStatus(covered, total);
-    const pct = total > 0 ? Math.round((covered / total) * 100) : 0;
-    const coveringTeachers = teachers.filter((t) => {
-      const ts = coverageByTeacher.get(t.id) ?? new Set();
-      return (byStandardId[s.id] ?? []).some((sk) => ts.has(sk.id));
-    });
-    return { standard: s, covered, total, status, pct, coveringTeachers };
+    const activeResults = focusTeacherId
+      ? results.filter((r) => r.teacherId === focusTeacherId)
+      : results;
+    const taughtByCount = activeResults.filter((r) => r.statusByStandardId.get(s.id) === "taught").length;
+    const plannedByCount = activeResults.filter((r) => ["planned","scheduled"].includes(r.statusByStandardId.get(s.id) ?? "")).length;
+    // Department status: taught by anyone > scheduled > planned > unmapped
+    const status: "taught" | "scheduled" | "planned" | "unmapped" =
+      taughtByCount > 0 ? "taught"
+      : plannedByCount > 0 ? "scheduled"
+      : activeResults.some((r) => r.statusByStandardId.get(s.id) === "planned") ? "planned"
+      : "unmapped";
+    const coveringTeachers = activeResults
+      .filter((r) => r.statusByStandardId.get(s.id) === "taught")
+      .map((r) => ({ id: r.teacherId, full_name: r.teacherName }));
+    return { standard: s, status, taughtByCount, coveringTeachers };
   });
 
-  const totalSkillsAll = standardStats.reduce((sum, s) => sum + s.total, 0);
-  const totalCoveredAll = standardStats.reduce((sum, s) => sum + s.covered, 0);
-  const deptPct = totalSkillsAll > 0 ? Math.round((totalCoveredAll / totalSkillsAll) * 100) : 0;
+  const taughtCount   = standardStats.filter((s) => s.status === "taught").length;
+  const scheduledCount = standardStats.filter((s) => s.status === "scheduled" || s.status === "planned").length;
+  const unmappedCount  = standardStats.filter((s) => s.status === "unmapped").length;
 
-  const coveredCount = standardStats.filter((s) => s.status === "covered").length;
-  const partialCount = standardStats.filter((s) => s.status === "partial").length;
-  const notCoveredCount = standardStats.filter((s) => s.status === "not_covered").length;
+  const deptTaughtPct = standards.length > 0
+    ? Math.round((taughtCount / standards.length) * 100) : 0;
 
-  const readyCount = teacherStats.filter((t) => t.pct >= 80).length;
+  const readyCount      = teacherStats.filter((t) => t.pct >= 80).length;
   const inProgressCount = teacherStats.filter((t) => t.pct >= 50 && t.pct < 80).length;
-  const startingCount = teacherStats.filter((t) => t.pct < 50).length;
+  const startingCount   = teacherStats.filter((t) => t.pct < 50).length;
 
   const topGaps = standardStats
-    .filter((s) => s.status !== "covered")
+    .filter((s) => s.status !== "taught")
     .sort((a, b) => a.coveringTeachers.length - b.coveringTeachers.length)
     .slice(0, 5);
 
   if (loading) return null;
 
   const tabs = [
-    { key: "all" as const,         label: "All Standards", count: standards.length },
-    { key: "covered" as const,     label: "Covered",       count: coveredCount     },
-    { key: "partial" as const,     label: "Partial",       count: partialCount     },
-    { key: "not_covered" as const, label: "Not Covered",   count: notCoveredCount  },
+    { key: "all" as const,       label: "All Standards", count: standards.length },
+    { key: "taught" as const,    label: "Taught",        count: taughtCount      },
+    { key: "scheduled" as const, label: "In Plan",       count: scheduledCount   },
+    { key: "unmapped" as const,  label: "Unmapped",      count: unmappedCount    },
   ];
 
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-        {teacherStats.map(({ teacher, pct, standardsCovered }) => {
+        {teacherStats.map(({ teacherId, teacherName, pct, taughtCount, summary }) => {
           const { label, color } = readinessLabel(pct);
-          const isActive = focusTeacherId === teacher.id;
+          const isActive = focusTeacherId === teacherId;
           return (
             <button
-              key={teacher.id}
+              key={teacherId}
               type="button"
-              onClick={() => setFocusTeacherId(isActive ? null : teacher.id)}
+              onClick={() => setFocusTeacherId(isActive ? null : teacherId)}
               className={`text-left p-4 rounded-xl border transition-all ${
                 isActive
                   ? "border-primary ring-1 ring-primary bg-primary/5"
@@ -715,10 +702,10 @@ function DepartmentCoverageGrid({
             >
               <div className="flex items-center gap-3 mb-3">
                 <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-sm font-semibold text-muted-foreground shrink-0">
-                  {teacherInitials(teacher.full_name, teacher.email)}
+                  {(teacherName ?? "?").split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">{teacher.full_name ?? teacher.email}</p>
+                  <p className="text-sm font-medium truncate">{teacherName ?? "Unknown"}</p>
                   <span className={`text-xs px-1.5 py-0.5 rounded border font-medium ${color}`}>{label}</span>
                 </div>
               </div>
@@ -731,7 +718,7 @@ function DepartmentCoverageGrid({
                 </div>
                 <span className="text-xs font-semibold tabular-nums">{pct}%</span>
               </div>
-              <p className="text-xs text-muted-foreground">{standardsCovered} of {standards.length} standards fully covered</p>
+              <p className="text-xs text-muted-foreground">{taughtCount} of {standards.length} taught · {summary.unmapped} unmapped</p>
             </button>
           );
         })}
@@ -793,9 +780,13 @@ function DepartmentCoverageGrid({
                   if (strandFilter !== "all" && strandFilter !== strand) return null;
 
                   const filteredItems = items.filter((s) => {
+                    if (statusFilter === "all") return true;
                     const stat = standardStats.find((st) => st.standard.id === s.id);
-                    if (!stat) return statusFilter === "all";
-                    return statusFilter === "all" || stat.status === statusFilter;
+                    if (!stat) return statusFilter === "unmapped";
+                    if (statusFilter === "taught") return stat.status === "taught";
+                    if (statusFilter === "scheduled") return stat.status === "scheduled" || stat.status === "planned";
+                    if (statusFilter === "unmapped") return stat.status === "unmapped";
+                    return true;
                   });
                   if (filteredItems.length === 0) return null;
 
@@ -841,29 +832,29 @@ function DepartmentCoverageGrid({
                                 {coveringTeachers.map((t) => (
                                   <span
                                     key={t.id}
-                                    title={t.full_name ?? t.email}
+                                    title={t.full_name ?? t.id}
                                     className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-muted text-xs font-semibold text-muted-foreground"
                                   >
-                                    {teacherInitials(t.full_name, t.email)}
+                                    {(t.full_name ?? "?").split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
                                   </span>
                                 ))}
                               </div>
                             )}
                           </td>
                           <td className="px-4 py-3">
-                            {status === "covered" && (
+                            {status === "taught" && (
                               <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-medium">
-                                <CheckCircle2 className="h-3 w-3" /> Covered
+                                <CheckCircle2 className="h-3 w-3" /> Taught
                               </span>
                             )}
-                            {status === "partial" && (
+                            {(status === "scheduled" || status === "planned") && (
                               <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 font-medium">
-                                <AlertTriangle className="h-3 w-3" /> Partial
+                                <Circle className="h-3 w-3" /> In Plan
                               </span>
                             )}
-                            {status === "not_covered" && (
+                            {status === "unmapped" && (
                               <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border font-medium">
-                                <Circle className="h-3 w-3" /> Not Covered
+                                <AlertTriangle className="h-3 w-3" /> Unmapped
                               </span>
                             )}
                           </td>
@@ -880,13 +871,13 @@ function DepartmentCoverageGrid({
         <div className="w-60 shrink-0 space-y-3 hidden lg:block">
           <Card>
             <CardContent className="pt-4 pb-4">
-              <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Department Coverage</div>
-              <div className="text-4xl font-bold mb-1">{deptPct}%</div>
-              <Progress value={deptPct} className="h-2 mb-2" />
+              <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Taught This Year</div>
+              <div className="text-4xl font-bold mb-1">{deptTaughtPct}%</div>
+              <Progress value={deptTaughtPct} className="h-2 mb-2" />
               <p className="text-xs text-muted-foreground">
                 {focusTeacherId
-                  ? `Filtered: ${teacherStats.find((t) => t.teacher.id === focusTeacherId)?.teacher.full_name ?? "teacher"}`
-                  : `Across ${teachers.length} teachers`}
+                  ? `Filtered: ${teacherStats.find((t) => t.teacherId === focusTeacherId)?.teacherName ?? "teacher"}`
+                  : `${taughtCount} of ${standards.length} standards taught`}
               </p>
             </CardContent>
           </Card>
