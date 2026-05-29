@@ -87,7 +87,7 @@ interface PptGenerationSheetProps {
   unitId: string;
   unitTitle: string;
   week: LessonWeek;
-  classId?: string;
+  planTitle?: string;
   vocabulary?: string[];
 }
 
@@ -97,7 +97,7 @@ export function PptGenerationSheet({
   unitId,
   unitTitle,
   week,
-  classId,
+  planTitle,
   vocabulary = [],
 }: PptGenerationSheetProps) {
   const [slides, setSlides] = useState<SlidePreview[]>(() => buildPreviews(week, unitTitle, vocabulary));
@@ -140,7 +140,7 @@ export function PptGenerationSheet({
       const res = await fetch("/api/generate-ppt", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ unitId, weekNumber: week.week, classId, overrides }),
+        body: JSON.stringify({ unitId, weekNumber: week.week, planTitle, overrides }),
       });
 
       if (!res.ok) {

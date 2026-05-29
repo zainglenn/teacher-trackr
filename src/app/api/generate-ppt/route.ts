@@ -21,10 +21,10 @@ const STRAND_TEXT: Record<string, string> = {
 function strandFromCode(code: string) { return code.split(".")[0]; }
 
 export async function POST(req: NextRequest) {
-  const { unitId, weekNumber, classId, overrides } = await req.json() as {
+  const { unitId, weekNumber, planTitle, overrides } = await req.json() as {
     unitId: string;
     weekNumber: number;
-    classId?: string;
+    planTitle?: string;
     overrides?: Record<number, { title?: string; content?: string }>;
   };
 
@@ -48,12 +48,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unit not found" }, { status: 404 });
   }
 
-  // Fetch class name
-  let className = "";
-  if (classId) {
-    const { data: cls } = await supabase.from("classes").select("name").eq("id", classId).single();
-    className = cls?.name ?? "";
-  }
+  const className = planTitle ?? "";
 
   const lessonSequence: { week: number; focus: string; activities: string; standards: string[] }[] =
     unit.lesson_sequence ?? [];

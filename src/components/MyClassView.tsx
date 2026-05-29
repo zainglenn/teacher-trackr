@@ -447,7 +447,6 @@ function WeekDetailSheet({
         unitId={week.unit_id}
         unitTitle={week.unit_title}
         week={week}
-        classId={classId}
         vocabulary={[]}
       />
     </>
