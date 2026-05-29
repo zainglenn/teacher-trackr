@@ -24,6 +24,9 @@ import { useTeachers } from "@/hooks/useTeachers";
 import { useStudents } from "@/hooks/useStudents";
 import { useClassProgress } from "@/hooks/useClassProgress";
 import { useActiveContext } from "@/hooks/useActiveContext";
+import { useStandardPipeline } from "@/hooks/useStandardPipeline";
+import { useDepartmentPipeline } from "@/hooks/useDepartmentPipeline";
+import { useTeacherNotifications, useHodNotifications } from "@/hooks/useNotifications";
 import { Loader2, BookOpen } from "lucide-react";
 
 function CurriculumApp({ userId }: { userId: string }) {
@@ -64,7 +67,20 @@ function CurriculumApp({ userId }: { userId: string }) {
   const { students } = useStudents(userId);
   const { progress: classProgress } = useClassProgress(userId);
 
-  const overdueCount = 0; // will be computed from class_lesson_deliveries once DB migration is applied
+  // Notifications
+  const notifSubjectId = activeContext?.subjectId ?? profileSubjectId ?? null;
+  const notifGradeId = activeContext?.gradeLevelId ?? null;
+  const { entries: teacherPipelineEntries } = useStandardPipeline(
+    role === "teacher" ? userId : null, notifSubjectId, notifGradeId, standards
+  );
+  const { results: deptPipelineResults } = useDepartmentPipeline(
+    isHod ? notifSubjectId : null, isHod ? notifGradeId : null, standards
+  );
+  const teacherNotifs = useTeacherNotifications(role === "teacher" ? ltps : [], teacherPipelineEntries);
+  const hodNotifs = useHodNotifications(isHod ? ltps : [], deptPipelineResults, standards.length);
+  const notifications = isHod ? hodNotifs : teacherNotifs;
+  const overdueCount = notifications.filter((n) => n.severity === "urgent").length;
+
   // HODs are scoped by subject_id on their profile — they don't need class assignments
   const noContextAssigned = role === "teacher" && !contextLoading && contextAssignments.length === 0;
 
@@ -92,6 +108,7 @@ function CurriculumApp({ userId }: { userId: string }) {
         role={role}
         username={username}
         overdueCount={overdueCount}
+        notifications={notifications}
         activeContext={activeContext}
         contextAssignments={showContext ? contextAssignments : []}
         onContextChange={setActiveContext}
