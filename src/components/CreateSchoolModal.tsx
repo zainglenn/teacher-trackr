@@ -137,7 +137,12 @@ export function CreateSchoolModal({ open, onClose, onCreated }: CreateSchoolModa
 
       <ModalFooter>
         <ModalCancel onClick={onClose} />
-        <Button onClick={handleSubmit} disabled={!isValid || saving} size="sm">
+        <Button
+          onClick={handleSubmit}
+          disabled={!isValid || saving}
+          size="sm"
+          className="disabled:opacity-40 disabled:cursor-not-allowed disabled:pointer-events-none"
+        >
           {saving ? "Creating…" : "Create School"}
         </Button>
       </ModalFooter>

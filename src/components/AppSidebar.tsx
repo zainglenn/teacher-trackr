@@ -153,6 +153,8 @@ export function AppSidebar({ view, onViewChange, role, username, overdueCount = 
                 ? "bg-violet-100 text-violet-700 border-violet-200"
                 : role === "admin"
                 ? "bg-rose-100 text-rose-700 border-rose-200"
+                : role === "platform_admin"
+                ? "bg-slate-800 text-slate-100 border-slate-700"
                 : "bg-blue-100 text-blue-700 border-blue-200"
             }`}>
               {role === "hod" ? "HOD" : role === "admin" ? "Admin" : role === "platform_admin" ? "Platform" : "Teacher"}

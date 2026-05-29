@@ -223,6 +223,12 @@ export function PlatformAdminView() {
               </tbody>
             </table>
           </div>
+
+          {!loading && !search && schools.length === 1 && (
+            <p className="text-xs text-muted-foreground text-center pt-1">
+              Use <strong>New School</strong> above to provision additional schools.
+            </p>
+          )}
         </PageContainer>
       </div>
 
