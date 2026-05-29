@@ -110,6 +110,9 @@ function CurriculumApp({ userId }: { userId: string }) {
               isHod={isHod}
               classProgress={classProgress}
               onNavigate={setView}
+              teacherId={userId}
+              subjectId={activeContext?.subjectId ?? profileSubjectId ?? null}
+              gradeLevelId={activeContext?.gradeLevelId ?? null}
             />
           )}
           {view === "coverage" && (

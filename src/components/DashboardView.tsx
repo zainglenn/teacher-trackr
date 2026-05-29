@@ -9,6 +9,8 @@ import { CheckSquare, ClipboardList, Users, ClipboardCheck, AlertTriangle, Clock
 import { Standard, CoverageLog, LongTermPlan, Student } from "@/types";
 import { AttainmentCounts } from "@/hooks/useClassProgress";
 import { useDepartmentStats } from "@/hooks/useDepartmentStats";
+import { useDepartmentPipeline } from "@/hooks/useDepartmentPipeline";
+import { useStandardPipeline } from "@/hooks/useStandardPipeline";
 import { useGradeLevels } from "@/hooks/useGradeLevels";
 import { strandFromCode, STRAND_COLORS } from "@/components/ltp/StrandBadge";
 import { GradeFilter } from "@/components/GradeFilter";
@@ -22,17 +24,30 @@ interface DashboardViewProps {
   isHod: boolean;
   classProgress: Map<string, AttainmentCounts>;
   onNavigate: (view: AppView) => void;
+  teacherId?: string;
+  subjectId?: string | null;
+  gradeLevelId?: string | null;
 }
 
 const STRAND_ABBREV: Record<string, string> = { RL: "Rdg Lit", RI: "Rdg Info", W: "Writing", SL: "Speaking", L: "Language" };
 const STRAND_ORDER = ["RL", "RI", "W", "SL", "L"];
 
-function HodDashboard({ standards, ltps, onNavigate }: {
+function HodDashboard({ standards, ltps, onNavigate, subjectId, gradeLevelId }: {
   standards: Standard[];
   ltps: LongTermPlan[];
   onNavigate: (view: AppView) => void;
+  subjectId?: string | null;
+  gradeLevelId?: string | null;
 }) {
-  const { teachers, coverageByTeacher, loading } = useDepartmentStats();
+  const { results: pipelineResults, loading } = useDepartmentPipeline(subjectId ?? null, gradeLevelId ?? null, standards);
+  const teachers = pipelineResults.map((r) => ({ id: r.teacherId, full_name: r.teacherName, email: "" }));
+  // For backwards-compat with heatmap: build a map of teacherId → Set of "in plan" standard IDs
+  const coverageByTeacher = new Map(
+    pipelineResults.map((r) => [
+      r.teacherId,
+      new Set([...r.statusByStandardId.entries()].filter(([, s]) => s !== "unmapped").map(([id]) => id)),
+    ])
+  );
   const { gradeLevels } = useGradeLevels();
   const [activeGradeId, setActiveGradeId] = useState<string>("");
 
@@ -207,10 +222,12 @@ function HodDashboard({ standards, ltps, onNavigate }: {
   );
 }
 
-export function DashboardView({ standards, coverageLogs, ltps, students, isHod, classProgress, onNavigate }: DashboardViewProps) {
-  if (isHod) return <HodDashboard standards={standards} ltps={ltps} onNavigate={onNavigate} />;
+export function DashboardView({ standards, coverageLogs: _, ltps, students, isHod, classProgress, onNavigate, teacherId, subjectId, gradeLevelId }: DashboardViewProps) {
+  if (isHod) return <HodDashboard standards={standards} ltps={ltps} onNavigate={onNavigate} subjectId={subjectId} gradeLevelId={gradeLevelId} />;
 
-  const coveredIds = new Set(coverageLogs.map((l) => l.standard_id));
+  // Use pipeline for coverage: count standards that are "in plan" (not unmapped)
+  const { entries: pipelineEntries } = useStandardPipeline(teacherId ?? null, subjectId ?? null, gradeLevelId ?? null, standards);
+  const coveredIds = new Set(pipelineEntries.filter((e) => e.status !== "unmapped").map((e) => e.standard.id));
   const coveragePct = standards.length > 0 ? Math.round((coveredIds.size / standards.length) * 100) : 0;
 
   const approvedLTP = ltps.find((p) => p.status === "approved");
