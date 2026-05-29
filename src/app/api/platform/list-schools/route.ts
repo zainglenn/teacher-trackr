@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
 
   const { data: schools, error } = await admin
     .from("schools")
-    .select("id, name, is_active, created_at")
+    .select("id, name, city, country, curriculum, is_active, created_at")
     .order("created_at", { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

@@ -73,7 +73,7 @@ function CurriculumApp({ userId }: { userId: string }) {
   const { students } = useStudents(userId);
   const { progress: classProgress } = useClassProgress(userId);
 
-  // Notifications
+  // Notifications — skipped for platform_admin (no curriculum data)
   const notifSubjectId = activeContext?.subjectId ?? profileSubjectId ?? null;
   const notifGradeId = activeContext?.gradeLevelId ?? null;
   const { entries: teacherPipelineEntries } = useStandardPipeline(
@@ -84,7 +84,7 @@ function CurriculumApp({ userId }: { userId: string }) {
   );
   const teacherNotifs = useTeacherNotifications(role === "teacher" ? ltps : [], teacherPipelineEntries);
   const hodNotifs = useHodNotifications(isHod ? ltps : [], deptPipelineResults, standards.length);
-  const notifications = isHod ? hodNotifs : teacherNotifs;
+  const notifications = isPlatformAdmin ? [] : (isHod ? hodNotifs : teacherNotifs);
   const overdueCount = notifications.filter((n) => n.severity === "urgent").length;
 
   // HODs are scoped by subject_id on their profile — they don't need class assignments

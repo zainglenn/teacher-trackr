@@ -25,7 +25,12 @@ const ROLE_COLORS: Record<string, string> = {
 
 function formatDate(iso: string | null) {
   if (!iso) return "Never";
-  return new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+  const d = new Date(iso);
+  const days = Math.floor((Date.now() - d.getTime()) / 86400000);
+  if (days === 0) return "Today";
+  if (days === 1) return "Yesterday";
+  if (days < 30) return `${days}d ago`;
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 }
 
 interface SchoolDetailSheetProps {
