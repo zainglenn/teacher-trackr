@@ -12,10 +12,11 @@ import { Modal, ModalFooter, ModalCancel, ConfirmModal } from "@/components/ui/m
 import {
   ArrowLeft, Sparkles, Loader2, Save, UserCircle2, ChevronDown, ChevronUp, Plus, X,
   AlertTriangle, Send, Check, RotateCcw, Clock, FileText, BookOpen, Video, Lock,
-  Target, CheckCircle2, Wand2, Pencil, ClipboardList, Globe,
+  Target, CheckCircle2, Circle, Wand2, Pencil, ClipboardList, Globe,
 } from "lucide-react";
 import { LongTermPlan, LTPUnit, Standard, AssessmentRow, LessonWeek } from "@/types";
 import { supabase } from "@/lib/supabase";
+import { useDeliveryLog } from "@/hooks/useDeliveryLog";
 import { STRAND_COLORS, strandFromCode } from "@/components/ltp/StrandBadge";
 import { UNIT_STATUS_CONFIG } from "@/lib/ltpStatus";
 
@@ -144,6 +145,13 @@ export function UnitPlanView({
     : !isHod && isOwner && (unit.status === "draft" || unit.status === "revision");
 
   const [tab, setTab] = useState<"view" | "edit">("view");
+
+  // Delivery logging (teachers only)
+  const canLogDelivery = !isHod;
+  const { deliveredWeeks, toggling: deliveryToggling, toggle: toggleDelivery } = useDeliveryLog(
+    canLogDelivery ? currentUserId : null,
+    unit.id
+  );
 
   // Edit form state
   const [title, setTitle] = useState(unit.title);
@@ -673,24 +681,51 @@ export function UnitPlanView({
                   <table className="w-full text-sm border-collapse">
                     <thead>
                       <tr className="bg-muted/40 border-b">
-                        {["Week", "Focus", "Key Activities", "Standards"].map(h => (
+                        {["Week", "Focus", "Key Activities", "Standards", ...(canLogDelivery ? ["Delivered"] : [])].map(h => (
                           <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-muted-foreground">{h}</th>
                         ))}
                       </tr>
                     </thead>
                     <tbody className="divide-y">
-                      {unit.lesson_sequence.map((row, i) => (
-                        <tr key={i} className="hover:bg-muted/20">
-                          <td className="px-4 py-2.5"><span className="text-xs font-bold text-muted-foreground">{row.week}</span></td>
-                          <td className="px-4 py-2.5 text-xs font-medium">{row.focus}</td>
-                          <td className="px-4 py-2.5 text-xs text-muted-foreground">{row.activities}</td>
-                          <td className="px-4 py-2.5">
-                            <div className="flex flex-wrap gap-1">
-                              {row.standards.map(s => <Badge key={s} variant="outline" className="text-[10px] px-1.5 py-0 font-mono">{s}</Badge>)}
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
+                      {unit.lesson_sequence.map((row, i) => {
+                        const taught = deliveredWeeks.has(row.week);
+                        const isBusy = deliveryToggling === row.week;
+                        return (
+                          <tr key={i} className={`hover:bg-muted/20 ${taught ? "bg-emerald-50/40 dark:bg-emerald-950/10" : ""}`}>
+                            <td className="px-4 py-2.5"><span className="text-xs font-bold text-muted-foreground">{row.week}</span></td>
+                            <td className="px-4 py-2.5 text-xs font-medium">{row.focus}</td>
+                            <td className="px-4 py-2.5 text-xs text-muted-foreground">{row.activities}</td>
+                            <td className="px-4 py-2.5">
+                              <div className="flex flex-wrap gap-1">
+                                {row.standards.map(s => <Badge key={s} variant="outline" className="text-[10px] px-1.5 py-0 font-mono">{s}</Badge>)}
+                              </div>
+                            </td>
+                            {canLogDelivery && (
+                              <td className="px-4 py-2.5 w-24">
+                                <button
+                                  type="button"
+                                  disabled={isBusy}
+                                  onClick={() => toggleDelivery(row.week)}
+                                  className={`flex items-center gap-1.5 text-xs font-medium rounded transition-colors disabled:opacity-50 ${
+                                    taught
+                                      ? "text-emerald-600 hover:text-rose-500"
+                                      : "text-muted-foreground/40 hover:text-emerald-600"
+                                  }`}
+                                  title={taught ? "Click to unmark" : "Mark as taught"}
+                                >
+                                  {isBusy
+                                    ? <Loader2 className="h-4 w-4 animate-spin" />
+                                    : taught
+                                      ? <CheckCircle2 className="h-4 w-4" />
+                                      : <Circle className="h-4 w-4" />
+                                  }
+                                  <span>{taught ? "Taught" : ""}</span>
+                                </button>
+                              </td>
+                            )}
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
                 </div>

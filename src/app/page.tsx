@@ -132,7 +132,12 @@ function CurriculumApp({ userId }: { userId: string }) {
             noContextAssigned ? <NoAssignmentState /> : <StudentProgressView teacherId={userId} standards={standards} byStrand={byStrand} isHod={isHod} contextLabel={contextLabel} />
           )}
           {view === "delivery-grid" && isHod && (
-            <DeliveryGridView teacherId={userId} onNavigate={setView} />
+            <DeliveryGridView
+              teacherId={userId}
+              subjectId={activeContext?.subjectId ?? null}
+              gradeLevelId={activeContext?.gradeLevelId ?? null}
+              onNavigate={setView}
+            />
           )}
           {view === "hod-review" && isHod && (
             <HODReviewView teacherId={userId} standards={standards} />

@@ -33,6 +33,10 @@ Units 1–7 (Terms 1–2 + early T3) are complete. Unit 8 just submitted. Unit 9
 
 ## Staff
 
+### Admin — Zain Glenn
+- **Username:** `zain.admin` · **Password:** `Admin123!@@`
+- Full access: Manage Users, School Setup, Platform Settings, Curriculum Audit.
+
 ### HOD — Sarah Mitchell
 - **Username:** `hod.test` · **Password:** `HODtest123!@@`
 - British, MA in English Education (UCL). 12 years teaching, 5 at DSK. Former Year Coordinator at a OFSTED-Outstanding school in Manchester. Joined DSK as founding HOD for English in 2021. Known for precise, actionable feedback; expects clearly articulated essential questions and evidence of standard-to-task alignment in every plan.
