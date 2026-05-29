@@ -7,6 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import {
   CheckCircle2,
   Circle,
+  Clock,
   ChevronDown,
   ChevronRight,
   BookOpen,
@@ -17,9 +18,8 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { Standard } from "@/types";
-import { useCoverageFromDelivery, CoverageStatus } from "@/hooks/useCoverageFromDelivery";
+import { useStandardPipeline, PipelineStatus } from "@/hooks/useStandardPipeline";
 import { useAllSkills } from "@/hooks/useAllSkills";
-import { useClasses } from "@/hooks/useClasses";
 import { useTeachers } from "@/hooks/useTeachers";
 import { useDepartmentCoverage } from "@/hooks/useDepartmentCoverage";
 import { StandardContextView } from "@/components/StandardDetailView";
@@ -32,9 +32,11 @@ interface CoverageViewProps {
   teacherId: string;
   isHod?: boolean;
   contextLabel?: string | null;
+  subjectId?: string | null;
+  gradeLevelId?: string | null;
 }
 
-type StatusFilter = "all" | "covered" | "in_progress" | "planned" | "gap";
+type StatusFilter = "all" | "taught" | "scheduled" | "planned" | "unmapped";
 
 const STRAND_CODE: Record<string, string> = {
   "Reading Literature": "RL",
@@ -68,15 +70,19 @@ function strandIconStyle(code: string): React.CSSProperties {
   };
 }
 
-function StatusBadge({ status }: { status: CoverageStatus }) {
-  const styles: Record<CoverageStatus, { bg: string; text: string; border: string; label: string }> = {
-    covered:     { bg: "var(--status-taught-bg)",  text: "var(--status-taught-text)",  border: "var(--status-taught-border)",  label: "Covered"     },
-    in_progress: { bg: "var(--status-behind-bg)",  text: "var(--status-behind-text)",  border: "var(--status-behind-border)",  label: "In Progress" },
-    planned:     { bg: "var(--status-pending-bg)", text: "var(--status-pending-text)", border: "var(--status-pending-border)", label: "Planned"     },
-    gap:         { bg: "var(--status-overdue-bg)", text: "var(--status-overdue-text)", border: "var(--status-overdue-border)", label: "Gap"         },
+function StatusBadge({ status }: { status: PipelineStatus }) {
+  const styles: Record<PipelineStatus, { bg: string; text: string; border: string; label: string }> = {
+    taught:     { bg: "var(--status-taught-bg)",  text: "var(--status-taught-text)",  border: "var(--status-taught-border)",  label: "Taught"     },
+    scheduled:  { bg: "var(--status-behind-bg)",  text: "var(--status-behind-text)",  border: "var(--status-behind-border)",  label: "Scheduled"  },
+    planned:    { bg: "var(--status-pending-bg)", text: "var(--status-pending-text)", border: "var(--status-pending-border)", label: "Planned"    },
+    unmapped:   { bg: "var(--status-overdue-bg)", text: "var(--status-overdue-text)", border: "var(--status-overdue-border)", label: "Unmapped"   },
   };
   const s = styles[status];
-  const Icon = status === "covered" ? CheckCircle2 : status === "gap" ? AlertTriangle : status === "in_progress" ? AlertTriangle : Circle;
+  const Icon =
+    status === "taught"    ? CheckCircle2 :
+    status === "scheduled" ? Clock :
+    status === "planned"   ? Circle :
+    AlertTriangle;
   return (
     <span
       className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full border font-medium"
@@ -88,31 +94,77 @@ function StatusBadge({ status }: { status: CoverageStatus }) {
   );
 }
 
-export function CoverageView({ standards, byStrand, teacherId, isHod, contextLabel }: CoverageViewProps) {
+/** Horizontal pipeline progress bar */
+function PipelineSummaryBar({
+  unmapped, planned, scheduled, taught, total,
+}: {
+  unmapped: number; planned: number; scheduled: number; taught: number; total: number;
+}) {
+  if (total === 0) return null;
+
+  const segments: { count: number; color: string; label: string; textColor: string }[] = [
+    { count: unmapped,  color: "var(--status-overdue-bg)",  textColor: "var(--status-overdue-text)",  label: "Unmapped"  },
+    { count: planned,   color: "var(--status-pending-bg)",  textColor: "var(--status-pending-text)",  label: "Planned"   },
+    { count: scheduled, color: "var(--status-behind-bg)",   textColor: "var(--status-behind-text)",   label: "Scheduled" },
+    { count: taught,    color: "var(--status-taught-bg)",   textColor: "var(--status-taught-text)",   label: "Taught"    },
+  ];
+
+  return (
+    <div className="space-y-2">
+      {/* Bar */}
+      <div className="flex h-2 rounded-full overflow-hidden w-full bg-muted">
+        {segments.map(({ count, color, label }) => {
+          const pct = (count / total) * 100;
+          if (pct === 0) return null;
+          return (
+            <div
+              key={label}
+              title={`${label}: ${count}`}
+              style={{ width: `${pct}%`, background: color }}
+            />
+          );
+        })}
+      </div>
+      {/* Labels */}
+      <div className="flex items-center gap-4 flex-wrap">
+        {segments.map(({ count, textColor, label }, i) => (
+          <div key={label} className="flex items-center gap-1.5">
+            {i < segments.length - 1 && (
+              <span className="text-xs text-muted-foreground hidden sm:inline">→</span>
+            )}
+            <span
+              className="text-xs font-medium tabular-nums"
+              style={{ color: textColor }}
+            >
+              {label}
+            </span>
+            <span className="text-xs text-muted-foreground tabular-nums">({count})</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function CoverageView({ standards, byStrand, teacherId, isHod, contextLabel, subjectId, gradeLevelId }: CoverageViewProps) {
   const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(null);
   const { teachers } = useTeachers();
 
   const effectiveTeacherId = isHod ? selectedTeacherId : teacherId;
-  const { classes, loading: classesLoading } = useClasses(effectiveTeacherId ?? "");
-  const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
-
-  const activeClassId = selectedClassId ?? classes[0]?.id ?? null;
-
-  if (classesLoading && !isHod) return null;
 
   const showAllTeachers = isHod && !selectedTeacherId;
 
   return (
     <PageContainer
       title="Standards Coverage"
-      description={contextLabel ?? "Coverage is computed from your class delivery — no extra steps needed."}
+      description={contextLabel ?? "Coverage is computed from your long term plans — no extra steps needed."}
     >
       <div className="space-y-4">
         {isHod && (
           <div className="flex items-center gap-2">
             <Select
               value={selectedTeacherId ?? "all"}
-              onValueChange={(v) => { setSelectedTeacherId(v === "all" ? null : v); setSelectedClassId(null); }}
+              onValueChange={(v) => { setSelectedTeacherId(v === "all" ? null : v); }}
             >
               <SelectTrigger className="w-56 h-8 text-sm">
                 <SelectValue />
@@ -127,33 +179,16 @@ export function CoverageView({ standards, byStrand, teacherId, isHod, contextLab
           </div>
         )}
 
-        {!showAllTeachers && classes.length > 1 && (
-          <div className="flex items-center gap-2 flex-wrap">
-            {classes.map((cls) => (
-              <button
-                key={cls.id}
-                onClick={() => setSelectedClassId(cls.id)}
-                className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-colors ${
-                  activeClassId === cls.id
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-background border-border hover:bg-muted"
-                }`}
-              >
-                {cls.name}
-              </button>
-            ))}
-          </div>
-        )}
-
         {showAllTeachers ? (
           <DepartmentCoverageGrid standards={standards} byStrand={byStrand} teachers={teachers} />
         ) : (
           <CoverageGrid
-            key={`${effectiveTeacherId}-${activeClassId ?? "none"}`}
+            key={`${effectiveTeacherId}-${subjectId ?? "none"}-${gradeLevelId ?? "none"}`}
             standards={standards}
             byStrand={byStrand}
             teacherId={effectiveTeacherId ?? teacherId}
-            classId={activeClassId}
+            subjectId={subjectId ?? null}
+            gradeLevelId={gradeLevelId ?? null}
             isHod={isHod}
           />
         )}
@@ -166,16 +201,18 @@ function CoverageGrid({
   standards,
   byStrand,
   teacherId,
-  classId,
+  subjectId,
+  gradeLevelId,
   isHod,
 }: {
   standards: Standard[];
   byStrand: Record<string, Standard[]>;
   teacherId: string;
-  classId: string | null;
+  subjectId: string | null;
+  gradeLevelId: string | null;
   isHod?: boolean;
 }) {
-  const { statusMap, loading } = useCoverageFromDelivery(teacherId, classId);
+  const { entries, loading, summary } = useStandardPipeline(teacherId, subjectId, gradeLevelId, standards);
   const { byStandardId } = useAllSkills();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [selectedStandard, setSelectedStandard] = useState<(typeof standards)[0] | null>(null);
@@ -186,29 +223,29 @@ function CoverageGrid({
 
   const standardStats = useMemo(() => {
     return standards.map((s) => {
-      const delivery = statusMap.get(s.id);
-      const status: CoverageStatus = delivery?.status ?? "gap";
-      const deliveredWeeks = delivery?.deliveredWeeks ?? 0;
-      const totalWeeks = delivery?.totalWeeks ?? 0;
-      const pct = totalWeeks > 0 ? Math.round((deliveredWeeks / totalWeeks) * 100) : 0;
-      return { standard: s, status, deliveredWeeks, totalWeeks, pct, delivery };
+      const entry = entries.find((e) => e.standard.id === s.id);
+      const status: PipelineStatus = entry?.status ?? "unmapped";
+      return { standard: s, status, entry };
     });
-  }, [standards, statusMap]);
+  }, [standards, entries]);
 
-  const coveredCount     = standardStats.filter((s) => s.status === "covered").length;
-  const inProgressCount  = standardStats.filter((s) => s.status === "in_progress").length;
-  const plannedCount     = standardStats.filter((s) => s.status === "planned").length;
-  const gapCount         = standardStats.filter((s) => s.status === "gap").length;
-  const overallPct       = standards.length > 0 ? Math.round((coveredCount / standards.length) * 100) : 0;
+  const taughtCount    = standardStats.filter((s) => s.status === "taught").length;
+  const scheduledCount = standardStats.filter((s) => s.status === "scheduled").length;
+  const plannedCount   = standardStats.filter((s) => s.status === "planned").length;
+  const unmappedCount  = standardStats.filter((s) => s.status === "unmapped").length;
+  const overallPct     = standards.length > 0 ? Math.round((taughtCount / standards.length) * 100) : 0;
 
   const strandStats = useMemo(() => {
     return strandKeys.map((strand) => {
       const items = byStrand[strand] ?? [];
-      const coveredStandards = items.filter((s) => (statusMap.get(s.id)?.status ?? "gap") === "covered").length;
-      const pct = items.length > 0 ? Math.round((coveredStandards / items.length) * 100) : 0;
-      return { strand, total: items.length, coveredStandards, pct };
+      const taughtStandards = items.filter((s) => {
+        const entry = entries.find((e) => e.standard.id === s.id);
+        return (entry?.status ?? "unmapped") === "taught";
+      }).length;
+      const pct = items.length > 0 ? Math.round((taughtStandards / items.length) * 100) : 0;
+      return { strand, total: items.length, taughtStandards, pct };
     });
-  }, [strandKeys, byStrand, statusMap]);
+  }, [strandKeys, byStrand, entries]);
 
   if (selectedStandard) {
     return (
@@ -216,23 +253,32 @@ function CoverageGrid({
         standard={selectedStandard}
         onBack={() => setSelectedStandard(null)}
         preloadedSkills={byStandardId[selectedStandard.id] ?? []}
-        deliveryStatus={statusMap.get(selectedStandard.id) ?? null}
+        deliveryStatus={null}
       />
     );
   }
 
   const tabs: { key: StatusFilter; label: string; count: number }[] = [
-    { key: "all",         label: "All Standards", count: standards.length },
-    { key: "covered",     label: "Covered",       count: coveredCount    },
-    { key: "in_progress", label: "In Progress",   count: inProgressCount },
-    { key: "planned",     label: "Planned",       count: plannedCount    },
-    { key: "gap",         label: "Gap",           count: gapCount        },
+    { key: "all",       label: "All Standards", count: standards.length },
+    { key: "taught",    label: "Taught",        count: taughtCount      },
+    { key: "scheduled", label: "Scheduled",     count: scheduledCount   },
+    { key: "planned",   label: "Planned",       count: plannedCount     },
+    { key: "unmapped",  label: "Unmapped",      count: unmappedCount    },
   ];
 
   return (
     <div className="space-y-5">
-      {/* Gap alert banner */}
-      {gapCount > 0 && (
+      {/* Pipeline summary bar */}
+      <PipelineSummaryBar
+        unmapped={summary.unmapped}
+        planned={summary.planned}
+        scheduled={summary.scheduled}
+        taught={summary.taught}
+        total={summary.total}
+      />
+
+      {/* Unmapped alert banner */}
+      {unmappedCount > 0 && (
         <div
           role="alert"
           className="flex items-center gap-3 px-4 py-3 rounded-xl border"
@@ -243,22 +289,22 @@ function CoverageGrid({
         >
           <AlertTriangle className="h-4 w-4 shrink-0" style={{ color: "var(--status-overdue-text)" }} />
           <p className="text-sm flex-1" style={{ color: "var(--status-overdue-text)" }}>
-            <span className="font-semibold">{gapCount} standard{gapCount !== 1 ? "s" : ""} have no unit plan</span>
+            <span className="font-semibold">{unmappedCount} standard{unmappedCount !== 1 ? "s" : ""} have no unit plan</span>
             {" "}— they may not be taught this year.
           </p>
           <button
-            onClick={() => setStatusFilter("gap")}
+            onClick={() => setStatusFilter("unmapped")}
             className="text-sm font-medium underline shrink-0"
             style={{ color: "var(--status-overdue-text)" }}
           >
-            Show gaps
+            Show unmapped
           </button>
         </div>
       )}
 
       {/* Strand summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        {strandStats.map(({ strand, total, coveredStandards, pct }) => {
+        {strandStats.map(({ strand, total, taughtStandards, pct }) => {
           const code = STRAND_CODE[strand] ?? strand;
           const isActive = strandFilter === strand;
           return (
@@ -277,7 +323,7 @@ function CoverageGrid({
                 {STRAND_ICON[code]}
               </div>
               <div className="text-xs text-muted-foreground mb-0.5">{strand}</div>
-              <div className="text-xl font-bold leading-none mb-1">{coveredStandards}</div>
+              <div className="text-xl font-bold leading-none mb-1">{taughtStandards}</div>
               <div className="text-xs text-muted-foreground mb-2">of {total} standards</div>
               <div className="flex items-center gap-2">
                 <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
@@ -342,7 +388,7 @@ function CoverageGrid({
                   <th className="text-left px-4 py-2.5 font-medium text-muted-foreground w-24">Standard</th>
                   <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">Description</th>
                   <th className="text-left px-4 py-2.5 font-medium text-muted-foreground w-32 hidden md:table-cell">Strand</th>
-                  <th className="text-left px-4 py-2.5 font-medium text-muted-foreground w-36 hidden sm:table-cell">Delivery</th>
+                  <th className="text-left px-4 py-2.5 font-medium text-muted-foreground w-36 hidden sm:table-cell">Unit</th>
                   <th className="text-left px-4 py-2.5 font-medium text-muted-foreground w-28">Status</th>
                 </tr>
               </thead>
@@ -367,8 +413,11 @@ function CoverageGrid({
                     if (filteredItems.length === 0) return null;
 
                     const isOpen = !collapsed[strand];
-                    const strandCovered = items.filter((s) => (statusMap.get(s.id)?.status ?? "gap") === "covered").length;
-                    const strandPct = items.length > 0 ? Math.round((strandCovered / items.length) * 100) : 0;
+                    const strandTaught = items.filter((s) => {
+                      const entry = entries.find((e) => e.standard.id === s.id);
+                      return (entry?.status ?? "unmapped") === "taught";
+                    }).length;
+                    const strandPct = items.length > 0 ? Math.round((strandTaught / items.length) * 100) : 0;
 
                     return [
                       <tr
@@ -402,10 +451,8 @@ function CoverageGrid({
                       </tr>,
                       ...(isOpen ? filteredItems.map((standard) => {
                         const stat = standardStats.find((st) => st.standard.id === standard.id);
-                        const status: CoverageStatus = stat?.status ?? "gap";
-                        const deliveredWeeks = stat?.deliveredWeeks ?? 0;
-                        const totalWeeks = stat?.totalWeeks ?? 0;
-                        const pct = stat?.pct ?? 0;
+                        const status: PipelineStatus = stat?.status ?? "unmapped";
+                        const entry = stat?.entry;
 
                         return (
                           <tr
@@ -428,16 +475,10 @@ function CoverageGrid({
                               </span>
                             </td>
                             <td className="px-4 py-3 hidden sm:table-cell">
-                              {status !== "gap" && totalWeeks > 0 ? (
-                                <div className="flex items-center gap-2">
-                                  <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden min-w-[48px]">
-                                    <div
-                                      className="h-full rounded-full"
-                                      style={{ width: `${pct}%`, backgroundColor: `var(${STRAND_ACCENT_VAR[code]})` }}
-                                    />
-                                  </div>
-                                  <span className="text-xs tabular-nums text-muted-foreground w-12 shrink-0">{deliveredWeeks}/{totalWeeks}w</span>
-                                </div>
+                              {entry?.unitTitle ? (
+                                <span className="text-xs text-muted-foreground truncate max-w-[120px] block">
+                                  {entry.unitNumber != null ? `Unit ${entry.unitNumber}: ` : ""}{entry.unitTitle}
+                                </span>
                               ) : (
                                 <span className="text-xs text-muted-foreground">—</span>
                               )}
@@ -465,7 +506,7 @@ function CoverageGrid({
               </div>
               <div className="text-4xl font-bold mb-1">{overallPct}%</div>
               <Progress value={overallPct} className="h-2 mb-2" />
-              <p className="text-xs text-muted-foreground">{coveredCount} of {standards.length} standards covered</p>
+              <p className="text-xs text-muted-foreground">{taughtCount} of {standards.length} standards taught</p>
             </CardContent>
           </Card>
 
@@ -474,19 +515,19 @@ function CoverageGrid({
               <CardTitle className="text-sm">Coverage Breakdown</CardTitle>
             </CardHeader>
             <CardContent className="px-4 pb-4 space-y-2.5">
-              {coveredCount > 0 && (
+              {taughtCount > 0 && (
                 <div className="flex items-center gap-2">
                   <CheckCircle2 className="h-4 w-4 shrink-0" style={{ color: "var(--status-taught-text)" }} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium">{coveredCount} covered</p>
+                    <p className="text-sm font-medium">{taughtCount} taught</p>
                   </div>
                 </div>
               )}
-              {inProgressCount > 0 && (
+              {scheduledCount > 0 && (
                 <div className="flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 shrink-0" style={{ color: "var(--status-behind-text)" }} />
+                  <Clock className="h-4 w-4 shrink-0" style={{ color: "var(--status-behind-text)" }} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium">{inProgressCount} in progress</p>
+                    <p className="text-sm font-medium">{scheduledCount} scheduled</p>
                   </div>
                 </div>
               )}
@@ -498,16 +539,16 @@ function CoverageGrid({
                   </div>
                 </div>
               )}
-              {gapCount > 0 && (
+              {unmappedCount > 0 && (
                 <div className="flex items-center gap-2">
                   <AlertTriangle className="h-4 w-4 shrink-0" style={{ color: "var(--status-overdue-text)" }} />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium">{gapCount} gap{gapCount !== 1 ? "s" : ""}</p>
+                    <p className="text-sm font-medium">{unmappedCount} unmapped</p>
                     <p className="text-xs text-muted-foreground">Not in any unit plan</p>
                   </div>
                 </div>
               )}
-              {coveredCount === 0 && inProgressCount === 0 && plannedCount === 0 && gapCount === 0 && (
+              {taughtCount === 0 && scheduledCount === 0 && plannedCount === 0 && unmappedCount === 0 && (
                 <div className="flex items-center gap-2">
                   <Circle className="h-4 w-4 text-muted-foreground" />
                   <p className="text-sm text-muted-foreground">No data yet</p>

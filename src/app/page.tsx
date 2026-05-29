@@ -113,7 +113,7 @@ function CurriculumApp({ userId }: { userId: string }) {
             />
           )}
           {view === "coverage" && (
-            noContextAssigned ? <NoAssignmentState /> : <CoverageView standards={standards} byStrand={byStrand} teacherId={userId} isHod={isHod} contextLabel={contextLabel} />
+            noContextAssigned ? <NoAssignmentState /> : <CoverageView standards={standards} byStrand={byStrand} teacherId={userId} isHod={isHod} contextLabel={contextLabel} subjectId={activeContext?.subjectId ?? null} gradeLevelId={activeContext?.gradeLevelId ?? null} />
           )}
           {view === "long-term-plan" && (
             noContextAssigned ? <NoAssignmentState /> : <LongTermPlanView
