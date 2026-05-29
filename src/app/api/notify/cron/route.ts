@@ -36,13 +36,16 @@ export async function GET(req: NextRequest) {
   for (const profile of profiles ?? []) {
     if (!profile.notification_email) continue;
 
-    // Fetch their plan memberships
-    const { data: memberRows } = await supabase
-      .from("ltp_members")
-      .select("plan_id")
-      .eq("teacher_id", profile.id);
+    // Fetch their plans: members table for teachers, owner field for HOD/admin
+    const [{ data: memberRows }, { data: ownedPlans }] = await Promise.all([
+      supabase.from("ltp_members").select("plan_id").eq("teacher_id", profile.id),
+      supabase.from("long_term_plans").select("id").eq("teacher_id", profile.id),
+    ]);
 
-    const planIds = (memberRows ?? []).map((m) => m.plan_id);
+    const planIds = [...new Set([
+      ...(memberRows ?? []).map((m) => m.plan_id),
+      ...(ownedPlans ?? []).map((p) => p.id),
+    ])];
     if (!planIds.length) { results.push({ userId: profile.id, skipped: true, sent: false }); continue; }
 
     const { data: plans } = await supabase
