@@ -427,7 +427,9 @@ function StandardSetsTab() {
           <Label className="text-xs mb-1.5 block">Subject</Label>
           <Select value={selectedSubjectId} onValueChange={(v) => v && setSelectedSubjectId(v)}>
             <SelectTrigger className="h-8 text-sm">
-              <SelectValue placeholder="Select subject…" />
+              <SelectValue placeholder="Select subject…">
+                {subjects.find(s => s.id === selectedSubjectId)?.name}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {subjects.map(s => (
@@ -440,7 +442,9 @@ function StandardSetsTab() {
           <Label className="text-xs mb-1.5 block">Grade Level</Label>
           <Select value={selectedGradeId} onValueChange={(v) => v && setSelectedGradeId(v)}>
             <SelectTrigger className="h-8 text-sm">
-              <SelectValue placeholder="Select grade…" />
+              <SelectValue placeholder="Select grade…">
+                {gradeLevels.find(g => g.id === selectedGradeId)?.name}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {gradeLevels.map(g => (
@@ -728,7 +732,9 @@ function ClassAssignmentsTab() {
           <Label className="text-xs mb-1.5 block">Subject</Label>
           <Select value={selectedSubjectId} onValueChange={(v) => v && setSelectedSubjectId(v)}>
             <SelectTrigger className="h-8 text-sm">
-              <SelectValue placeholder="Select subject…" />
+              <SelectValue placeholder="Select subject…">
+                {subjects.find(s => s.id === selectedSubjectId)?.name}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {subjects.map(s => (
@@ -741,7 +747,9 @@ function ClassAssignmentsTab() {
           <Label className="text-xs mb-1.5 block">Grade Level</Label>
           <Select value={selectedGradeId} onValueChange={(v) => v && setSelectedGradeId(v)}>
             <SelectTrigger className="h-8 text-sm">
-              <SelectValue placeholder="Select grade…" />
+              <SelectValue placeholder="Select grade…">
+                {gradeLevels.find(g => g.id === selectedGradeId)?.name}
+              </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {gradeLevels.map(g => (
