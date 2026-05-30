@@ -20,6 +20,7 @@ import { strandFromCode, StrandBadge, STRAND_COLORS } from "@/components/ltp/Str
 interface HODReviewViewProps {
   teacherId: string;
   standards: Standard[];
+  schoolId?: string | null;
 }
 
 type UnitWithPlan = { unit: LTPUnit; plan: LongTermPlan };
@@ -99,9 +100,9 @@ function strandCounts(unit: LTPUnit): Record<string, number> {
   return counts;
 }
 
-export function HODReviewView({ teacherId, standards }: HODReviewViewProps) {
-  const { plans, loading, approveUnit, requestUnitRevision, reopenUnit, rejectUnit } = useLongTermPlans(teacherId, true);
-  const { gradeLevels } = useGradeLevels();
+export function HODReviewView({ teacherId, standards, schoolId }: HODReviewViewProps) {
+  const { plans, loading, approveUnit, requestUnitRevision, reopenUnit, rejectUnit } = useLongTermPlans(teacherId, true, { schoolId });
+  const { gradeLevels } = useGradeLevels(schoolId);
   const [activeGradeId, setActiveGradeId] = useState<string>("");
 
   // Default to first grade level once loaded

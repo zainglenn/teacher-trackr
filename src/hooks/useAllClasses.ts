@@ -8,12 +8,14 @@ export interface ClassWithTeacher extends Class {
   teacher: Pick<Profile, "id" | "full_name" | "email"> | null;
 }
 
-export function useAllClasses() {
+export function useAllClasses(schoolId?: string | null) {
   const [classes, setClasses] = useState<ClassWithTeacher[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetch = useCallback(async () => {
-    const { data: rows } = await supabase.from("classes").select("*").order("name");
+    let q = supabase.from("classes").select("*").order("name");
+    if (schoolId) q = q.eq("school_id", schoolId);
+    const { data: rows } = await q;
     if (!rows) { setLoading(false); return; }
 
     const teacherIds = [...new Set(rows.map((r) => r.teacher_id).filter(Boolean))];
@@ -24,7 +26,7 @@ export function useAllClasses() {
     const profileMap = new Map((profiles ?? []).map((p) => [p.id, p]));
     setClasses(rows.map((r) => ({ ...r, teacher: profileMap.get(r.teacher_id) ?? null })));
     setLoading(false);
-  }, []);
+  }, [schoolId]);
 
   useEffect(() => { fetch(); }, [fetch]);
 

@@ -40,7 +40,7 @@ export function deliveryStatus(delivered: boolean): DeliveryStatus {
   return "pending";
 }
 
-export function useDeliveryGrid(subjectId: string | null, gradeLevelId: string | null) {
+export function useDeliveryGrid(subjectId: string | null, gradeLevelId: string | null, schoolId?: string | null) {
   const [classes, setClasses] = useState<GridClass[]>([]);
   const [weeks, setWeeks] = useState<GridWeek[]>([]);
   const [deliveries, setDeliveries] = useState<DeliveryRecord[]>([]);
@@ -58,7 +58,7 @@ export function useDeliveryGrid(subjectId: string | null, gradeLevelId: string |
     setLoading(true);
 
     // 1. Fetch all LTPs for this subject+grade with their lead members
-    const { data: plans } = await supabase
+    let plansQuery = supabase
       .from("long_term_plans")
       .select(`
         id, title,
@@ -67,6 +67,8 @@ export function useDeliveryGrid(subjectId: string | null, gradeLevelId: string |
       .eq("subject_id", subjectId)
       .eq("grade_level_id", gradeLevelId)
       .order("created_at");
+    if (schoolId) plansQuery = plansQuery.eq("school_id", schoolId);
+    const { data: plans } = await plansQuery;
 
     if (!plans?.length) {
       setClasses([]);
@@ -143,7 +145,7 @@ export function useDeliveryGrid(subjectId: string | null, gradeLevelId: string |
     }
 
     setLoading(false);
-  }, [subjectId, gradeLevelId]);
+  }, [subjectId, gradeLevelId, schoolId]);
 
   useEffect(() => { fetch(); }, [fetch]);
 

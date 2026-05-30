@@ -24,14 +24,22 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser(token);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const { data: caller } = await supabase.from("profiles").select("role, school_id").eq("id", user.id).single();
+  if (!caller) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   const { recipientId } = await req.json() as { recipientId: string };
 
   // Get recipient profile
   const { data: profile } = await supabase
     .from("profiles")
-    .select("id, full_name, notification_email, role")
+    .select("id, full_name, notification_email, role, school_id")
     .eq("id", recipientId)
     .single();
+
+  // Only allow if caller is the same user, or is an admin/hod in the same school
+  const isSelf = user.id === recipientId;
+  const isSameSchoolAdmin = ["admin", "hod"].includes(caller.role) && caller.school_id === profile?.school_id;
+  if (!isSelf && !isSameSchoolAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   if (!profile?.notification_email) {
     return NextResponse.json({ error: "No notification email configured for this user" }, { status: 400 });

@@ -10,22 +10,23 @@ export interface DepartmentStats {
   loading: boolean;
 }
 
-export function useDepartmentStats(): DepartmentStats {
+export function useDepartmentStats(schoolId?: string | null): DepartmentStats {
   const [teachers, setTeachers] = useState<Profile[]>([]);
   const [coverageByTeacher, setCoverageByTeacher] = useState<Map<string, Set<string>>>(new Map());
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function fetch() {
+      let teachersQuery = supabase
+        .from("profiles")
+        .select("id, email, full_name, role, created_at")
+        .eq("role", "teacher")
+        .order("full_name", { ascending: true });
+      if (schoolId) teachersQuery = teachersQuery.eq("school_id", schoolId);
+
       const [teachersRes, coverageRes] = await Promise.all([
-        supabase
-          .from("profiles")
-          .select("id, email, full_name, role, created_at")
-          .eq("role", "teacher")
-          .order("full_name", { ascending: true }),
-        supabase
-          .from("coverage_logs")
-          .select("teacher_id, standard_id"),
+        teachersQuery,
+        supabase.from("coverage_logs").select("teacher_id, standard_id"),
       ]);
 
       setTeachers((teachersRes.data ?? []) as Profile[]);
@@ -39,7 +40,7 @@ export function useDepartmentStats(): DepartmentStats {
       setLoading(false);
     }
     fetch();
-  }, []);
+  }, [schoolId]);
 
   return { teachers, coverageByTeacher, loading };
 }

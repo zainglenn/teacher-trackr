@@ -10,6 +10,9 @@ export async function PATCH(req: NextRequest) {
   if (!id) return NextResponse.json({ error: "id is required" }, { status: 400 });
   if (typeof is_lead !== "boolean") return NextResponse.json({ error: "is_lead (boolean) is required" }, { status: 400 });
 
+  const { data: existing } = await admin.from("class_assignments").select("school_id").eq("id", id).single();
+  if (existing?.school_id !== auth.schoolId) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
   const { data, error } = await admin
     .from("class_assignments")
     .update({ is_lead })

@@ -28,10 +28,11 @@ async function adminDelete(endpoint: string, body: Record<string, string>) {
 interface AdminViewProps {
   userId: string;
   tab?: "platform" | "audit";
+  schoolId?: string | null;
 }
 
-export function AdminView({ userId, tab: activeSection = "audit" }: AdminViewProps) {
-  const { plans, loading } = useLongTermPlans(userId, true);
+export function AdminView({ userId, tab: activeSection = "audit", schoolId }: AdminViewProps) {
+  const { plans, loading } = useLongTermPlans(userId, true, { schoolId });
   const [tab, setTab] = useState<AdminTab>("ltps");
   const [confirmLtp, setConfirmLtp] = useState<{ id: string; title: string } | null>(null);
   const [confirmUnit, setConfirmUnit] = useState<{ id: string; title: string } | null>(null);

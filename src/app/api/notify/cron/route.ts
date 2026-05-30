@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
   // All users with a notification email
   const { data: profiles } = await supabase
     .from("profiles")
-    .select("id, full_name, notification_email, role")
+    .select("id, full_name, notification_email, role, school_id")
     .not("notification_email", "is", null);
 
   const resend = new Resend(resendKey);
@@ -37,9 +37,11 @@ export async function GET(req: NextRequest) {
     if (!profile.notification_email) continue;
 
     // Fetch their plans: members table for teachers, owner field for HOD/admin
+    // Always scope to the user's school to prevent cross-school data in digests
+    const schoolFilter = profile.school_id ? { school_id: profile.school_id } : {};
     const [{ data: memberRows }, { data: ownedPlans }] = await Promise.all([
       supabase.from("ltp_members").select("plan_id").eq("teacher_id", profile.id),
-      supabase.from("long_term_plans").select("id").eq("teacher_id", profile.id),
+      supabase.from("long_term_plans").select("id").eq("teacher_id", profile.id).match(schoolFilter),
     ]);
 
     const planIds = [...new Set([
@@ -51,7 +53,8 @@ export async function GET(req: NextRequest) {
     const { data: plans } = await supabase
       .from("long_term_plans")
       .select("id, title, units:ltp_units(id, title, status, submitted_at, reviewed_at, rejection_reason, hod_feedback)")
-      .in("id", planIds);
+      .in("id", planIds)
+      .match(schoolFilter);
 
     const items: string[] = [];
     const now = Date.now();

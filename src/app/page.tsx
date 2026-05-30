@@ -70,7 +70,7 @@ function CurriculumApp({ userId }: { userId: string }) {
     subjectId: activeContext?.subjectId,
     gradeLevelId: activeContext?.gradeLevelId,
   });
-  const { teachers } = useTeachers();
+  const { teachers } = useTeachers(profile?.school_id ?? null);
   const { students } = useStudents(userId);
   const { progress: classProgress } = useClassProgress(userId);
 
@@ -187,7 +187,7 @@ function CurriculumApp({ userId }: { userId: string }) {
             />
           )}
           {view === "hod-review" && isHod && (
-            <HODReviewView teacherId={userId} standards={standards} />
+            <HODReviewView teacherId={userId} standards={standards} schoolId={profile?.school_id ?? null} />
           )}
           {view === "hod-settings" && isHod && (
             <HODAdminPanel
@@ -209,10 +209,10 @@ function CurriculumApp({ userId }: { userId: string }) {
             />
           )}
           {view === "platform-settings" && isAdmin && (
-            <AdminView userId={userId} tab="platform" />
+            <AdminView userId={userId} tab="platform" schoolId={profile?.school_id ?? null} />
           )}
           {view === "curriculum-audit" && isAdmin && (
-            <AdminView userId={userId} tab="audit" />
+            <AdminView userId={userId} tab="audit" schoolId={profile?.school_id ?? null} />
           )}
         </main>
       </SidebarInset>
