@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
 
   const { name, slot } = await req.json();
   if (!name?.trim()) return NextResponse.json({ error: "name is required" }, { status: 400 });
-  if (!slot || slot < 1 || slot > 6) return NextResponse.json({ error: "slot must be 1–6" }, { status: 400 });
+  if (!slot || slot < 1 || slot > 11) return NextResponse.json({ error: "slot must be 1–11" }, { status: 400 });
 
   const { data, error } = await admin
     .from("subjects")

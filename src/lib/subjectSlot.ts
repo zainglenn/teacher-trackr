@@ -1,6 +1,6 @@
-export type SubjectSlot = 1 | 2 | 3 | 4 | 5 | 6;
+export type SubjectSlot = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11;
 
-export const SUBJECT_SLOTS: SubjectSlot[] = [1, 2, 3, 4, 5, 6];
+export const SUBJECT_SLOTS: SubjectSlot[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
 
 const SLOT_LABELS: Record<SubjectSlot, string> = {
   1: "Teal",
@@ -9,6 +9,11 @@ const SLOT_LABELS: Record<SubjectSlot, string> = {
   4: "Lime",
   5: "Yellow",
   6: "Sky",
+  7: "Rose",
+  8: "Violet",
+  9: "Emerald",
+  10: "Indigo",
+  11: "Pink",
 };
 
 export function getSubjectSlotStyle(slot: SubjectSlot): {

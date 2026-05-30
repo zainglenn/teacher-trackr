@@ -302,6 +302,31 @@
   --subject-slot-6-text:    oklch(0.365 0.100 210);   /* sky-800   */
   --subject-slot-6-border:  oklch(0.912 0.045 210);   /* sky-200   */
   --subject-slot-6-accent:  oklch(0.530 0.155 210);   /* sky-600   */
+
+  --subject-slot-7-bg:      oklch(0.962 0.025 10);    /* rose-100  */
+  --subject-slot-7-text:    oklch(0.380 0.115 10);    /* rose-800  */
+  --subject-slot-7-border:  oklch(0.920 0.050 10);    /* rose-200  */
+  --subject-slot-7-accent:  oklch(0.555 0.175 10);    /* rose-600  */
+
+  --subject-slot-8-bg:      oklch(0.960 0.025 265);   /* violet-100 */
+  --subject-slot-8-text:    oklch(0.370 0.120 265);   /* violet-800 */
+  --subject-slot-8-border:  oklch(0.918 0.048 265);   /* violet-200 */
+  --subject-slot-8-accent:  oklch(0.540 0.190 265);   /* violet-600 */
+
+  --subject-slot-9-bg:      oklch(0.958 0.030 155);   /* emerald-100 */
+  --subject-slot-9-text:    oklch(0.360 0.105 155);   /* emerald-800 */
+  --subject-slot-9-border:  oklch(0.915 0.058 155);   /* emerald-200 */
+  --subject-slot-9-accent:  oklch(0.525 0.155 155);   /* emerald-600 */
+
+  --subject-slot-10-bg:     oklch(0.957 0.028 245);   /* indigo-100 */
+  --subject-slot-10-text:   oklch(0.360 0.130 245);   /* indigo-800 */
+  --subject-slot-10-border: oklch(0.914 0.055 245);   /* indigo-200 */
+  --subject-slot-10-accent: oklch(0.525 0.200 245);   /* indigo-600 */
+
+  --subject-slot-11-bg:     oklch(0.964 0.025 330);   /* pink-100  */
+  --subject-slot-11-text:   oklch(0.375 0.115 330);   /* pink-800  */
+  --subject-slot-11-border: oklch(0.922 0.048 330);   /* pink-200  */
+  --subject-slot-11-accent: oklch(0.550 0.175 330);   /* pink-600  */
 }
 
 /* ── Dark mode overrides for extended tokens ─────────────────────────────── */
@@ -330,6 +355,26 @@
   --subject-slot-6-bg:      oklch(0.235 0.050 210);
   --subject-slot-6-text:    oklch(0.820 0.085 210);
   --subject-slot-6-border:  oklch(0.318 0.070 210);
+
+  --subject-slot-7-bg:      oklch(0.238 0.052 10);
+  --subject-slot-7-text:    oklch(0.822 0.088 10);
+  --subject-slot-7-border:  oklch(0.320 0.075 10);
+
+  --subject-slot-8-bg:      oklch(0.238 0.050 265);
+  --subject-slot-8-text:    oklch(0.820 0.090 265);
+  --subject-slot-8-border:  oklch(0.318 0.072 265);
+
+  --subject-slot-9-bg:      oklch(0.236 0.055 155);
+  --subject-slot-9-text:    oklch(0.820 0.088 155);
+  --subject-slot-9-border:  oklch(0.320 0.078 155);
+
+  --subject-slot-10-bg:     oklch(0.237 0.055 245);
+  --subject-slot-10-text:   oklch(0.820 0.092 245);
+  --subject-slot-10-border: oklch(0.318 0.078 245);
+
+  --subject-slot-11-bg:     oklch(0.237 0.050 330);
+  --subject-slot-11-text:   oklch(0.820 0.086 330);
+  --subject-slot-11-border: oklch(0.318 0.072 330);
   /* Delivery status — slightly desaturated on dark to avoid harsh vibrancy */
   --status-taught-bg:        oklch(0.230 0.060 155);
   --status-taught-text:      oklch(0.821 0.100 155);
