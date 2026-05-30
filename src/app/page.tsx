@@ -63,7 +63,7 @@ function CurriculumApp({ userId }: { userId: string }) {
     const subject = match.subject?.name ?? "";
     return grade && subject ? `${grade} · ${subject}` : grade || subject || null;
   })();
-  const { standards, byStrand, loading: standardsLoading } = useStandards();
+  const { standards, byStrand, loading: standardsLoading } = useStandards(null, profile?.school_id ?? null);
   const { logs: coverageLogs } = useCoverage(userId);
   const { plans: ltps, assignUnit } = useLongTermPlans(userId, isHod, {
     schoolId: profile?.school_id ?? null,
