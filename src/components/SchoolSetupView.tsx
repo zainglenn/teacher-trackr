@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Trash2, CheckSquare, Square } from "lucide-react";
+import { Plus, Trash2, CheckSquare, Square, Sparkles, RefreshCw } from "lucide-react";
 import { PageContainer } from "@/components/PageContainer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -264,6 +264,8 @@ function GradeLevelsTab() {
 
 // ── Standard Sets Tab ─────────────────────────────────────────────────────────
 
+interface GeneratedStandard { code: string; strand: string; description: string; }
+
 function StandardSetsTab() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [gradeLevels, setGradeLevels] = useState<GradeLevel[]>([]);
@@ -280,6 +282,12 @@ function StandardSetsTab() {
   const [stdDesc, setStdDesc] = useState("");
   const [stdSaving, setStdSaving] = useState(false);
   const [error, setError] = useState("");
+  // AI generation state
+  const [generating, setGenerating] = useState(false);
+  const [aiPreview, setAiPreview] = useState<{ setName: string; standards: GeneratedStandard[] } | null>(null);
+  const [aiSetName, setAiSetName] = useState("");
+  const [selectedCodes, setSelectedCodes] = useState<Set<string>>(new Set());
+  const [savingGenerated, setSavingGenerated] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -355,6 +363,57 @@ function StandardSetsTab() {
     await loadSet(selectedSubjectId, selectedGradeId);
   }
 
+  function clearAiPreview() {
+    setAiPreview(null);
+    setAiSetName("");
+    setSelectedCodes(new Set());
+    setError("");
+  }
+
+  async function handleGenerate() {
+    const subject = subjects.find(s => s.id === selectedSubjectId);
+    const grade = gradeLevels.find(g => g.id === selectedGradeId);
+    if (!subject || !grade) return;
+    setGenerating(true);
+    setError("");
+    clearAiPreview();
+    const res = await adminFetch("/api/ai/generate-standards", {
+      method: "POST",
+      body: JSON.stringify({ subject_name: subject.name, grade_level_name: grade.name }),
+    });
+    const json = await res.json();
+    setGenerating(false);
+    if (json.error) { setError(json.error); return; }
+    setAiPreview(json);
+    setAiSetName(json.setName);
+    setSelectedCodes(new Set((json.standards as GeneratedStandard[]).map(s => s.code)));
+  }
+
+  async function handleSaveGenerated() {
+    if (!aiPreview || !aiSetName.trim()) return;
+    setSavingGenerated(true);
+    setError("");
+    // 1. Create the standard set
+    const setRes = await adminFetch("/api/admin/create-standard-set", {
+      method: "POST",
+      body: JSON.stringify({ name: aiSetName.trim(), subject_id: selectedSubjectId, grade_level_id: selectedGradeId }),
+    });
+    const setJson = await setRes.json();
+    if (setJson.error) { setError(setJson.error); setSavingGenerated(false); return; }
+    const setId = setJson.standard_set.id as string;
+    // 2. Bulk insert selected standards
+    const toInsert = aiPreview.standards.filter(s => selectedCodes.has(s.code));
+    const bulkRes = await adminFetch("/api/admin/bulk-add-standards", {
+      method: "POST",
+      body: JSON.stringify({ standard_set_id: setId, standards: toInsert }),
+    });
+    const bulkJson = await bulkRes.json();
+    if (bulkJson.error) { setError(bulkJson.error); setSavingGenerated(false); return; }
+    clearAiPreview();
+    setSavingGenerated(false);
+    await loadSet(selectedSubjectId, selectedGradeId);
+  }
+
   const showContent = selectedSubjectId && selectedGradeId;
 
   return (
@@ -398,25 +457,105 @@ function StandardSetsTab() {
           {loadingSet ? (
             <div className="text-sm text-muted-foreground py-4 text-center">Loading…</div>
           ) : !standardSet ? (
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">No standard set for this combination yet.</p>
-              <div className="flex gap-2 items-end">
-                <div className="flex-1">
-                  <Label htmlFor="new-set-name" className="text-xs mb-1.5 block">Standard set name</Label>
-                  <Input
-                    id="new-set-name"
-                    value={newSetName}
-                    onChange={e => setNewSetName(e.target.value)}
-                    placeholder="e.g. NYSED Grade 6 ELA"
-                    className="h-8 text-sm"
-                    onKeyDown={e => { if (e.key === "Enter") handleCreateSet(); }}
-                  />
+            <div className="space-y-4">
+              {/* AI generation preview */}
+              {aiPreview ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-3.5 w-3.5 text-violet-500 shrink-0" />
+                    <span className="text-xs font-medium">AI-generated standard set — review and confirm</span>
+                    <span className="ml-auto text-xs text-muted-foreground">{selectedCodes.size} of {aiPreview.standards.length} selected</span>
+                  </div>
+                  <div className="flex gap-2 items-center">
+                    <Input
+                      value={aiSetName}
+                      onChange={e => setAiSetName(e.target.value)}
+                      placeholder="Standard set name"
+                      className="h-8 text-sm flex-1"
+                    />
+                  </div>
+                  <div className="border border-border rounded-md overflow-hidden">
+                    <div className="grid grid-cols-[20px_80px_100px_1fr] gap-0 px-3 py-1.5 bg-muted/40 text-xs font-medium text-muted-foreground border-b border-border">
+                      <span />
+                      <span>Code</span>
+                      <span>Strand</span>
+                      <span>Description</span>
+                    </div>
+                    <div className="max-h-80 overflow-y-auto">
+                      {aiPreview.standards.map((s, i) => (
+                        <div key={s.code}>
+                          {i > 0 && <Separator />}
+                          <div
+                            className="grid grid-cols-[20px_80px_100px_1fr] gap-0 px-3 py-2 items-start cursor-pointer hover:bg-muted/30"
+                            onClick={() => setSelectedCodes(prev => {
+                              const next = new Set(prev);
+                              next.has(s.code) ? next.delete(s.code) : next.add(s.code);
+                              return next;
+                            })}
+                          >
+                            <div className="pt-0.5">
+                              {selectedCodes.has(s.code)
+                                ? <CheckSquare className="h-3.5 w-3.5 text-primary" />
+                                : <Square className="h-3.5 w-3.5 text-muted-foreground" />}
+                            </div>
+                            <span className="text-xs font-mono text-foreground pt-0.5">{s.code}</span>
+                            <span className="text-xs text-muted-foreground pt-0.5 pr-2">{s.strand}</span>
+                            <span className="text-xs text-foreground leading-relaxed">{s.description}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  {error && <p className="text-xs text-destructive">{error}</p>}
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={handleSaveGenerated} disabled={savingGenerated || selectedCodes.size === 0 || !aiSetName.trim()} className="h-8 text-xs">
+                      {savingGenerated ? "Saving…" : `Save ${selectedCodes.size} Standard${selectedCodes.size !== 1 ? "s" : ""}`}
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={handleGenerate} disabled={generating} className="h-8 text-xs gap-1.5">
+                      <RefreshCw className="h-3 w-3" />
+                      Regenerate
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={clearAiPreview} className="h-8 text-xs ml-auto">
+                      Cancel
+                    </Button>
+                  </div>
                 </div>
-                <Button size="sm" onClick={handleCreateSet} disabled={creatingSet || !newSetName.trim()} className="h-8 text-xs">
-                  {creatingSet ? "Creating…" : "Create Set"}
-                </Button>
-              </div>
-              {error && <p className="text-xs text-destructive">{error}</p>}
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">No standard set for this combination yet.</p>
+                  <Button
+                    size="sm"
+                    onClick={handleGenerate}
+                    disabled={generating}
+                    className="h-8 text-xs gap-1.5 bg-violet-600 hover:bg-violet-700 text-white"
+                  >
+                    <Sparkles className="h-3.5 w-3.5" />
+                    {generating ? "Generating…" : "Generate with AI"}
+                  </Button>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 h-px bg-border" />
+                    <span className="text-xs text-muted-foreground">or create manually</span>
+                    <div className="flex-1 h-px bg-border" />
+                  </div>
+                  <div className="flex gap-2 items-end">
+                    <div className="flex-1">
+                      <Label htmlFor="new-set-name" className="text-xs mb-1.5 block">Standard set name</Label>
+                      <Input
+                        id="new-set-name"
+                        value={newSetName}
+                        onChange={e => setNewSetName(e.target.value)}
+                        placeholder="e.g. NYSED Grade 6 ELA"
+                        className="h-8 text-sm"
+                        onKeyDown={e => { if (e.key === "Enter") handleCreateSet(); }}
+                      />
+                    </div>
+                    <Button size="sm" onClick={handleCreateSet} disabled={creatingSet || !newSetName.trim()} className="h-8 text-xs">
+                      {creatingSet ? "Creating…" : "Create Set"}
+                    </Button>
+                  </div>
+                  {error && <p className="text-xs text-destructive">{error}</p>}
+                </div>
+              )}
             </div>
           ) : (
             <div className="space-y-4">
