@@ -65,14 +65,15 @@ export async function POST(req: NextRequest) {
   // Create profile for school admin
   const { data: profile, error: profileErr } = await admin
     .from("profiles")
-    .insert({
+    .upsert({
       id: authData.user.id,
+      email: authEmail,
       username: adminUsername.toLowerCase(),
       full_name: adminFullName.trim(),
       role: "admin",
       school_id: school.id,
       notification_email: adminEmail?.trim() || null,
-    })
+    }, { onConflict: "id" })
     .select()
     .single();
 
