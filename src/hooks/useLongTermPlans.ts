@@ -8,17 +8,18 @@ import { ltpAggregateStatus } from "@/lib/ltpStatus";
 interface UseLongTermPlansOptions {
   subjectId?: string | null;
   gradeLevelId?: string | null;
+  schoolId?: string | null;
 }
 
 export function useLongTermPlans(teacherId: string, isHod: boolean, options: UseLongTermPlansOptions = {}) {
   const [plans, setPlans] = useState<LongTermPlan[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const { subjectId, gradeLevelId } = options;
+  const { subjectId, gradeLevelId, schoolId } = options;
 
   const fetch = useCallback(async () => {
     // RLS handles visibility: HOD sees all, teachers see plans they're members of.
-    // No teacher_id filter needed here.
+    // school_id filter ensures cross-school isolation.
     let query = supabase
       .from("long_term_plans")
       .select(`
@@ -29,6 +30,7 @@ export function useLongTermPlans(teacherId: string, isHod: boolean, options: Use
       `)
       .order("created_at", { ascending: false });
 
+    if (schoolId) query = query.eq("school_id", schoolId);
     if (subjectId) query = query.eq("subject_id", subjectId);
     if (gradeLevelId) query = query.eq("grade_level_id", gradeLevelId);
 
@@ -48,7 +50,7 @@ export function useLongTermPlans(teacherId: string, isHod: boolean, options: Use
     }));
     setPlans(normalized as LongTermPlan[]);
     setLoading(false);
-  }, [subjectId, gradeLevelId]);
+  }, [schoolId, subjectId, gradeLevelId]);
 
   useEffect(() => { fetch(); }, [fetch]);
 

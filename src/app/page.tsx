@@ -66,6 +66,7 @@ function CurriculumApp({ userId }: { userId: string }) {
   const { standards, byStrand, loading: standardsLoading } = useStandards();
   const { logs: coverageLogs } = useCoverage(userId);
   const { plans: ltps, assignUnit } = useLongTermPlans(userId, isHod, {
+    schoolId: profile?.school_id ?? null,
     subjectId: activeContext?.subjectId,
     gradeLevelId: activeContext?.gradeLevelId,
   });
