@@ -14,7 +14,7 @@ export function makeAdminClient(): SupabaseClient {
 export async function requireAdmin(
   req: NextRequest,
   admin: SupabaseClient
-): Promise<{ callerId: string } | NextResponse> {
+): Promise<{ callerId: string; schoolId: string | null } | NextResponse> {
   const token = req.headers.get("authorization")?.replace(/^[Bb]earer /, "");
   if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -23,7 +23,7 @@ export async function requireAdmin(
 
   const { data: profile } = await admin
     .from("profiles")
-    .select("role")
+    .select("role, school_id")
     .eq("id", user.id)
     .single();
 
@@ -31,5 +31,5 @@ export async function requireAdmin(
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  return { callerId: user.id };
+  return { callerId: user.id, schoolId: profile.school_id ?? null };
 }

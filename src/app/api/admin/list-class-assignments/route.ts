@@ -15,6 +15,7 @@ export async function GET(req: NextRequest) {
     .select("*, teacher:profiles(id, full_name, username, role), subject:subjects(*), grade_level:grade_levels(*)")
     .order("created_at", { ascending: true });
 
+  if (auth.schoolId) query = query.eq("school_id", auth.schoolId);
   if (subject_id) query = query.eq("subject_id", subject_id);
   if (grade_level_id) query = query.eq("grade_level_id", grade_level_id);
 

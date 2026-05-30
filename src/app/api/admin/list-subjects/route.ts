@@ -6,11 +6,10 @@ export async function GET(req: NextRequest) {
   const auth = await requireAdmin(req, admin);
   if (auth instanceof NextResponse) return auth;
 
-  const { data, error } = await admin
-    .from("subjects")
-    .select("*")
-    .order("created_at", { ascending: true });
+  let query = admin.from("subjects").select("*").order("created_at", { ascending: true });
+  if (auth.schoolId) query = query.eq("school_id", auth.schoolId);
 
+  const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ subjects: data });
 }
