@@ -108,7 +108,7 @@ export function SchoolDetailSheet({ schoolId, onClose, onSuspend, onUnsuspend, o
             ].map(({ label, value, icon: Icon }) => (
               <div key={label} className="rounded-lg border bg-muted/20 px-3 py-2.5 text-center">
                 <Icon className="h-3.5 w-3.5 text-muted-foreground mx-auto mb-1" />
-                <p className="text-lg font-semibold tabular-nums">{loading ? <Skeleton className="h-5 w-8 mx-auto" /> : value}</p>
+                <span className="block text-lg font-semibold tabular-nums">{loading ? <Skeleton className="h-5 w-8 mx-auto" /> : value}</span>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5">{label}</p>
               </div>
             ))}

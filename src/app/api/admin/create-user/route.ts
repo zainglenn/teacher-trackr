@@ -1,5 +1,5 @@
-import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
+import { makeAdminClient, requireAdmin } from "@/lib/adminClient";
 
 const USERNAME_RE = /^[a-zA-Z0-9._]{2,30}$/;
 
@@ -8,33 +8,10 @@ function toAuthEmail(username: string): string {
 }
 
 export async function POST(req: NextRequest) {
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!serviceRoleKey) {
-    return NextResponse.json({ error: "Service role key not configured" }, { status: 500 });
-  }
-
-  const admin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    serviceRoleKey,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-
-  const authHeader = req.headers.get("authorization");
-  const token = authHeader?.replace(/^[Bb]earer /, "");
-  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const { data: { user: caller }, error: callerErr } = await admin.auth.getUser(token);
-  if (callerErr || !caller) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const { data: profile } = await admin
-    .from("profiles")
-    .select("role, school_id")
-    .eq("id", caller.id)
-    .single();
-
-  if (!["admin"].includes(profile?.role)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const admin = makeAdminClient();
+  const result = await requireAdmin(req, admin);
+  if (result instanceof NextResponse) return result;
+  const { schoolId } = result;
 
   const { username, password, full_name, role, notification_email } = await req.json();
 
@@ -63,7 +40,7 @@ export async function POST(req: NextRequest) {
     full_name: full_name ?? null,
     role,
     notification_email: notification_email ?? null,
-    school_id: profile?.school_id ?? null,
+    school_id: schoolId ?? null,
   });
 
   return NextResponse.json({ success: true, userId: data.user.id });

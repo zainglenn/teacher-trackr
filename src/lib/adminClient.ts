@@ -27,6 +27,13 @@ export async function requireAdmin(
     .eq("id", user.id)
     .single();
 
+  // Platform admins can act as school admin by supplying x-school-id header
+  if (profile?.role === "platform_admin") {
+    const overrideSchoolId = req.headers.get("x-school-id");
+    if (!overrideSchoolId) return NextResponse.json({ error: "Forbidden — missing x-school-id" }, { status: 403 });
+    return { callerId: user.id, schoolId: overrideSchoolId };
+  }
+
   if (profile?.role !== "admin") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }

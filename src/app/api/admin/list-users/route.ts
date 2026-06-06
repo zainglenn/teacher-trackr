@@ -1,34 +1,11 @@
-import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
+import { makeAdminClient, requireAdmin } from "@/lib/adminClient";
 
 export async function GET(req: NextRequest) {
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!serviceRoleKey) {
-    return NextResponse.json({ error: "Service role key not configured" }, { status: 500 });
-  }
-
-  const admin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    serviceRoleKey,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-
-  const authHeader = req.headers.get("authorization");
-  const token = authHeader?.replace(/^[Bb]earer /, "");
-  if (!token) return NextResponse.json({ error: "Unauthorized: missing token" }, { status: 401 });
-
-  const { data: { user: caller }, error: callerErr } = await admin.auth.getUser(token);
-  if (callerErr || !caller) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const { data: profile } = await admin
-    .from("profiles")
-    .select("role, school_id")
-    .eq("id", caller.id)
-    .single();
-
-  if (!["admin"].includes(profile?.role)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const admin = makeAdminClient();
+  const result = await requireAdmin(req, admin);
+  if (result instanceof NextResponse) return result;
+  const { schoolId } = result;
 
   let query = admin
     .from("profiles")
@@ -36,10 +13,8 @@ export async function GET(req: NextRequest) {
     .not("role", "eq", "platform_admin")
     .order("created_at", { ascending: true });
 
-  // Scope to same school as the calling admin
-  if (profile?.school_id) query = query.eq("school_id", profile.school_id);
+  if (schoolId) query = query.eq("school_id", schoolId);
 
   const { data } = await query;
-
   return NextResponse.json({ users: data ?? [] });
 }

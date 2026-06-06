@@ -9,7 +9,8 @@ export async function getFreshToken(): Promise<string | null> {
 
 export async function adminFetch(
   path: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
+  extraHeaders?: Record<string, string>
 ): Promise<Response> {
   const token = await getFreshToken();
   if (!token) throw new Error("Not authenticated");
@@ -18,6 +19,7 @@ export async function adminFetch(
     headers: {
       "content-type": "application/json",
       authorization: `Bearer ${token}`,
+      ...(extraHeaders ?? {}),
       ...(options.headers ?? {}),
     },
   });

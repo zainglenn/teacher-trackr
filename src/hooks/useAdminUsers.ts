@@ -11,16 +11,21 @@ async function getFreshToken(): Promise<string | null> {
   return refreshed?.access_token ?? null;
 }
 
-export function useAdminUsers() {
+export function useAdminUsers(overrideSchoolId?: string | null) {
   const [users, setUsers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // When platform admin is managing a school, inject x-school-id header
+  function schoolHeader(): Record<string, string> {
+    return overrideSchoolId ? { "x-school-id": overrideSchoolId } : {};
+  }
 
   const fetchUsers = useCallback(async () => {
     const token = await getFreshToken();
     if (!token) return;
 
     let res = await fetch("/api/admin/list-users", {
-      headers: { authorization: `Bearer ${token}` },
+      headers: { authorization: `Bearer ${token}`, ...schoolHeader() },
     });
 
     if (res.status === 401) {
@@ -28,14 +33,14 @@ export function useAdminUsers() {
       const retryToken = session?.access_token;
       if (!retryToken) return;
       res = await fetch("/api/admin/list-users", {
-        headers: { authorization: `Bearer ${retryToken}` },
+        headers: { authorization: `Bearer ${retryToken}`, ...schoolHeader() },
       });
     }
 
     const json = await res.json();
     setUsers(json.users ?? []);
     setLoading(false);
-  }, []);
+  }, [overrideSchoolId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
@@ -51,7 +56,7 @@ export function useAdminUsers() {
 
     const res = await fetch("/api/admin/create-user", {
       method: "POST",
-      headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+      headers: { "content-type": "application/json", authorization: `Bearer ${token}`, ...schoolHeader() },
       body: JSON.stringify({ username, password, full_name, role, notification_email }),
     });
     const json = await res.json();
@@ -68,7 +73,7 @@ export function useAdminUsers() {
 
     const res = await fetch("/api/admin/update-user", {
       method: "PATCH",
-      headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+      headers: { "content-type": "application/json", authorization: `Bearer ${token}`, ...schoolHeader() },
       body: JSON.stringify({ userId, ...updates }),
     });
     const json = await res.json();
@@ -82,7 +87,7 @@ export function useAdminUsers() {
 
     const res = await fetch("/api/admin/delete-user", {
       method: "DELETE",
-      headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+      headers: { "content-type": "application/json", authorization: `Bearer ${token}`, ...schoolHeader() },
       body: JSON.stringify({ userId }),
     });
     const json = await res.json();
@@ -90,5 +95,18 @@ export function useAdminUsers() {
     setUsers((prev) => prev.filter((u) => u.id !== userId));
   }
 
-  return { users, loading, createUser, updateUser, deleteUser };
+  async function resetPassword(userId: string, newPassword: string) {
+    const token = await getFreshToken();
+    if (!token) throw new Error("Not authenticated");
+
+    const res = await fetch("/api/admin/reset-user-password", {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${token}`, ...schoolHeader() },
+      body: JSON.stringify({ userId, newPassword }),
+    });
+    const json = await res.json();
+    if (json.error) throw new Error(json.error);
+  }
+
+  return { users, loading, createUser, updateUser, deleteUser, resetPassword };
 }

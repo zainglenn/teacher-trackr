@@ -1,5 +1,5 @@
-import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
+import { makeAdminClient, requireAdmin } from "@/lib/adminClient";
 
 const USERNAME_RE = /^[a-zA-Z0-9._]{2,30}$/;
 
@@ -8,29 +8,21 @@ function toAuthEmail(username: string): string {
 }
 
 export async function PATCH(req: NextRequest) {
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!serviceRoleKey) return NextResponse.json({ error: "Service role key not configured" }, { status: 500 });
-
-  const admin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    serviceRoleKey,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-
-  const authHeader = req.headers.get("authorization");
-  const token = authHeader?.replace(/^[Bb]earer /, "");
-  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const { data: { user: caller }, error: callerErr } = await admin.auth.getUser(token);
-  if (callerErr || !caller) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const { data: callerProfile } = await admin.from("profiles").select("role").eq("id", caller.id).single();
-  if (!["admin"].includes(callerProfile?.role)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const admin = makeAdminClient();
+  const result = await requireAdmin(req, admin);
+  if (result instanceof NextResponse) return result;
+  const { schoolId } = result;
 
   const { userId, username, full_name, role, notification_email, subject_id } = await req.json();
   if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
+
+  // Verify target belongs to this school
+  if (schoolId) {
+    const { data: target } = await admin.from("profiles").select("school_id").eq("id", userId).single();
+    if (target?.school_id !== schoolId) {
+      return NextResponse.json({ error: "User not found in this school" }, { status: 404 });
+    }
+  }
 
   if (username !== undefined && !USERNAME_RE.test(username)) {
     return NextResponse.json({ error: "Invalid username format" }, { status: 400 });
@@ -42,7 +34,6 @@ export async function PATCH(req: NextRequest) {
   if (notification_email !== undefined) profileUpdates.notification_email = notification_email || null;
   if (subject_id !== undefined) profileUpdates.subject_id = subject_id || null;
 
-  // If username is changing, update the Supabase auth email too
   if (username !== undefined) {
     profileUpdates.username = username;
     profileUpdates.email = toAuthEmail(username);

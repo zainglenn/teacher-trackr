@@ -1,38 +1,23 @@
-import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
+import { makeAdminClient, requireAdmin } from "@/lib/adminClient";
 
 export async function DELETE(req: NextRequest) {
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!serviceRoleKey) {
-    return NextResponse.json({ error: "Service role key not configured" }, { status: 500 });
-  }
-
-  const admin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    serviceRoleKey,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  );
-
-  const authHeader = req.headers.get("authorization");
-  const token = authHeader?.replace(/^[Bb]earer /, "");
-  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const { data: { user: caller }, error: callerErr } = await admin.auth.getUser(token);
-  if (callerErr || !caller) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const { data: profile } = await admin
-    .from("profiles")
-    .select("role")
-    .eq("id", caller.id)
-    .single();
-
-  if (!["admin"].includes(profile?.role)) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  const admin = makeAdminClient();
+  const result = await requireAdmin(req, admin);
+  if (result instanceof NextResponse) return result;
+  const { callerId, schoolId } = result;
 
   const { userId } = await req.json();
   if (!userId) return NextResponse.json({ error: "userId required" }, { status: 400 });
-  if (userId === caller.id) return NextResponse.json({ error: "Cannot delete yourself" }, { status: 400 });
+  if (userId === callerId) return NextResponse.json({ error: "Cannot delete yourself" }, { status: 400 });
+
+  // Verify target belongs to this school
+  if (schoolId) {
+    const { data: target } = await admin.from("profiles").select("school_id").eq("id", userId).single();
+    if (target?.school_id !== schoolId) {
+      return NextResponse.json({ error: "User not found in this school" }, { status: 404 });
+    }
+  }
 
   const { error } = await admin.auth.admin.deleteUser(userId);
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });

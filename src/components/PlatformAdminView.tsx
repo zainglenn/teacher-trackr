@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useCallback, useEffect } from "react";
-import { Building2, Plus, Search, MoreHorizontal, Eye, Ban, CheckCircle } from "lucide-react";
+import { Building2, Plus, Search, MoreHorizontal, Eye, Ban, CheckCircle, Settings } from "lucide-react";
 import { PageContainer } from "@/components/PageContainer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { ConfirmModal } from "@/components/ui/modal";
 import { CreateSchoolModal } from "@/components/CreateSchoolModal";
 import { SchoolDetailSheet } from "@/components/SchoolDetailSheet";
+import { PlatformSchoolPanel } from "@/components/PlatformSchoolPanel";
+import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 
 export interface SchoolRow {
@@ -43,11 +45,13 @@ function formatDate(iso: string) {
 }
 
 export function PlatformAdminView() {
+  const { user } = useAuth();
   const [schools, setSchools] = useState<SchoolRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
   const [detailSchoolId, setDetailSchoolId] = useState<string | null>(null);
+  const [manageSchool, setManageSchool] = useState<SchoolRow | null>(null);
   const [suspendTarget, setSuspendTarget] = useState<SchoolRow | null>(null);
   const [suspendConfirmValue, setSuspendConfirmValue] = useState("");
   const [suspendLoading, setSuspendLoading] = useState(false);
@@ -96,6 +100,17 @@ export function PlatformAdminView() {
       body: JSON.stringify({ schoolId }),
     });
     setSchools((prev) => prev.map((s) => s.id === schoolId ? { ...s, is_active: true } : s));
+  }
+
+  // Show full school admin panel when "Manage School" is selected
+  if (manageSchool) {
+    return (
+      <PlatformSchoolPanel
+        school={manageSchool}
+        platformAdminId={user?.id ?? ""}
+        onBack={() => setManageSchool(null)}
+      />
+    );
   }
 
   return (
@@ -196,6 +211,9 @@ export function PlatformAdminView() {
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => setDetailSchoolId(school.id)}>
                               <Eye className="h-3.5 w-3.5 mr-2" /> View
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => { setManageSchool(school); }}>
+                              <Settings className="h-3.5 w-3.5 mr-2" /> Manage School
                             </DropdownMenuItem>
                             {school.is_active ? (
                               <DropdownMenuItem

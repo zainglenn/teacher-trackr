@@ -7,7 +7,7 @@ import { Modal, ModalFooter, ModalCancel, ConfirmModal } from "@/components/ui/m
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Trash2, Pencil, Search } from "lucide-react";
+import { Plus, Trash2, Pencil, Search, KeyRound } from "lucide-react";
 import { useAdminUsers } from "@/hooks/useAdminUsers";
 import { useSubjects } from "@/hooks/useSubjects";
 import { Profile, Role } from "@/types";
@@ -31,11 +31,16 @@ function userInitials(name: string | null, username: string) {
   return username.slice(0, 2).toUpperCase();
 }
 
-export function ManageUsersView({ currentUserId }: { currentUserId: string }) {
-  const { users, loading, createUser, updateUser, deleteUser } = useAdminUsers();
-  const { subjects } = useSubjects();
+interface Props {
+  currentUserId: string;
+  overrideSchoolId?: string | null;
+}
 
-  // Inline subject edit state: userId → "editing" | null
+export function ManageUsersView({ currentUserId, overrideSchoolId }: Props) {
+  const { users, loading, createUser, updateUser, deleteUser, resetPassword } = useAdminUsers(overrideSchoolId);
+  const { subjects } = useSubjects(overrideSchoolId);
+
+  // Inline subject edit state
   const [editingSubjectFor, setEditingSubjectFor] = useState<string | null>(null);
   const [subjectEditSaving, setSubjectEditSaving] = useState(false);
 
@@ -67,6 +72,12 @@ export function ManageUsersView({ currentUserId }: { currentUserId: string }) {
   const [editNotifEmail, setEditNotifEmail] = useState("");
   const [editError, setEditError] = useState("");
   const [editSaving, setEditSaving] = useState(false);
+
+  // Reset password dialog
+  const [resetTarget, setResetTarget] = useState<Profile | null>(null);
+  const [resetPw, setResetPw] = useState("");
+  const [resetError, setResetError] = useState("");
+  const [resetSaving, setResetSaving] = useState(false);
 
   // Delete confirm
   const [confirmDelete, setConfirmDelete] = useState<Profile | null>(null);
@@ -103,6 +114,12 @@ export function ManageUsersView({ currentUserId }: { currentUserId: string }) {
     setEditRole(user.role as Role);
     setEditNotifEmail(user.notification_email ?? "");
     setEditError("");
+  }
+
+  function openResetPassword(user: Profile) {
+    setResetTarget(user);
+    setResetPw("");
+    setResetError("");
   }
 
   async function handleAdd() {
@@ -174,6 +191,17 @@ export function ManageUsersView({ currentUserId }: { currentUserId: string }) {
     } finally { setDeleteSaving(false); }
   }
 
+  async function handleResetPassword() {
+    if (!resetTarget || resetPw.length < 6) return;
+    setResetSaving(true); setResetError("");
+    try {
+      await resetPassword(resetTarget.id, resetPw);
+      setResetTarget(null);
+    } catch (e) {
+      setResetError(e instanceof Error ? e.message : "Failed to reset password");
+    } finally { setResetSaving(false); }
+  }
+
   if (loading) return null;
 
   return (
@@ -222,7 +250,7 @@ export function ManageUsersView({ currentUserId }: { currentUserId: string }) {
                 <th className="text-left px-4 py-2.5 font-medium text-muted-foreground w-36">Role</th>
                 <th className="text-left px-4 py-2.5 font-medium text-muted-foreground w-40 hidden lg:table-cell">Subject</th>
                 <th className="text-left px-4 py-2.5 font-medium text-muted-foreground w-28 hidden md:table-cell">Joined</th>
-                <th className="w-20 px-4" />
+                <th className="w-24 px-4" />
               </tr>
             </thead>
             <tbody>
@@ -254,7 +282,6 @@ export function ManageUsersView({ currentUserId }: { currentUserId: string }) {
                               <span className="text-xs text-muted-foreground bg-muted px-1.5 py-0.5 rounded">you</span>
                             )}
                           </div>
-                          {/* Show username inline on small screens */}
                           <div className="sm:hidden text-xs text-muted-foreground mt-0.5 font-mono">
                             {user.username}
                           </div>
@@ -323,6 +350,14 @@ export function ManageUsersView({ currentUserId }: { currentUserId: string }) {
                     {/* Actions */}
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1 justify-end">
+                        <Button
+                          variant="ghost" size="sm"
+                          className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
+                          onClick={() => openResetPassword(user)}
+                          title="Reset password"
+                        >
+                          <KeyRound className="h-3.5 w-3.5" />
+                        </Button>
                         <Button
                           variant="ghost" size="sm"
                           className="h-7 w-7 p-0 text-muted-foreground hover:text-foreground"
@@ -471,6 +506,47 @@ export function ManageUsersView({ currentUserId }: { currentUserId: string }) {
           <ModalCancel onClick={() => setEditUser(null)} />
           <Button onClick={handleEdit} disabled={editSaving}>
             {editSaving ? "Saving…" : "Save Changes"}
+          </Button>
+        </ModalFooter>
+      </Modal>
+
+      {/* Reset password dialog */}
+      <Modal
+        open={!!resetTarget}
+        onClose={() => setResetTarget(null)}
+        title="Reset Password"
+      >
+        {resetTarget && (
+          <div className="space-y-3 py-2">
+            <div className="flex items-center gap-3 p-3 bg-muted/40 rounded-lg">
+              <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center text-sm font-semibold text-muted-foreground shrink-0">
+                {userInitials(resetTarget.full_name, resetTarget.username ?? "")}
+              </div>
+              <div>
+                <p className="text-sm font-medium">{resetTarget.full_name ?? resetTarget.username}</p>
+                <p className="text-xs text-muted-foreground font-mono">{resetTarget.username}</p>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label>New Password <span className="text-rose-500">*</span></Label>
+              <Input
+                type="password"
+                placeholder="Min. 6 characters"
+                value={resetPw}
+                onChange={(e) => setResetPw(e.target.value)}
+                autoFocus
+              />
+              <p className="text-xs text-muted-foreground">
+                The user will need to use this password on their next login.
+              </p>
+            </div>
+            {resetError && <p className="text-sm text-rose-600 bg-rose-50 px-3 py-2 rounded-lg">{resetError}</p>}
+          </div>
+        )}
+        <ModalFooter>
+          <ModalCancel onClick={() => setResetTarget(null)} />
+          <Button onClick={handleResetPassword} disabled={resetSaving || resetPw.length < 6}>
+            {resetSaving ? "Resetting…" : "Set Password"}
           </Button>
         </ModalFooter>
       </Modal>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, createContext, useContext } from "react";
 import { Plus, Trash2, CheckSquare, Square } from "lucide-react";
 import { PageContainer } from "@/components/PageContainer";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,15 @@ import { adminFetch } from "@/lib/authToken";
 import { nextAvailableSlot, SUBJECT_SLOTS, getSlotLabel, getSubjectSlotStyle, type SubjectSlot } from "@/lib/subjectSlot";
 import { Subject, GradeLevel, StandardSet, Standard, SchoolCurriculum, ClassAssignment, Profile } from "@/types";
 import { useTeachers } from "@/hooks/useTeachers";
+
+// Context that provides an optional school ID override (used by platform admin)
+const SchoolOverrideCtx = createContext<string | null>(null);
+
+function useSchoolFetch() {
+  const overrideId = useContext(SchoolOverrideCtx);
+  return (path: string, options?: RequestInit) =>
+    adminFetch(path, options, overrideId ? { "x-school-id": overrideId } : undefined);
+}
 
 type Tab = "subjects" | "grade-levels" | "standard-sets" | "class-assignments";
 
@@ -28,6 +37,7 @@ const STRANDS = ["RL", "RI", "W", "SL", "L"];
 // ── Subjects Tab ─────────────────────────────────────────────────────────────
 
 function SubjectsTab() {
+  const doFetch = useSchoolFetch();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
@@ -37,7 +47,7 @@ function SubjectsTab() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const res = await adminFetch("/api/admin/list-subjects");
+    const res = await doFetch("/api/admin/list-subjects");
     const json = await res.json();
     setSubjects(json.subjects ?? []);
     setLoading(false);
@@ -52,7 +62,7 @@ function SubjectsTab() {
     const usedSlots = subjects.map((s) => s.slot);
     const slot = nextAvailableSlot(usedSlots as SubjectSlot[]);
     try {
-      const res = await adminFetch("/api/admin/create-subject", {
+      const res = await doFetch("/api/admin/create-subject", {
         method: "POST",
         body: JSON.stringify({ name: newName.trim(), slot }),
       });
@@ -67,7 +77,7 @@ function SubjectsTab() {
   }
 
   async function handleDelete(id: string) {
-    await adminFetch("/api/admin/delete-subject", { method: "DELETE", body: JSON.stringify({ id }) });
+    await doFetch("/api/admin/delete-subject", { method: "DELETE", body: JSON.stringify({ id }) });
     await load();
   }
 
@@ -157,6 +167,7 @@ function SubjectsTab() {
 // ── Grade Levels Tab ──────────────────────────────────────────────────────────
 
 function GradeLevelsTab() {
+  const doFetch = useSchoolFetch();
   const [gradeLevels, setGradeLevels] = useState<GradeLevel[]>([]);
   const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
@@ -166,7 +177,7 @@ function GradeLevelsTab() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const res = await adminFetch("/api/admin/list-grade-levels");
+    const res = await doFetch("/api/admin/list-grade-levels");
     const json = await res.json();
     setGradeLevels(json.grade_levels ?? []);
     setLoading(false);
@@ -179,7 +190,7 @@ function GradeLevelsTab() {
     setSaving(true);
     setError("");
     try {
-      const res = await adminFetch("/api/admin/create-grade-level", {
+      const res = await doFetch("/api/admin/create-grade-level", {
         method: "POST",
         body: JSON.stringify({ name: newName.trim(), sort_order: gradeLevels.length }),
       });
@@ -194,7 +205,7 @@ function GradeLevelsTab() {
   }
 
   async function handleDelete(id: string) {
-    await adminFetch("/api/admin/delete-grade-level", { method: "DELETE", body: JSON.stringify({ id }) });
+    await doFetch("/api/admin/delete-grade-level", { method: "DELETE", body: JSON.stringify({ id }) });
     await load();
   }
 
@@ -265,6 +276,7 @@ function GradeLevelsTab() {
 // ── Standard Sets Tab ─────────────────────────────────────────────────────────
 
 function StandardSetsTab() {
+  const doFetch = useSchoolFetch();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [gradeLevels, setGradeLevels] = useState<GradeLevel[]>([]);
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>("");
@@ -279,9 +291,9 @@ function StandardSetsTab() {
 
   useEffect(() => {
     Promise.all([
-      adminFetch("/api/admin/list-subjects").then(r => r.json()),
-      adminFetch("/api/admin/list-grade-levels").then(r => r.json()),
-      adminFetch("/api/admin/list-standard-sets").then(r => r.json()),
+      doFetch("/api/admin/list-subjects").then(r => r.json()),
+      doFetch("/api/admin/list-grade-levels").then(r => r.json()),
+      doFetch("/api/admin/list-standard-sets").then(r => r.json()),
     ]).then(([sj, gl, ss]) => {
       setSubjects(sj.subjects ?? []);
       setGradeLevels(gl.grade_levels ?? []);
@@ -294,7 +306,7 @@ function StandardSetsTab() {
     setLoadingAssigned(true);
     setAssigned(null);
     setAssignedStandards([]);
-    const res = await adminFetch(`/api/admin/school-curricula?subject_id=${subjectId}&grade_level_id=${gradeId}`);
+    const res = await doFetch(`/api/admin/school-curricula?subject_id=${subjectId}&grade_level_id=${gradeId}`);
     const json = await res.json();
     const curr: SchoolCurriculum | undefined = (json.school_curricula ?? [])[0];
     setAssigned(curr ?? null);
@@ -317,7 +329,7 @@ function StandardSetsTab() {
   async function handleAssign(standardSetId: string) {
     setSaving(true);
     setError("");
-    const res = await adminFetch("/api/admin/school-curricula", {
+    const res = await doFetch("/api/admin/school-curricula", {
       method: "POST",
       body: JSON.stringify({ standard_set_id: standardSetId, subject_id: selectedSubjectId, grade_level_id: selectedGradeId }),
     });
@@ -329,7 +341,7 @@ function StandardSetsTab() {
 
   async function handleUnassign() {
     setSaving(true);
-    await adminFetch("/api/admin/school-curricula", {
+    await doFetch("/api/admin/school-curricula", {
       method: "DELETE",
       body: JSON.stringify({ subject_id: selectedSubjectId, grade_level_id: selectedGradeId }),
     });
@@ -480,6 +492,7 @@ function StandardSetsTab() {
 // ── Class Assignments Tab ─────────────────────────────────────────────────────
 
 function ClassAssignmentsTab() {
+  const doFetch = useSchoolFetch();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [gradeLevels, setGradeLevels] = useState<GradeLevel[]>([]);
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>("");
@@ -494,8 +507,8 @@ function ClassAssignmentsTab() {
 
   useEffect(() => {
     Promise.all([
-      adminFetch("/api/admin/list-subjects").then(r => r.json()),
-      adminFetch("/api/admin/list-grade-levels").then(r => r.json()),
+      doFetch("/api/admin/list-subjects").then(r => r.json()),
+      doFetch("/api/admin/list-grade-levels").then(r => r.json()),
     ]).then(([sj, gl]) => {
       setSubjects(sj.subjects ?? []);
       setGradeLevels(gl.grade_levels ?? []);
@@ -505,7 +518,7 @@ function ClassAssignmentsTab() {
   const loadAssignments = useCallback(async (subjectId: string, gradeId: string) => {
     if (!subjectId || !gradeId) return;
     setLoadingAssignments(true);
-    const res = await adminFetch(`/api/admin/list-class-assignments?subject_id=${subjectId}&grade_level_id=${gradeId}`);
+    const res = await doFetch(`/api/admin/list-class-assignments?subject_id=${subjectId}&grade_level_id=${gradeId}`);
     const json = await res.json();
     setAssignments(json.assignments ?? []);
     setLoadingAssignments(false);
@@ -521,7 +534,7 @@ function ClassAssignmentsTab() {
     if (!selectedTeacherId) return;
     setSaving(true);
     setError("");
-    const res = await adminFetch("/api/admin/create-class-assignment", {
+    const res = await doFetch("/api/admin/create-class-assignment", {
       method: "POST",
       body: JSON.stringify({ teacher_id: selectedTeacherId, subject_id: selectedSubjectId, grade_level_id: selectedGradeId }),
     });
@@ -534,7 +547,7 @@ function ClassAssignmentsTab() {
   }
 
   async function handleToggleLead(assignment: ClassAssignment) {
-    await adminFetch("/api/admin/update-class-assignment", {
+    await doFetch("/api/admin/update-class-assignment", {
       method: "PATCH",
       body: JSON.stringify({ id: assignment.id, is_lead: !assignment.is_lead }),
     });
@@ -543,7 +556,7 @@ function ClassAssignmentsTab() {
 
   async function handleRemove(id: string) {
     if (!confirm("Remove this teacher from the class assignment?")) return;
-    await adminFetch("/api/admin/delete-class-assignment", { method: "DELETE", body: JSON.stringify({ id }) });
+    await doFetch("/api/admin/delete-class-assignment", { method: "DELETE", body: JSON.stringify({ id }) });
     await loadAssignments(selectedSubjectId, selectedGradeId);
   }
 
@@ -685,11 +698,12 @@ function ClassAssignmentsTab() {
 
 // ── Shell ─────────────────────────────────────────────────────────────────────
 
-export function SchoolSetupView() {
+export function SchoolSetupView({ overrideSchoolId }: { overrideSchoolId?: string | null } = {}) {
   const [tab, setTab] = useState<Tab>("subjects");
   const active = TABS.find(t => t.key === tab)!;
 
   return (
+    <SchoolOverrideCtx.Provider value={overrideSchoolId ?? null}>
     <PageContainer
       title="School Setup"
       description="Configure subjects, grade levels, standard sets, and teacher assignments."
@@ -736,5 +750,6 @@ export function SchoolSetupView() {
         </div>
       </div>
     </PageContainer>
+    </SchoolOverrideCtx.Provider>
   );
 }
