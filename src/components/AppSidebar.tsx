@@ -81,7 +81,6 @@ const NAV_ITEMS: NavItem[] = [
   { key: "hod-settings",      label: "HOD Settings",       icon: Settings2,       roles: ["hod"],                     group: "other" },
   { key: "manage-users",      label: "Manage Users",       icon: UserCog,         roles: ["admin"] },
   { key: "school-setup",      label: "School Setup",       icon: Building2,       roles: ["admin"] },
-  { key: "platform-settings", label: "Platform Settings",  icon: ShieldCheck,     roles: ["admin"] },
   { key: "curriculum-audit",  label: "Curriculum Audit",   icon: Search,          roles: ["admin"] },
   { key: "initiatives",       label: "Initiatives",        icon: Rocket,          roles: ["admin", "hod"] },
   { key: "schools",           label: "Schools",            icon: Building2,       roles: ["platform_admin"] },
