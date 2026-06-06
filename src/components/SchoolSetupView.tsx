@@ -177,6 +177,95 @@ function RootPage({ onGradeClick }: { onGradeClick: (id: string, name: string) =
   );
 }
 
+// ── Classes section (root page) ───────────────────────────────────────────────
+
+function ClassesSection() {
+  const doFetch = useSchoolFetch();
+  const [teachers, setTeachers] = useState<Profile[]>([]);
+  const [classes, setClasses] = useState<ClassRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [addingFor, setAddingFor] = useState<string | null>(null);
+  const [newName, setNewName] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const load = useCallback(async () => {
+    const [usersRes, clsRes] = await Promise.all([
+      doFetch("/api/admin/list-users").then(r => r.json()),
+      doFetch("/api/admin/list-classes").then(r => r.json()),
+    ]);
+    setTeachers((usersRes.users ?? []).filter((u: Profile) => u.role === "teacher" || u.role === "hod"));
+    setClasses(clsRes.classes ?? []);
+    setLoading(false);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => { load(); }, [load]);
+
+  async function handleAdd(teacherId: string) {
+    if (!newName.trim()) return;
+    setSaving(true);
+    const res = await doFetch("/api/admin/create-class", { method: "POST", body: JSON.stringify({ teacher_id: teacherId, name: newName.trim() }) });
+    const json = await res.json();
+    if (json.error) { toast.error(json.error); setSaving(false); return; }
+    setClasses(prev => [...prev, { id: json.class?.id, name: newName.trim(), teacher_id: teacherId }]);
+    setNewName(""); setAddingFor(null); setSaving(false);
+    toast.success("Class created");
+  }
+
+  async function handleDelete(id: string) {
+    await doFetch("/api/admin/delete-class", { method: "DELETE", body: JSON.stringify({ id }) });
+    setClasses(prev => prev.filter(c => c.id !== id));
+    toast.success("Class deleted");
+  }
+
+  if (loading) return <div className="text-sm text-muted-foreground py-4 text-center">Loading…</div>;
+  if (teachers.length === 0) return <p className="text-sm text-muted-foreground">Add teachers in Manage Users first.</p>;
+
+  return (
+    <div className="space-y-4">
+      {teachers.map(teacher => {
+        const teacherClasses = classes.filter(c => c.teacher_id === teacher.id);
+        const isAdding = addingFor === teacher.id;
+        return (
+          <div key={teacher.id}>
+            <p className="text-xs font-semibold text-muted-foreground mb-1.5">{teacher.full_name ?? teacher.username}</p>
+            <div className="border border-border rounded-lg overflow-hidden divide-y divide-border">
+              {teacherClasses.map(cls => (
+                <div key={cls.id} className="flex items-center justify-between px-4 py-2.5">
+                  <span className="text-sm font-medium">{cls.name}</span>
+                  <button onClick={() => handleDelete(cls.id)} className="text-muted-foreground hover:text-destructive transition-colors p-1" aria-label="Delete">
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+              <div className="px-4 py-2.5 bg-muted/10">
+                {isAdding ? (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={newName}
+                      onChange={e => setNewName(e.target.value)}
+                      onKeyDown={e => { if (e.key === "Enter") handleAdd(teacher.id); if (e.key === "Escape") { setAddingFor(null); setNewName(""); } }}
+                      placeholder="e.g. Class A"
+                      autoFocus
+                      className="h-7 w-32 px-2 text-sm border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring/50"
+                    />
+                    <Button size="sm" className="h-7 text-xs" onClick={() => handleAdd(teacher.id)} disabled={saving || !newName.trim()}>Add</Button>
+                    <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => { setAddingFor(null); setNewName(""); }}>Cancel</Button>
+                  </div>
+                ) : (
+                  <button onClick={() => { setAddingFor(teacher.id); setNewName(""); }} className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                    <Plus className="h-3.5 w-3.5" /> Add class
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Grade page — subjects ─────────────────────────────────────────────────────
 
 function GradePage({ gradeId, gradeName, onSubjectClick }: { gradeId: string; gradeName: string; onSubjectClick: (id: string, name: string) => void }) {
@@ -324,9 +413,6 @@ function SubjectPage({ gradeId, subjectId, subjectName }: { gradeId: string; sub
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  // Inline class creation
-  const [newClassName, setNewClassName] = useState("");
-  const [creatingClass, setCreatingClass] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -354,22 +440,6 @@ function SubjectPage({ gradeId, subjectId, subjectName }: { gradeId: string; sub
   function toggleClass(id: string) {
     setSelectedClassIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
     setSaved(false);
-  }
-
-  async function handleCreateClass() {
-    if (!newClassName.trim() || !selectedTeacherId) return;
-    setCreatingClass(true);
-    const res = await doFetch("/api/admin/create-class", {
-      method: "POST",
-      body: JSON.stringify({ teacher_id: selectedTeacherId, name: newClassName.trim() }),
-    });
-    const json = await res.json();
-    if (json.error) { toast.error(json.error); setCreatingClass(false); return; }
-    const newId = json.class?.id;
-    setAllClasses(prev => [...prev, { id: newId, name: newClassName.trim(), teacher_id: selectedTeacherId }]);
-    if (newId) setSelectedClassIds(prev => [...prev, newId]);
-    setNewClassName(""); setCreatingClass(false); setSaved(false);
-    toast.success("Class created and selected");
   }
 
   async function handleSave() {
@@ -425,38 +495,26 @@ function SubjectPage({ gradeId, subjectId, subjectName }: { gradeId: string; sub
       {selectedTeacherId && (
         <div className="space-y-2">
           <Label className="text-sm font-medium">Classes</Label>
-          <p className="text-xs text-muted-foreground">Which classes will this teacher cover for {subjectName}?</p>
-          <div className="border border-border rounded-lg overflow-hidden divide-y divide-border">
-            {teacherClasses.map(cls => (
-              <label key={cls.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/20 cursor-pointer transition-colors">
-                <input
-                  type="checkbox"
-                  checked={selectedClassIds.includes(cls.id)}
-                  onChange={() => toggleClass(cls.id)}
-                  className="h-4 w-4 rounded border-border text-primary"
-                />
-                <span className="text-sm font-medium">{cls.name}</span>
-              </label>
-            ))}
-            {/* Inline create class */}
-            <div className="px-4 py-2.5 bg-muted/10">
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={newClassName}
-                  onChange={e => setNewClassName(e.target.value)}
-                  onKeyDown={e => { if (e.key === "Enter") handleCreateClass(); }}
-                  placeholder="New class name (e.g. Class D)"
-                  className="h-7 flex-1 px-2 text-xs border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring/50"
-                />
-                <Button size="sm" variant="outline" className="h-7 text-xs shrink-0" onClick={handleCreateClass} disabled={creatingClass || !newClassName.trim()}>
-                  {creatingClass ? "…" : "+ Create"}
-                </Button>
-              </div>
+          <p className="text-xs text-muted-foreground">Select which of this teacher&apos;s classes cover {subjectName}.</p>
+          {teacherClasses.length === 0 ? (
+            <div className="rounded-lg border border-dashed border-border px-4 py-4 text-center">
+              <p className="text-sm text-muted-foreground">No classes created for this teacher yet.</p>
+              <p className="text-xs text-muted-foreground mt-1">Go back to School Setup and create classes under <strong>Classes</strong>.</p>
             </div>
-          </div>
-          {teacherClasses.length === 0 && (
-            <p className="text-xs text-muted-foreground">This teacher has no classes yet — create one above.</p>
+          ) : (
+            <div className="border border-border rounded-lg overflow-hidden divide-y divide-border">
+              {teacherClasses.map(cls => (
+                <label key={cls.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/20 cursor-pointer transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={selectedClassIds.includes(cls.id)}
+                    onChange={() => toggleClass(cls.id)}
+                    className="h-4 w-4 rounded border-border text-primary"
+                  />
+                  <span className="text-sm font-medium">{cls.name}</span>
+                </label>
+              ))}
+            </div>
           )}
         </div>
       )}
@@ -488,7 +546,14 @@ export function SchoolSetupView({ overrideSchoolId }: { overrideSchoolId?: strin
       <PageContainer title={pageTitle} description={pageDesc}>
         <Breadcrumb page={page} onNavigate={setPage} />
         {page.type === "root" && (
-          <RootPage onGradeClick={(id, name) => setPage({ type: "grade", gradeId: id, gradeName: name })} />
+          <div className="space-y-8">
+            <RootPage onGradeClick={(id, name) => setPage({ type: "grade", gradeId: id, gradeName: name })} />
+            <div>
+              <p className="text-sm font-semibold text-foreground mb-0.5">Classes</p>
+              <p className="text-xs text-muted-foreground mb-3">Pre-create class sections per teacher. These are assigned when configuring a subject.</p>
+              <ClassesSection />
+            </div>
+          </div>
         )}
         {page.type === "grade" && (
           <GradePage
