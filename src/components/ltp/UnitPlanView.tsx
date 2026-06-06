@@ -457,8 +457,45 @@ export function UnitPlanView({
   const canSubmitUnit = !isHod && isOwner && (unit.status === "draft" || unit.status === "revision") && !!submitUnit;
   const canWithdraw = !isHod && isOwner && unit.status === "submitted" && unit.reviewed_at === null && !!withdrawUnit;
 
+  // Submission blockers — reasons a teacher cannot yet submit this unit
+  const submissionBlockers: string[] = [];
+  if (canSubmitUnit) {
+    if (selectedIds.size === 0) submissionBlockers.push("Map at least one standard to this unit");
+    if (!unit.big_idea?.trim()) submissionBlockers.push("Add an essential question");
+  }
+  const isSubmitBlocked = submissionBlockers.length > 0;
+
+  // HOD approval blocker — HOD cannot approve a unit with no standards mapped
+  const hodApproveBlocked = isHod && unit.status === "submitted" && selectedIds.size === 0;
+
   return (
     <div className="min-h-screen">
+
+      {/* Submission blocker banner — shown to teacher when unit isn't ready to submit */}
+      {canSubmitUnit && isSubmitBlocked && (
+        <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 flex items-start gap-2 mb-4">
+          <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-xs font-semibold text-amber-700">Unit is not ready to submit</p>
+            <ul className="mt-1 space-y-0.5">
+              {submissionBlockers.map((b) => (
+                <li key={b} className="text-sm text-amber-800">· {b}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      )}
+
+      {/* HOD approval blocker banner */}
+      {hodApproveBlocked && (
+        <div className="rounded-xl bg-rose-50 border border-rose-200 px-4 py-3 flex items-start gap-2 mb-4">
+          <AlertTriangle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-xs font-semibold text-rose-700">Cannot approve — no standards mapped</p>
+            <p className="text-sm text-rose-800 mt-1">This unit has no standards mapped to it. Request a revision so the teacher adds standards before you approve.</p>
+          </div>
+        </div>
+      )}
 
       {/* HOD feedback banner */}
       {unit.status === "revision" && unit.hod_feedback && (
@@ -509,7 +546,13 @@ export function UnitPlanView({
         </div>
         <div className="flex items-center gap-2 shrink-0">
           {canSubmitUnit && (
-            <Button size="sm" className="h-8 text-xs bg-blue-600 hover:bg-blue-700 text-white" onClick={() => setSubmitDialogOpen(true)}>
+            <Button
+              size="sm"
+              className={`h-8 text-xs text-white ${isSubmitBlocked ? "bg-blue-300 cursor-not-allowed hover:bg-blue-300" : "bg-blue-600 hover:bg-blue-700"}`}
+              onClick={() => !isSubmitBlocked && setSubmitDialogOpen(true)}
+              disabled={isSubmitBlocked}
+              title={isSubmitBlocked ? submissionBlockers.join(" · ") : undefined}
+            >
               <Send className="h-3.5 w-3.5 mr-1" />
               {unit.status === "revision" ? "Resubmit" : "Submit Unit"}
             </Button>
@@ -520,7 +563,13 @@ export function UnitPlanView({
             </Button>
           )}
           {isHod && unit.status === "submitted" && approveUnit && (
-            <Button size="sm" className="h-8 text-xs bg-emerald-600 hover:bg-emerald-700 text-white" onClick={handleApprove} disabled={actionSaving}>
+            <Button
+              size="sm"
+              className={`h-8 text-xs text-white ${hodApproveBlocked ? "bg-emerald-300 cursor-not-allowed hover:bg-emerald-300" : "bg-emerald-600 hover:bg-emerald-700"}`}
+              onClick={hodApproveBlocked ? undefined : handleApprove}
+              disabled={actionSaving || hodApproveBlocked}
+              title={hodApproveBlocked ? "Cannot approve: no standards mapped to this unit" : undefined}
+            >
               <Check className="h-3.5 w-3.5 mr-1" /> Approve
             </Button>
           )}

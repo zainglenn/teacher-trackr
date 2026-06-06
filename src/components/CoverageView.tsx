@@ -18,13 +18,19 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { Standard } from "@/types";
-import { useStandardPipeline, PipelineStatus } from "@/hooks/useStandardPipeline";
+import { useStandardPipeline, PipelineStatus, PipelineEntry } from "@/hooks/useStandardPipeline";
 import { useDepartmentPipeline } from "@/hooks/useDepartmentPipeline";
 import { useAllSkills } from "@/hooks/useAllSkills";
 import { useTeachers } from "@/hooks/useTeachers";
 import { StandardContextView } from "@/components/StandardDetailView";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { STRAND_COLORS, StrandBadge } from "@/components/ltp/StrandBadge";
+import { CoverageSummaryBar } from "@/components/coverage/CoverageSummaryBar";
+import { CoverageSearchBar } from "@/components/coverage/CoverageSearchBar";
+import { ViewToggle, ViewMode } from "@/components/coverage/ViewToggle";
+import { UnitCoverageGroup } from "@/components/coverage/UnitCoverageGroup";
+import { UnmappedGroup } from "@/components/coverage/UnmappedGroup";
+import { StandardDetailSheet } from "@/components/coverage/StandardDetailSheet";
 
 interface CoverageViewProps {
   standards: Standard[];
@@ -146,54 +152,191 @@ function PipelineSummaryBar({
   );
 }
 
+// ── New teacher coverage view ─────────────────────────────────────────────────
+
+function TeacherCoverageView({
+  standards,
+  teacherId,
+  subjectId,
+  gradeLevelId,
+  contextLabel,
+}: {
+  standards: Standard[];
+  teacherId: string;
+  subjectId: string | null;
+  gradeLevelId: string | null;
+  contextLabel?: string | null;
+}) {
+  const { entries, loading, summary, byUnit, byStrand: byStrandMap } = useStandardPipeline(
+    teacherId, subjectId, gradeLevelId, standards
+  );
+
+  const [query, setQuery] = useState("");
+  const [viewMode, setViewMode] = useState<ViewMode>("unit");
+  const [selectedEntry, setSelectedEntry] = useState<PipelineEntry | null>(null);
+
+  const unmappedEntries = entries.filter((e) => e.status === "unmapped");
+
+  const STRAND_ORDER = ["RL", "RI", "W", "SL", "L"];
+  const STRAND_FULL: Record<string, string> = {
+    RL: "Reading Literature", RI: "Reading Informational Text",
+    W: "Writing", SL: "Speaking & Listening", L: "Language",
+  };
+
+  return (
+    <PageContainer
+      title="Standards Coverage"
+      description={contextLabel ?? "See how your standards are distributed across units."}
+    >
+      <div className="space-y-6">
+        {/* Summary bar */}
+        <CoverageSummaryBar summary={summary} entries={entries} loading={loading} />
+
+        {/* Search + view toggle */}
+        <div className="flex items-center gap-3">
+          <CoverageSearchBar query={query} onChange={setQuery} />
+          <ViewToggle mode={viewMode} onChange={setViewMode} />
+        </div>
+
+        {/* Standard groups */}
+        <div className="space-y-3">
+          {viewMode === "unit" ? (
+            <>
+              {[...byUnit.values()].map((group) => (
+                <UnitCoverageGroup
+                  key={group.unitId}
+                  unitId={group.unitId}
+                  unitNumber={group.unitNumber}
+                  unitTitle={group.unitTitle}
+                  entries={group.entries}
+                  onSelect={setSelectedEntry}
+                  query={query}
+                />
+              ))}
+              {byUnit.size === 0 && !loading && (
+                <div className="flex items-center justify-center h-32 border border-dashed border-border rounded-lg">
+                  <p className="text-sm text-muted-foreground">No units created yet. Add units in your Long Term Plan.</p>
+                </div>
+              )}
+            </>
+          ) : (
+            STRAND_ORDER.map((strand) => {
+              const strandEntries = (byStrandMap.get(strand) ?? []).filter((e) => e.status !== "unmapped");
+              if (strandEntries.length === 0) return null;
+              const filtered = query
+                ? strandEntries.filter((e) =>
+                    e.standard.code.toLowerCase().includes(query.toLowerCase()) ||
+                    e.standard.description.toLowerCase().includes(query.toLowerCase())
+                  )
+                : strandEntries;
+              if (query && filtered.length === 0) return null;
+              const taught = strandEntries.filter((e) => e.status === "taught").length;
+              return (
+                <div key={strand} className="border border-border rounded-lg overflow-hidden">
+                  <div className="flex items-center gap-3 px-4 py-3 bg-muted/20">
+                    <StrandBadge code={`${strand}.6.1`} />
+                    <span className="text-sm font-semibold text-foreground flex-1">
+                      {STRAND_FULL[strand] ?? strand}
+                    </span>
+                    <span className="text-xs text-muted-foreground tabular-nums">
+                      {taught}/{strandEntries.length} taught
+                    </span>
+                  </div>
+                  <div className="divide-y divide-border/50">
+                    {filtered.map((e) => (
+                      <div
+                        key={e.standard.id}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setSelectedEntry(e)}
+                        onKeyDown={(ev) => { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); setSelectedEntry(e); }}}
+                        className="flex items-center gap-3 px-4 py-2.5 hover:bg-muted/30 cursor-pointer transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset group"
+                      >
+                        <div className="shrink-0"><StrandBadge code={e.standard.code} /></div>
+                        <p className="flex-1 text-sm text-foreground leading-snug line-clamp-1 min-w-0">{e.standard.description}</p>
+                        <div className="shrink-0">
+                          {/* inline status badge */}
+                          {(() => {
+                            const cfg: Record<string, {label:string;bg:string;text:string;border:string}> = {
+                              taught:    {label:"Taught",    bg:"var(--status-taught-bg)",   text:"var(--status-taught-text)",   border:"var(--status-taught-border)"},
+                              scheduled: {label:"Scheduled", bg:"var(--status-behind-bg)",   text:"var(--status-behind-text)",   border:"var(--status-behind-border)"},
+                              planned:   {label:"In a unit", bg:"var(--status-pending-bg)",  text:"var(--status-pending-text)",  border:"var(--status-pending-border)"},
+                              unmapped:  {label:"Not mapped",bg:"var(--status-overdue-bg)",  text:"var(--status-overdue-text)",  border:"var(--status-overdue-border)"},
+                            };
+                            const c = cfg[e.status];
+                            return <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[11px] font-medium border" style={{background:c.bg,color:c.text,borderColor:c.border}}>{c.label}</span>;
+                          })()}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })
+          )}
+
+          {/* Unmapped — always last */}
+          <UnmappedGroup
+            entries={unmappedEntries}
+            onSelect={setSelectedEntry}
+            query={query}
+          />
+        </div>
+      </div>
+
+      <StandardDetailSheet
+        entry={selectedEntry}
+        allStandards={standards}
+        open={!!selectedEntry}
+        onClose={() => setSelectedEntry(null)}
+      />
+    </PageContainer>
+  );
+}
+
+// ── Main export ───────────────────────────────────────────────────────────────
+
 export function CoverageView({ standards, byStrand, teacherId, isHod, contextLabel, subjectId, gradeLevelId }: CoverageViewProps) {
   const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(null);
   const { teachers } = useTeachers();
 
   const effectiveTeacherId = isHod ? selectedTeacherId : teacherId;
-
   const showAllTeachers = isHod && !selectedTeacherId;
 
-  return (
+  return showAllTeachers ? (
     <PageContainer
       title="Standards Coverage"
-      description={contextLabel ?? "Coverage is computed from your long term plans — no extra steps needed."}
+      description={contextLabel ?? "Department-wide standards coverage."}
     >
       <div className="space-y-4">
-        {isHod && (
-          <div className="flex items-center gap-2">
-            <Select
-              value={selectedTeacherId ?? "all"}
-              onValueChange={(v) => { setSelectedTeacherId(v === "all" ? null : v); }}
-            >
-              <SelectTrigger className="w-56 h-8 text-sm">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Teachers</SelectItem>
-                {teachers.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>{t.full_name ?? t.email}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-
-        {showAllTeachers ? (
-          <DepartmentCoverageGrid standards={standards} byStrand={byStrand} subjectId={subjectId} gradeLevelId={gradeLevelId} />
-        ) : (
-          <CoverageGrid
-            key={`${effectiveTeacherId}-${subjectId ?? "none"}-${gradeLevelId ?? "none"}`}
-            standards={standards}
-            byStrand={byStrand}
-            teacherId={effectiveTeacherId ?? teacherId}
-            subjectId={subjectId ?? null}
-            gradeLevelId={gradeLevelId ?? null}
-            isHod={isHod}
-          />
-        )}
+        <div className="flex items-center gap-2">
+          <Select
+            value={selectedTeacherId ?? "all"}
+            onValueChange={(v) => { setSelectedTeacherId(v === "all" ? null : v); }}
+          >
+            <SelectTrigger className="w-56 h-8 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Teachers</SelectItem>
+              {teachers.map((t) => (
+                <SelectItem key={t.id} value={t.id}>{t.full_name ?? t.email}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <DepartmentCoverageGrid standards={standards} byStrand={byStrand} subjectId={subjectId} gradeLevelId={gradeLevelId} />
       </div>
     </PageContainer>
+  ) : (
+    <TeacherCoverageView
+      key={`${effectiveTeacherId}-${subjectId ?? "none"}-${gradeLevelId ?? "none"}`}
+      standards={standards}
+      teacherId={effectiveTeacherId ?? teacherId}
+      subjectId={subjectId ?? null}
+      gradeLevelId={gradeLevelId ?? null}
+      contextLabel={contextLabel}
+    />
   );
 }
 

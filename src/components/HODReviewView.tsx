@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Modal, ModalFooter, ModalCancel } from "@/components/ui/modal";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Check, RotateCcw, ClipboardCheck, ChevronDown, ChevronRight, XCircle } from "lucide-react";
+import { Check, RotateCcw, ClipboardCheck, ChevronDown, ChevronRight, XCircle, AlertTriangle } from "lucide-react";
 import { LongTermPlan, LTPUnit, Standard } from "@/types";
 import { UnitPlanView } from "@/components/ltp/UnitPlanView";
 import { useLongTermPlans } from "@/hooks/useLongTermPlans";
@@ -230,12 +230,19 @@ export function HODReviewView({ teacherId, standards, schoolId }: HODReviewViewP
                   <div className="space-y-2">
                     {units.map((unit) => {
                       const counts = strandCounts(unit);
+                      const standardCount = (unit.standards ?? []).length;
+                      const approveBlocked = standardCount === 0;
                       return (
-                        <div key={unit.id} className="flex items-start gap-3 p-3 rounded-lg border bg-muted/20">
+                        <div key={unit.id} className={`flex items-start gap-3 p-3 rounded-lg border bg-muted/20 ${approveBlocked ? "border-amber-200" : ""}`}>
                           <div className="flex-1 min-w-0 space-y-1">
                             <div className="flex items-center gap-2 flex-wrap">
                               <span className="text-xs text-muted-foreground">T{unit.term} · U{unit.unit_number}</span>
                               <span className="text-sm font-medium">{unit.title}</span>
+                              {approveBlocked && (
+                                <span className="inline-flex items-center gap-1 text-[11px] font-medium px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200">
+                                  <AlertTriangle className="h-3 w-3" /> No standards
+                                </span>
+                              )}
                             </div>
                             {unit.big_idea && (
                               <p className="text-xs text-muted-foreground line-clamp-1">{unit.big_idea}</p>
@@ -258,8 +265,13 @@ export function HODReviewView({ teacherId, standards, schoolId }: HODReviewViewP
                               onClick={() => { setSelectedUnitId(unit.id); setSelectedPlanId(plan.id); }}>
                               Open Unit
                             </Button>
-                            <Button size="sm" className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
-                              onClick={() => approveUnit(unit.id, plan.id)}>
+                            <Button
+                              size="sm"
+                              className={`h-7 text-xs text-white ${approveBlocked ? "bg-emerald-300 cursor-not-allowed hover:bg-emerald-300" : "bg-emerald-600 hover:bg-emerald-700"}`}
+                              onClick={approveBlocked ? undefined : () => approveUnit(unit.id, plan.id)}
+                              disabled={approveBlocked}
+                              title={approveBlocked ? "Cannot approve: no standards mapped to this unit" : undefined}
+                            >
                               <Check className="h-3 w-3 mr-1" /> Approve
                             </Button>
                             <Button size="sm" variant="outline" className="h-7 text-xs border-rose-200 text-rose-600 hover:bg-rose-50"

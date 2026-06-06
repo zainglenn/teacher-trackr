@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { Standard } from "@/types";
 
@@ -152,5 +152,30 @@ export function useStandardPipeline(
     total:     entries.length,
   };
 
-  return { entries, loading, summary };
+  // Derived map: unitId → { unitTitle, unitNumber, entries[] } — mapped standards only, sorted by unitNumber
+  const byUnit = useMemo((): Map<string, { unitId: string; unitTitle: string; unitNumber: number; entries: PipelineEntry[] }> => {
+    const map = new Map<string, { unitId: string; unitTitle: string; unitNumber: number; entries: PipelineEntry[] }>();
+    for (const e of entries) {
+      if (!e.unitId) continue;
+      if (!map.has(e.unitId)) {
+        map.set(e.unitId, { unitId: e.unitId, unitTitle: e.unitTitle ?? "", unitNumber: e.unitNumber ?? 0, entries: [] });
+      }
+      map.get(e.unitId)!.entries.push(e);
+    }
+    return new Map([...map.entries()].sort((a, b) => a[1].unitNumber - b[1].unitNumber));
+  }, [entries]);
+
+  // Derived map: strandCode → PipelineEntry[] — all entries (including unmapped), in strand order
+  const STRAND_ORDER = ["RL", "RI", "W", "SL", "L"];
+  const byStrand = useMemo((): Map<string, PipelineEntry[]> => {
+    const map = new Map<string, PipelineEntry[]>(STRAND_ORDER.map((s) => [s, []]));
+    for (const e of entries) {
+      const strand = e.standard.strand?.toUpperCase() ?? e.standard.code.split(".")[0].toUpperCase();
+      if (!map.has(strand)) map.set(strand, []);
+      map.get(strand)!.push(e);
+    }
+    return map;
+  }, [entries]);
+
+  return { entries, loading, summary, byUnit, byStrand };
 }
