@@ -835,86 +835,456 @@ function ClassesSection() {
   );
 }
 
-// ── Shell ─────────────────────────────────────────────────────────────────────
-
 // ── Accordion section wrapper ─────────────────────────────────────────────────
 
-function AccordionSection({
-  title,
-  description,
-  children,
-  defaultOpen = true,
-}: {
-  title: string;
-  description?: string;
-  children: React.ReactNode;
-  defaultOpen?: boolean;
-}) {
+function AccordionSection({ title, description, children, defaultOpen = true }: { title: string; description?: string; children: React.ReactNode; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
     <div className="border border-border rounded-lg overflow-hidden">
-      <button
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center justify-between px-5 py-4 bg-muted/20 hover:bg-muted/40 transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset"
-        aria-expanded={open}
-      >
+      <button onClick={() => setOpen(!open)} className="w-full flex items-center justify-between px-5 py-4 bg-muted/20 hover:bg-muted/40 transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-inset" aria-expanded={open}>
         <div>
           <p className="text-sm font-semibold text-foreground">{title}</p>
           {description && <p className="text-xs text-muted-foreground mt-0.5">{description}</p>}
         </div>
-        <ChevronDown
-          className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
-        />
+        <ChevronDown className={`h-4 w-4 text-muted-foreground shrink-0 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
       </button>
-      {open && (
-        <div className="px-5 py-5 border-t border-border">
-          {children}
-        </div>
+      {open && <div className="px-5 py-5 border-t border-border">{children}</div>}
+    </div>
+  );
+}
+
+// ── Page navigation types ─────────────────────────────────────────────────────
+
+type SetupPage =
+  | { type: "root" }
+  | { type: "grade"; gradeId: string; gradeName: string }
+  | { type: "subject"; gradeId: string; gradeName: string; subjectId: string; subjectName: string };
+
+// ── Breadcrumb ────────────────────────────────────────────────────────────────
+
+function Breadcrumb({ page, onNavigate }: { page: SetupPage; onNavigate: (p: SetupPage) => void }) {
+  if (page.type === "root") return null;
+  return (
+    <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-4">
+      <button onClick={() => onNavigate({ type: "root" })} className="hover:text-foreground transition-colors">School Setup</button>
+      <span>/</span>
+      {page.type === "grade" && <span className="text-foreground font-medium">{page.gradeName}</span>}
+      {page.type === "subject" && (
+        <>
+          <button onClick={() => onNavigate({ type: "grade", gradeId: page.gradeId, gradeName: page.gradeName })} className="hover:text-foreground transition-colors">{page.gradeName}</button>
+          <span>/</span>
+          <span className="text-foreground font-medium">{page.subjectName}</span>
+        </>
       )}
     </div>
   );
 }
 
+// ── Grade config table (root → grade overview) ────────────────────────────────
+
+function GradeConfigTable({ onGradeClick }: { onGradeClick: (gradeId: string, gradeName: string) => void }) {
+  const doFetch = useSchoolFetch();
+  const [grades, setGrades] = useState<GradeLevel[]>([]);
+  const [progress, setProgress] = useState<Record<string, { subjects: number; withTeacher: number }>>({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function load() {
+      setLoading(true);
+      const [glRes, assignRes] = await Promise.all([
+        doFetch("/api/admin/list-grade-levels").then(r => r.json()),
+        doFetch("/api/admin/list-class-assignments").then(r => r.json()),
+      ]);
+      const grds: GradeLevel[] = glRes.grade_levels ?? [];
+      setGrades(grds);
+
+      // Load grade_subjects for each grade to get subject counts
+      const progressMap: Record<string, { subjects: number; withTeacher: number }> = {};
+      await Promise.all(grds.map(async g => {
+        const gsRes = await doFetch(`/api/admin/grade-subjects?grade_level_id=${g.id}`).then(r => r.json());
+        const gradeSubjects = gsRes.grade_subjects ?? [];
+        const assignments: ClassAssignment[] = (assignRes.assignments ?? []).filter((a: ClassAssignment) => a.grade_level_id === g.id);
+        const assignedSubjectIds = new Set(assignments.map((a: ClassAssignment) => a.subject_id));
+        progressMap[g.id] = {
+          subjects: gradeSubjects.length,
+          withTeacher: gradeSubjects.filter((gs: { subject_id: string }) => assignedSubjectIds.has(gs.subject_id)).length,
+        };
+      }));
+      setProgress(progressMap);
+      setLoading(false);
+    }
+    load();
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (loading) return <div className="text-sm text-muted-foreground py-4">Loading grades…</div>;
+  if (grades.length === 0) return <p className="text-sm text-muted-foreground">Add grade levels above first.</p>;
+
+  return (
+    <div className="border border-border rounded-lg overflow-hidden">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b bg-muted/40">
+            <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">Grade</th>
+            <th className="text-left px-4 py-2.5 font-medium text-muted-foreground hidden sm:table-cell">Subjects</th>
+            <th className="text-left px-4 py-2.5 font-medium text-muted-foreground hidden sm:table-cell">Status</th>
+            <th className="w-28 px-4" />
+          </tr>
+        </thead>
+        <tbody>
+          {grades.map(g => {
+            const p = progress[g.id] ?? { subjects: 0, withTeacher: 0 };
+            const complete = p.subjects > 0 && p.withTeacher === p.subjects;
+            return (
+              <tr key={g.id} className="border-t hover:bg-muted/20 transition-colors">
+                <td className="px-4 py-3 font-medium">{g.name}</td>
+                <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">
+                  {p.subjects === 0 ? "None added" : `${p.subjects} subject${p.subjects !== 1 ? "s" : ""}`}
+                </td>
+                <td className="px-4 py-3 hidden sm:table-cell">
+                  {p.subjects === 0 ? (
+                    <span className="text-xs text-muted-foreground">Not configured</span>
+                  ) : complete ? (
+                    <span className="text-xs font-medium" style={{ color: "var(--status-taught-text)" }}>All teachers assigned</span>
+                  ) : (
+                    <span className="text-xs text-amber-600">{p.withTeacher}/{p.subjects} teachers assigned</span>
+                  )}
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => onGradeClick(g.id, g.name)}>
+                    Configure <span className="text-muted-foreground">→</span>
+                  </Button>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ── Grade page (subjects for a grade) ─────────────────────────────────────────
+
+function GradeSubjectsPage({ gradeId, gradeName, onSubjectClick }: { gradeId: string; gradeName: string; onSubjectClick: (subjectId: string, subjectName: string) => void }) {
+  const doFetch = useSchoolFetch();
+  const [gradeSubjects, setGradeSubjects] = useState<{ id: string; subject_id: string; subjects: { id: string; name: string; slot: number } }[]>([]);
+  const [allSubjects, setAllSubjects] = useState<Subject[]>([]);
+  const [assignments, setAssignments] = useState<ClassAssignment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [adding, setAdding] = useState(false);
+  const [savingSubject, setSavingSubject] = useState("");
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const [gsRes, sjRes, assignRes] = await Promise.all([
+      doFetch(`/api/admin/grade-subjects?grade_level_id=${gradeId}`).then(r => r.json()),
+      doFetch("/api/admin/list-subjects").then(r => r.json()),
+      doFetch(`/api/admin/list-class-assignments?grade_level_id=${gradeId}`).then(r => r.json()),
+    ]);
+    setGradeSubjects(gsRes.grade_subjects ?? []);
+    setAllSubjects(sjRes.subjects ?? []);
+    setAssignments(assignRes.assignments ?? []);
+    setLoading(false);
+  }, [gradeId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => { load(); }, [load]);
+
+  const addedSubjectIds = new Set(gradeSubjects.map(gs => gs.subject_id));
+  const availableSubjects = allSubjects.filter(s => !addedSubjectIds.has(s.id));
+
+  async function handleAddSubject(subjectId: string) {
+    setSavingSubject(subjectId);
+    const res = await doFetch("/api/admin/grade-subjects", {
+      method: "POST",
+      body: JSON.stringify({ grade_level_id: gradeId, subject_id: subjectId }),
+    });
+    const json = await res.json();
+    if (!json.error) {
+      await load();
+      setAdding(false);
+      toast.success("Subject added to grade");
+    }
+    setSavingSubject("");
+  }
+
+  async function handleRemoveSubject(gsId: string) {
+    if (!confirm("Remove this subject from the grade? Teacher assignments for it will also be removed.")) return;
+    await doFetch("/api/admin/grade-subjects", { method: "DELETE", body: JSON.stringify({ id: gsId }) });
+    await load();
+    toast.success("Subject removed");
+  }
+
+  if (loading) return <div className="text-sm text-muted-foreground py-8 text-center">Loading…</div>;
+
+  return (
+    <div className="space-y-4">
+      <p className="text-xs text-muted-foreground">Select which subjects are taught in {gradeName}, then configure the teacher and classes for each.</p>
+
+      {gradeSubjects.length > 0 && (
+        <div className="border border-border rounded-lg overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b bg-muted/40">
+                <th className="text-left px-4 py-2.5 font-medium text-muted-foreground">Subject</th>
+                <th className="text-left px-4 py-2.5 font-medium text-muted-foreground hidden sm:table-cell">Teacher</th>
+                <th className="w-32 px-4" />
+              </tr>
+            </thead>
+            <tbody>
+              {gradeSubjects.map(gs => {
+                const assignment = assignments.find(a => a.subject_id === gs.subject_id);
+                const teacher = assignment?.teacher as Profile | undefined;
+                return (
+                  <tr key={gs.id} className="border-t hover:bg-muted/20 transition-colors">
+                    <td className="px-4 py-3 font-medium">{gs.subjects?.name}</td>
+                    <td className="px-4 py-3 hidden sm:table-cell">
+                      {teacher ? (
+                        <span className="text-sm text-foreground">{teacher.full_name ?? teacher.username}</span>
+                      ) : (
+                        <span className="text-xs text-amber-600">No teacher assigned</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2 justify-end">
+                        <Button size="sm" variant="outline" className="h-7 text-xs gap-1" onClick={() => onSubjectClick(gs.subject_id, gs.subjects?.name)}>
+                          Configure <span className="text-muted-foreground">→</span>
+                        </Button>
+                        <button onClick={() => handleRemoveSubject(gs.id)} className="text-muted-foreground hover:text-destructive transition-colors p-1" aria-label="Remove subject">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {gradeSubjects.length === 0 && !adding && (
+        <p className="text-sm text-muted-foreground">No subjects added to {gradeName} yet.</p>
+      )}
+
+      {adding ? (
+        <div className="border border-border rounded-lg p-4 space-y-3 bg-muted/20">
+          <p className="text-xs font-medium text-muted-foreground">Choose a subject to add</p>
+          {availableSubjects.length === 0 ? (
+            <p className="text-sm text-muted-foreground">All school subjects are already added to this grade.</p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {availableSubjects.map(s => (
+                <Button key={s.id} size="sm" variant="outline" className="h-7 text-xs" onClick={() => handleAddSubject(s.id)} disabled={savingSubject === s.id}>
+                  {savingSubject === s.id ? "Adding…" : `+ ${s.name}`}
+                </Button>
+              ))}
+            </div>
+          )}
+          <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => setAdding(false)}>Cancel</Button>
+        </div>
+      ) : (
+        <Button size="sm" variant="outline" className="h-7 text-xs gap-1.5" onClick={() => setAdding(true)} disabled={availableSubjects.length === 0}>
+          <Plus className="h-3.5 w-3.5" /> Add Subject
+        </Button>
+      )}
+    </div>
+  );
+}
+
+// ── Subject detail page (teacher + class assignment) ──────────────────────────
+
+interface ClassRecord { id: string; name: string; teacher_id: string }
+
+function SubjectDetailPage({ gradeId, subjectId, subjectName }: { gradeId: string; subjectId: string; subjectName: string }) {
+  const doFetch = useSchoolFetch();
+  const [availableTeachers, setAvailableTeachers] = useState<Profile[]>([]);
+  const [allClasses, setAllClasses] = useState<ClassRecord[]>([]);
+  const [existingAssignment, setExistingAssignment] = useState<ClassAssignment | null>(null);
+  const [selectedTeacherId, setSelectedTeacherId] = useState("");
+  const [selectedClassIds, setSelectedClassIds] = useState<string[]>([]);
+  const [assignmentLoaded, setAssignmentLoaded] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    async function load() {
+      const [assignRes, clsRes, usersRes] = await Promise.all([
+        doFetch(`/api/admin/list-class-assignments?subject_id=${subjectId}&grade_level_id=${gradeId}`).then(r => r.json()),
+        doFetch("/api/admin/list-classes").then(r => r.json()),
+        doFetch("/api/admin/list-users").then(r => r.json()),
+      ]);
+      const assignments: ClassAssignment[] = assignRes.assignments ?? [];
+      const existing = assignments[0] ?? null;
+      setExistingAssignment(existing);
+      setAllClasses(clsRes.classes ?? []);
+      setAvailableTeachers((usersRes.users ?? []).filter((u: Profile) => u.role === "teacher" || u.role === "hod"));
+      setAssignmentLoaded(true);
+      setLoading(false);
+    }
+    load();
+  }, [gradeId, subjectId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Set teacher selection after all data is loaded (teachers + assignment loaded together)
+  useEffect(() => {
+    if (assignmentLoaded && existingAssignment) {
+      setSelectedTeacherId(existingAssignment.teacher_id ?? "");
+      setSelectedClassIds((existingAssignment as unknown as { class_ids?: string[] })?.class_ids ?? []);
+    }
+  }, [assignmentLoaded, existingAssignment]);
+
+  const teacherClasses = allClasses.filter(c => c.teacher_id === selectedTeacherId);
+
+  function toggleClass(classId: string) {
+    setSelectedClassIds(prev => prev.includes(classId) ? prev.filter(id => id !== classId) : [...prev, classId]);
+  }
+
+  async function handleSave() {
+    if (!selectedTeacherId) return;
+    setSaving(true); setSaved(false);
+    let res: Response;
+    if (existingAssignment) {
+      // Update existing assignment
+      res = await doFetch("/api/admin/update-class-assignment", {
+        method: "PATCH",
+        body: JSON.stringify({ id: existingAssignment.id, class_ids: selectedClassIds }),
+      });
+      // If teacher changed, we need to delete + recreate
+      if (existingAssignment.teacher_id !== selectedTeacherId) {
+        await doFetch("/api/admin/delete-class-assignment", { method: "DELETE", body: JSON.stringify({ id: existingAssignment.id }) });
+        res = await doFetch("/api/admin/update-class-assignment", {
+          method: "POST",
+          body: JSON.stringify({ teacher_id: selectedTeacherId, subject_id: subjectId, grade_level_id: gradeId, class_ids: selectedClassIds }),
+        });
+      }
+    } else {
+      res = await doFetch("/api/admin/update-class-assignment", {
+        method: "POST",
+        body: JSON.stringify({ teacher_id: selectedTeacherId, subject_id: subjectId, grade_level_id: gradeId, class_ids: selectedClassIds }),
+      });
+    }
+    const json = await res.json();
+    setSaving(false);
+    if (!json.error) {
+      setSaved(true);
+      setExistingAssignment(json.assignment ?? json.assignment);
+      toast.success("Assignment saved");
+    }
+  }
+
+  if (loading) return <div className="text-sm text-muted-foreground py-8 text-center">Loading…</div>;
+
+  return (
+    <div className="space-y-6 max-w-lg">
+      <p className="text-xs text-muted-foreground">Assign a teacher to {subjectName} and select which of their classes they will teach for this grade.</p>
+
+      {/* Teacher selection */}
+      <div className="space-y-2">
+        <Label className="text-sm font-medium">Teacher</Label>
+        <Select value={selectedTeacherId} onValueChange={(v) => { setSelectedTeacherId(v ?? ""); setSelectedClassIds([]); setSaved(false); }}>
+          <SelectTrigger className="h-9">
+            {/* Resolve label directly — SelectValue only resolves after dropdown is opened */}
+            <span className={selectedTeacherId ? "text-foreground" : "text-muted-foreground"}>
+              {selectedTeacherId
+                ? (availableTeachers.find(t => t.id === selectedTeacherId)?.full_name ?? availableTeachers.find(t => t.id === selectedTeacherId)?.username ?? "Unknown teacher")
+                : "Select a teacher…"}
+            </span>
+          </SelectTrigger>
+          <SelectContent>
+            {availableTeachers.map(t => (
+              <SelectItem key={t.id} value={t.id}>{t.full_name ?? t.username}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Class selection — only when teacher is selected */}
+      {selectedTeacherId && (
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">Classes</Label>
+          <p className="text-xs text-muted-foreground">Which of this teacher&apos;s pre-created classes will they teach for {subjectName}?</p>
+          {teacherClasses.length === 0 ? (
+            <p className="text-sm text-amber-600">This teacher has no classes created yet. Go to School Setup → Classes to create them first.</p>
+          ) : (
+            <div className="border border-border rounded-lg divide-y divide-border overflow-hidden">
+              {teacherClasses.map(cls => (
+                <label key={cls.id} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/20 cursor-pointer transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={selectedClassIds.includes(cls.id)}
+                    onChange={() => { toggleClass(cls.id); setSaved(false); }}
+                    className="h-4 w-4 rounded border-border text-primary focus:ring-primary/50"
+                  />
+                  <span className="text-sm font-medium">{cls.name}</span>
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      <Button
+        onClick={handleSave}
+        disabled={saving || !selectedTeacherId || selectedClassIds.length === 0}
+        className="h-9"
+      >
+        {saving ? "Saving…" : saved ? "Saved ✓" : "Save Assignment"}
+      </Button>
+    </div>
+  );
+}
+
+// ── Main export ───────────────────────────────────────────────────────────────
+
 export function SchoolSetupView({ overrideSchoolId }: { overrideSchoolId?: string | null } = {}) {
+  const [page, setPage] = useState<SetupPage>({ type: "root" });
+
   return (
     <SchoolOverrideCtx.Provider value={overrideSchoolId ?? null}>
       <PageContainer
         title="School Setup"
-        description="Configure your school's subjects, grade levels, and teacher class assignments."
+        description={page.type === "root" ? "Configure your school's subjects, grade levels, classes, and grade curriculum." : undefined}
       >
-        <div className="space-y-4">
-          <AccordionSection
-            title="Subjects"
-            description="Top-level groupings for plans and teacher assignments."
-            defaultOpen={true}
-          >
-            <SubjectsTab />
-          </AccordionSection>
+        <Breadcrumb page={page} onNavigate={setPage} />
 
-          <AccordionSection
-            title="Grade Levels"
-            description="Year or grade groupings for teacher class assignments."
-            defaultOpen={true}
-          >
-            <GradeLevelsTab />
-          </AccordionSection>
+        {page.type === "root" && (
+          <div className="space-y-4">
+            <AccordionSection title="Subjects" description="School-wide subject names. Add all subjects taught across any grade." defaultOpen={true}>
+              <SubjectsTab />
+            </AccordionSection>
+            <AccordionSection title="Grade Levels" description="Year or grade groupings." defaultOpen={true}>
+              <GradeLevelsTab />
+            </AccordionSection>
+            <AccordionSection title="Classes" description="Pre-create named class sections (e.g. Class A, Class B). These are assigned to teachers per subject below." defaultOpen={true}>
+              <ClassesSection />
+            </AccordionSection>
+            <AccordionSection title="Grade Configuration" description="Configure which subjects are taught in each grade, assign teachers, and assign classes." defaultOpen={true}>
+              <GradeConfigTable onGradeClick={(id, name) => setPage({ type: "grade", gradeId: id, gradeName: name })} />
+            </AccordionSection>
+          </div>
+        )}
 
-          <AccordionSection
-            title="Class Assignments"
-            description="Assign teachers to subject and grade combinations."
-            defaultOpen={true}
-          >
-            <ClassAssignmentsTab />
-          </AccordionSection>
+        {page.type === "grade" && (
+          <div className="space-y-1">
+            <h2 className="text-base font-semibold text-foreground">{page.gradeName}</h2>
+            <p className="text-sm text-muted-foreground mb-4">Subjects taught in this grade.</p>
+            <GradeSubjectsPage
+              gradeId={page.gradeId}
+              gradeName={page.gradeName}
+              onSubjectClick={(subjectId, subjectName) =>
+                setPage({ type: "subject", gradeId: page.gradeId, gradeName: page.gradeName, subjectId, subjectName })
+              }
+            />
+          </div>
+        )}
 
-          <AccordionSection
-            title="Classes"
-            description="Create named class sections and assign them to teachers. Teachers use these classes to organise students and lesson plans."
-            defaultOpen={true}
-          >
-            <ClassesSection />
-          </AccordionSection>
-        </div>
+        {page.type === "subject" && (
+          <div className="space-y-1">
+            <h2 className="text-base font-semibold text-foreground">{page.subjectName}</h2>
+            <p className="text-sm text-muted-foreground mb-4">Teacher and class assignment for {page.gradeName}.</p>
+            <SubjectDetailPage gradeId={page.gradeId} subjectId={page.subjectId} subjectName={page.subjectName} />
+          </div>
+        )}
       </PageContainer>
     </SchoolOverrideCtx.Provider>
   );
