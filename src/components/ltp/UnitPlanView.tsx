@@ -310,6 +310,35 @@ export function UnitPlanView({
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const unitStandards = standards.filter(s => selectedIds.has(s.id));
+
+      // Step 1: If no standards are mapped yet, suggest + auto-apply them first
+      // so the content draft can use them as context
+      let draftStandardIds = new Set(selectedIds);
+      if (draftStandardIds.size === 0 && standards.length > 0) {
+        const allMappedIds = new Set(
+          plan.units?.filter(u => u.id !== unit.id).flatMap(u => u.standards?.map(s => s.id) ?? []) ?? []
+        );
+        const uncoveredCodes = standards.filter(s => !allMappedIds.has(s.id)).map(s => s.code);
+        const suggestRes = await fetch("/api/ai/suggest-standards", {
+          method: "POST",
+          headers: { "content-type": "application/json", authorization: `Bearer ${session?.access_token}` },
+          body: JSON.stringify({
+            unitTitle: title, bigIdea, term: unit.term,
+            selectedStandardCodes: [],
+            allStandards: standards.map(s => ({ id: s.id, code: s.code, strand: s.strand, description: s.description })),
+            uncoveredCodes,
+          }),
+        });
+        const suggestJson = await suggestRes.json();
+        if (suggestJson.suggestions?.length) {
+          const suggested = new Set<string>(suggestJson.suggestions.map((s: { standardId: string }) => s.standardId));
+          setSelectedIds(suggested);
+          draftStandardIds = suggested;
+        }
+      }
+
+      // Step 2: Draft all content sections using the mapped (or just-suggested) standards
+      const draftStandards = standards.filter(s => draftStandardIds.has(s.id));
       const res = await fetch("/api/ai/draft-unit-content", {
         method: "POST",
         headers: { "content-type": "application/json", authorization: `Bearer ${session?.access_token}` },
@@ -317,7 +346,7 @@ export function UnitPlanView({
           unitTitle: title, bigIdea, term: unit.term,
           durationWeeks: parseInt(durationWeeks) || unit.duration_weeks,
           assessmentType,
-          standards: unitStandards.map(s => ({ code: s.code, strand: s.strand, description: s.description })),
+          standards: draftStandards.map(s => ({ code: s.code, strand: s.strand, description: s.description })),
         }),
       });
       const json = await res.json();
@@ -1029,9 +1058,13 @@ export function UnitPlanView({
             <div className="flex items-center gap-2">
               <Button size="sm" variant="outline" className="h-8 text-xs gap-1.5 border-violet-200 text-violet-700 hover:bg-violet-50" onClick={handleAIDraft} disabled={aiDrafting}>
                 {aiDrafting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
-                {aiDrafting ? "Drafting all sections…" : "AI Draft All Sections"}
+                {aiDrafting ? "Drafting…" : "AI Draft All Sections"}
               </Button>
-              <p className="text-xs text-muted-foreground hidden sm:block">Auto-fill from title, question &amp; standards (~10s)</p>
+              <p className="text-xs text-muted-foreground hidden sm:block">
+                {selectedIds.size === 0
+                  ? "Suggests standards + fills all content sections (~15s)"
+                  : "Auto-fills all content sections from title, question & standards (~10s)"}
+              </p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <Button size="sm" variant="ghost" className="h-8 text-xs" onClick={() => { resetEditState(); setTab("view"); }}>
