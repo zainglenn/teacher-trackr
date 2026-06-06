@@ -183,30 +183,15 @@ function ClassDetailPanel({
 }
 
 function ClassesTab({ plans, teachers }: { plans: LongTermPlan[]; teachers: TeacherRow[] }) {
-  const { classes, loading, createClass, deleteClass, reassignClass, refresh } = useAllClasses();
+  const { classes, loading, deleteClass, reassignClass, refresh } = useAllClasses();
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [createDialog, setCreateDialog] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newTeacherId, setNewTeacherId] = useState("");
-  const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const effectiveSelectedId = selectedId ?? classes[0]?.id ?? null;
   const selectedCls = classes.find((c) => c.id === effectiveSelectedId) as
     | (ClassWithTeacher & { ltp_id?: string })
     | undefined;
-
-  async function handleCreate() {
-    if (!newName.trim()) return;
-    setSaving(true);
-    const created = await createClass(newName.trim(), (newTeacherId || teachers[0]?.id) ?? "");
-    setNewName("");
-    setNewTeacherId("");
-    setCreateDialog(false);
-    setSaving(false);
-    if (created?.id) setSelectedId(created.id);
-  }
 
   async function attachPlan(classId: string, ltpId: string) {
     await supabase.from("classes").update({ ltp_id: ltpId || null }).eq("id", classId);
@@ -224,7 +209,7 @@ function ClassesTab({ plans, teachers }: { plans: LongTermPlan[]; teachers: Teac
   }
 
   const createBtn = (
-    <Button size="sm" onClick={() => setCreateDialog(true)}>
+    <Button size="sm" disabled className="opacity-50 cursor-not-allowed" title="Classes are created by the school admin">
       <Plus className="h-3.5 w-3.5 mr-1.5" />
       New Class
     </Button>
@@ -234,58 +219,12 @@ function ClassesTab({ plans, teachers }: { plans: LongTermPlan[]; teachers: Teac
     <Card>
       <CardContent className="flex flex-col items-center justify-center py-12 text-center">
         <GraduationCap className="h-8 w-8 text-muted-foreground mb-3" />
-        <p className="text-sm font-medium mb-1">No classes yet</p>
-        <p className="text-xs text-muted-foreground mb-4">Create classes to assign teachers and plans.</p>
-        <Button size="sm" onClick={() => setCreateDialog(true)}>
-          <Plus className="h-3.5 w-3.5 mr-1.5" />
-          Create first class
-        </Button>
+        <p className="text-sm font-medium mb-1">No classes set up yet</p>
+        <p className="text-xs text-muted-foreground">Classes are created by your school admin in School Setup.</p>
       </CardContent>
     </Card>
   );
 
-  const createDialogNode = (
-    <Dialog open={createDialog} onOpenChange={setCreateDialog}>
-      <DialogContent className="max-w-sm">
-        <DialogHeader>
-          <DialogTitle>New Class</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4 py-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="class-name">Class name</Label>
-            <Input
-              id="class-name"
-              placeholder="e.g. 6A"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleCreate()}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="class-teacher">Assign teacher</Label>
-            <Select value={newTeacherId} onValueChange={(val) => val && setNewTeacherId(val)}>
-              <SelectTrigger id="class-teacher">
-                <SelectValue placeholder="Select teacher…" />
-              </SelectTrigger>
-              <SelectContent>
-                {teachers.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.full_name ?? t.email}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setCreateDialog(false)}>Cancel</Button>
-          <Button onClick={handleCreate} disabled={!newName.trim() || saving}>
-            {saving ? "Creating…" : "Create Class"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
 
   return (
     <>
@@ -408,9 +347,10 @@ function ClassesTab({ plans, teachers }: { plans: LongTermPlan[]; teachers: Teac
               {classes.length} class{classes.length !== 1 ? "es" : ""}
             </span>
             <button
-              onClick={() => setCreateDialog(true)}
-              className="p-1 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-              aria-label="New class"
+              disabled
+              className="p-1 rounded-md text-muted-foreground/30 cursor-not-allowed"
+              aria-label="Classes are created by admin"
+              title="Classes are set up by your school admin"
             >
               <Plus className="h-3.5 w-3.5" />
             </button>
@@ -461,18 +401,13 @@ function ClassesTab({ plans, teachers }: { plans: LongTermPlan[]; teachers: Teac
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-center py-12">
               <GraduationCap className="h-8 w-8 text-muted-foreground mb-3" />
-              <p className="text-sm font-medium mb-1">No classes yet</p>
-              <p className="text-xs text-muted-foreground mb-4">Create a class to get started.</p>
-              <Button size="sm" onClick={() => setCreateDialog(true)}>
-                <Plus className="h-3.5 w-3.5 mr-1.5" />
-                Create first class
-              </Button>
+              <p className="text-sm font-medium mb-1">No classes set up yet</p>
+              <p className="text-xs text-muted-foreground">Classes are created by your school admin in School Setup.</p>
             </div>
           )}
         </div>
       </div>
 
-      {createDialogNode}
     </>
   );
 }

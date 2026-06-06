@@ -679,6 +679,162 @@ function ClassAssignmentsTab() {
   );
 }
 
+// ── Classes Section ───────────────────────────────────────────────────────────
+
+interface ClassRecord { id: string; name: string; school_year: string; teacher_id: string; teacher?: { id: string; full_name: string | null; username: string } | null }
+
+function ClassesSection() {
+  const doFetch = useSchoolFetch();
+  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const [gradeLevels, setGradeLevels] = useState<GradeLevel[]>([]);
+  const [assignMap, setAssignMap] = useState<Record<string, ClassAssignment[]>>({});
+  const [classes, setClasses] = useState<ClassRecord[]>([]);
+  const [loading, setLoading] = useState(true);
+  // which teacher is showing the add-class inline form: teacherId
+  const [addingFor, setAddingFor] = useState<string | null>(null);
+  const [newClassName, setNewClassName] = useState("");
+  const [addSaving, setAddSaving] = useState(false);
+  const [addError, setAddError] = useState("");
+
+  const loadAll = useCallback(async () => {
+    setLoading(true);
+    const [sjRes, glRes, clsRes] = await Promise.all([
+      doFetch("/api/admin/list-subjects").then(r => r.json()),
+      doFetch("/api/admin/list-grade-levels").then(r => r.json()),
+      doFetch("/api/admin/list-classes").then(r => r.json()),
+    ]);
+    const subs: Subject[] = sjRes.subjects ?? [];
+    const grds: GradeLevel[] = glRes.grade_levels ?? [];
+    setSubjects(subs);
+    setGradeLevels(grds);
+    setClasses(clsRes.classes ?? []);
+
+    const entries = await Promise.all(
+      subs.flatMap(s =>
+        grds.map(async g => {
+          const res = await doFetch(`/api/admin/list-class-assignments?subject_id=${s.id}&grade_level_id=${g.id}`);
+          const json = await res.json();
+          return { key: `${s.id}-${g.id}`, assignments: (json.assignments ?? []) as ClassAssignment[] };
+        })
+      )
+    );
+    const map: Record<string, ClassAssignment[]> = {};
+    for (const { key, assignments } of entries) map[key] = assignments;
+    setAssignMap(map);
+    setLoading(false);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => { loadAll(); }, [loadAll]);
+
+  async function handleAddClass(teacherId: string) {
+    if (!newClassName.trim()) return;
+    setAddSaving(true); setAddError("");
+    const res = await doFetch("/api/admin/create-class", {
+      method: "POST",
+      body: JSON.stringify({ teacher_id: teacherId, name: newClassName.trim() }),
+    });
+    const json = await res.json();
+    if (json.error) { setAddError(json.error); setAddSaving(false); return; }
+    setClasses(prev => [...prev, { ...json.class, teacher: null }]);
+    setAddingFor(null); setNewClassName(""); setAddSaving(false);
+    toast.success("Class created");
+  }
+
+  async function handleDeleteClass(id: string) {
+    if (!confirm("Delete this class? Students enrolled will be unenrolled.")) return;
+    await doFetch("/api/admin/delete-class", { method: "DELETE", body: JSON.stringify({ id }) });
+    setClasses(prev => prev.filter(c => c.id !== id));
+    toast.success("Class deleted");
+  }
+
+  if (loading) return <div className="text-sm text-muted-foreground py-6 text-center">Loading…</div>;
+  if (subjects.length === 0) return <p className="text-sm text-muted-foreground">Add subjects first.</p>;
+
+  // Get unique teachers per subject from assignMap
+  return (
+    <div className="space-y-5">
+      {subjects.map(subject => {
+        // All teachers assigned to this subject (across all grades)
+        const teacherMap = new Map<string, ClassAssignment>();
+        gradeLevels.forEach(g => {
+          (assignMap[`${subject.id}-${g.id}`] ?? []).forEach(a => {
+            if (!teacherMap.has(a.teacher_id)) teacherMap.set(a.teacher_id, a);
+          });
+        });
+        if (teacherMap.size === 0) return null;
+
+        return (
+          <div key={subject.id}>
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-2">{subject.name}</p>
+            <div className="border border-border rounded-lg overflow-hidden divide-y divide-border">
+              {[...teacherMap.values()].map(assignment => {
+                const teacher = assignment.teacher as { id: string; full_name: string | null; username: string } | undefined;
+                const teacherId = assignment.teacher_id;
+                const teacherClasses = classes.filter(c => c.teacher_id === teacherId);
+                const isAddingHere = addingFor === teacherId;
+
+                return (
+                  <div key={teacherId} className="px-4 py-3">
+                    <div className="flex items-start gap-3 flex-wrap">
+                      <span className="text-sm font-medium text-foreground shrink-0 w-36 pt-0.5 truncate">
+                        {teacher?.full_name ?? teacher?.username ?? "—"}
+                      </span>
+                      <div className="flex flex-wrap gap-2 flex-1 min-w-0">
+                        {teacherClasses.length === 0 && !isAddingHere && (
+                          <span className="text-xs text-muted-foreground italic pt-0.5">No classes yet</span>
+                        )}
+                        {teacherClasses.map(cls => (
+                          <div key={cls.id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border bg-muted/30 text-sm">
+                            <span className="font-medium">{cls.name}</span>
+                            <button
+                              onClick={() => handleDeleteClass(cls.id)}
+                              className="text-muted-foreground/50 hover:text-destructive transition-colors"
+                              aria-label="Delete class"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))}
+                        {isAddingHere ? (
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={newClassName}
+                              onChange={e => setNewClassName(e.target.value)}
+                              onKeyDown={e => { if (e.key === "Enter") handleAddClass(teacherId); if (e.key === "Escape") { setAddingFor(null); setNewClassName(""); }}}
+                              placeholder="e.g. Class A"
+                              autoFocus
+                              className="h-7 w-28 px-2 text-xs border border-input rounded-md bg-background focus:outline-none focus:ring-2 focus:ring-ring/50"
+                            />
+                            <Button size="sm" className="h-7 text-xs" onClick={() => handleAddClass(teacherId)} disabled={addSaving || !newClassName.trim()}>
+                              {addSaving ? "…" : "Add"}
+                            </Button>
+                            <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => { setAddingFor(null); setNewClassName(""); setAddError(""); }}>
+                              Cancel
+                            </Button>
+                            {addError && <span className="text-xs text-destructive">{addError}</span>}
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => { setAddingFor(teacherId); setNewClassName(""); setAddError(""); }}
+                            className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            <Plus className="h-3 w-3" /> Add class
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 // ── Shell ─────────────────────────────────────────────────────────────────────
 
 // ── Accordion section wrapper ─────────────────────────────────────────────────
@@ -749,6 +905,14 @@ export function SchoolSetupView({ overrideSchoolId }: { overrideSchoolId?: strin
             defaultOpen={true}
           >
             <ClassAssignmentsTab />
+          </AccordionSection>
+
+          <AccordionSection
+            title="Classes"
+            description="Create named class sections and assign them to teachers. Teachers use these classes to organise students and lesson plans."
+            defaultOpen={true}
+          >
+            <ClassesSection />
           </AccordionSection>
         </div>
       </PageContainer>
