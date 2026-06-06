@@ -32,8 +32,6 @@ import {
 } from "lucide-react";
 import { Role } from "@/types";
 import { useAuth } from "@/hooks/useAuth";
-import { AppNotification } from "@/hooks/useNotifications";
-import { NotificationBell } from "@/components/NotificationPanel";
 import { SubjectGradeContext } from "@/components/SubjectGradeContext";
 import { SidebarSeparator } from "@/components/ui/sidebar";
 import type { ActiveContext } from "@/hooks/useActiveContext";
@@ -100,13 +98,12 @@ interface AppSidebarProps {
   role: Role;
   username: string;
   overdueCount?: number;
-  notifications?: AppNotification[];
   activeContext?: ActiveContext | null;
   contextAssignments?: ClassAssignment[];
   onContextChange?: (ctx: ActiveContext) => void;
 }
 
-export function AppSidebar({ view, onViewChange, role, username, overdueCount = 0, notifications = [], activeContext, contextAssignments, onContextChange }: AppSidebarProps) {
+export function AppSidebar({ view, onViewChange, role, username, overdueCount = 0, activeContext, contextAssignments, onContextChange }: AppSidebarProps) {
   const { signOut } = useAuth();
 
   const items = NAV_ITEMS.filter((item) => item.roles.includes(role));
@@ -175,7 +172,6 @@ export function AppSidebar({ view, onViewChange, role, username, overdueCount = 
             <BookOpen className="h-3.5 w-3.5 text-sidebar-primary-foreground" />
           </div>
           <p className="text-sm font-semibold text-sidebar-foreground leading-tight flex-1">Curriculum Tracker</p>
-          <NotificationBell notifications={notifications} onNavigate={onViewChange} />
         </div>
         {contextAssignments && contextAssignments.length > 0 && onContextChange && (
           <>

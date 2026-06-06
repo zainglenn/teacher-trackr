@@ -26,8 +26,6 @@ import { useClassProgress } from "@/hooks/useClassProgress";
 import { useActiveContext } from "@/hooks/useActiveContext";
 import { useStandardPipeline } from "@/hooks/useStandardPipeline";
 import { useDepartmentPipeline } from "@/hooks/useDepartmentPipeline";
-import { useTeacherNotifications, useHodNotifications } from "@/hooks/useNotifications";
-import { useLeadershipNotifications } from "@/hooks/useLeadershipNotifications";
 import { PlatformAdminView } from "@/components/PlatformAdminView";
 import { PlatformCurriculaView } from "@/components/PlatformCurriculaView";
 import { SuspendedSchoolMessage } from "@/components/SuspendedSchoolMessage";
@@ -87,24 +85,7 @@ function CurriculumApp({ userId }: { userId: string }) {
   const { students } = useStudents(userId);
   const { progress: classProgress } = useClassProgress(userId);
 
-  // Notifications — skipped for platform_admin (no curriculum data)
-  const notifSubjectId = activeContext?.subjectId ?? profileSubjectId ?? null;
-  const notifGradeId = activeContext?.gradeLevelId ?? null;
-  const { entries: teacherPipelineEntries } = useStandardPipeline(
-    role === "teacher" ? userId : null, notifSubjectId, notifGradeId, standards
-  );
-  const { results: deptPipelineResults } = useDepartmentPipeline(
-    isHod ? notifSubjectId : null, isHod ? notifGradeId : null, standards
-  );
-  const teacherNotifs = useTeacherNotifications(role === "teacher" ? ltps : [], teacherPipelineEntries);
-  const hodNotifs = useHodNotifications(isHod ? ltps : [], deptPipelineResults, standards.length);
-  const leadershipNotifs = useLeadershipNotifications(
-    !isPlatformAdmin ? userId : null,
-    profile?.school_id ?? null,
-    isHod
-  );
-  const notifications = isPlatformAdmin ? [] : (isHod ? [...hodNotifs, ...leadershipNotifs] : [...teacherNotifs, ...leadershipNotifs]);
-  const overdueCount = notifications.filter((n) => n.severity === "urgent").length;
+  const overdueCount = 0;
 
   // HODs are scoped by subject_id on their profile — they don't need class assignments
   const noContextAssigned = role === "teacher" && !contextLoading && contextAssignments.length === 0;
@@ -124,7 +105,7 @@ function CurriculumApp({ userId }: { userId: string }) {
   if (isPlatformAdmin) {
     return (
       <SidebarProvider>
-        <AppSidebar view={view} onViewChange={setView} role={role} username={username} notifications={[]} />
+        <AppSidebar view={view} onViewChange={setView} role={role} username={username} />
         <SidebarInset className="flex flex-col min-h-svh bg-slate-50/60">
           <header className="flex items-center h-10 px-3 border-b border-border/40 shrink-0 bg-background/80 backdrop-blur-sm sticky top-0 z-10">
             <SidebarTrigger className="h-7 w-7 text-muted-foreground hover:text-foreground md:hidden" />
@@ -153,7 +134,6 @@ function CurriculumApp({ userId }: { userId: string }) {
         role={role}
         username={username}
         overdueCount={overdueCount}
-        notifications={notifications}
         activeContext={activeContext}
         contextAssignments={showContext ? contextAssignments : []}
         onContextChange={setActiveContext}
