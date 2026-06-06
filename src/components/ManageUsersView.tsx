@@ -8,9 +8,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2, Pencil, Search, KeyRound } from "lucide-react";
+import { useState as useStateExtra, useEffect } from "react";
 import { useAdminUsers } from "@/hooks/useAdminUsers";
-import { useSubjects } from "@/hooks/useSubjects";
+import { adminFetch } from "@/lib/authToken";
 import { Profile, Role } from "@/types";
+
+interface SubjectOption { id: string; name: string; slot: number }
 
 const ROLE_CONFIG: Record<Role, { label: string; shortLabel: string; className: string }> = {
   hod:            { label: "Head of Department", shortLabel: "HOD",      className: "bg-violet-100 text-violet-700 border-violet-200" },
@@ -38,7 +41,16 @@ interface Props {
 
 export function ManageUsersView({ currentUserId, overrideSchoolId }: Props) {
   const { users, loading, createUser, updateUser, deleteUser, resetPassword } = useAdminUsers(overrideSchoolId);
-  const { subjects } = useSubjects(overrideSchoolId);
+
+  // Load subjects via the admin API (school-scoped) to avoid cross-school leakage
+  const [subjects, setSubjects] = useStateExtra<SubjectOption[]>([]);
+  useEffect(() => {
+    const extraHeaders = overrideSchoolId ? { "x-school-id": overrideSchoolId } : undefined;
+    adminFetch("/api/admin/list-subjects", {}, extraHeaders)
+      .then(r => r.json())
+      .then(json => setSubjects(json.subjects ?? []))
+      .catch(() => {});
+  }, [overrideSchoolId]);
 
   // Inline subject edit state
   const [editingSubjectFor, setEditingSubjectFor] = useState<string | null>(null);
