@@ -1,62 +1,118 @@
-# Design Review: Platform Admin — Multi-Tenant School Management
+# Design Review: Platform Curricula
 
-Reviewed against: `.design/platform-admin/DESIGN_BRIEF.md`
-Philosophy: Operational console — Dieter Rams functional, monochrome with status color as the only accent
-Date: 2026-05-29
-
----
+Reviewed against: architecture change (standard_sets → platform-level) dated 2026-06-04
+Date: 2026-06-04
 
 ## Screenshots Captured
 
 | Screenshot | Breakpoint | Description |
 |---|---|---|
-| `screenshots/review-schools-desktop-1280.png` | Desktop (1280×800) | Schools list — DSK row, search bar, New School button |
-| `screenshots/review-create-school-modal-desktop-1280.png` | Desktop (1280×800) | Create School modal — two-section form, all fields visible |
-| `screenshots/review-school-detail-sheet-desktop-1280.png` | Desktop (1280×800) | School Detail sheet — DSK stats + users table + Suspend footer |
-| `screenshots/review-schools-mobile-375.png` | Mobile (375×812) | Detail sheet on mobile — full-screen, readable, Suspend button at footer |
-| `screenshots/review-mobile-guard-375.png` | Mobile (375×812) | Desktop-only guard — icon + message at 375px |
+| `screenshots/review-platform-schools-desktop-1280.png` | Desktop 1280×800 | Platform admin Schools tab with new tab switcher |
+| `screenshots/review-curricula-empty-desktop-1280.png` | Desktop 1280×800 | Curricula tab — list of all platform standard sets |
+| `screenshots/review-curricula-create-form-desktop-1280.png` | Desktop 1280×800 | New Curriculum creation form open |
+| `screenshots/review-curricula-expanded-desktop-1280.png` | Desktop 1280×800 | Curriculum row expanded showing standards table + Add Standard |
+| `screenshots/review-curricula-add-standard-form-desktop-1280.png` | Desktop 1280×800 | Add Standard inline form open |
+| `screenshots/review-school-standard-sets-empty-desktop-1280.png` | Desktop 1280×800 | School Setup → Standard Sets tab, no selection |
 
-> All screenshots are in `.design/platform-admin/screenshots/`.
+> Note: The library state (subject + grade selected) was assessed via accessibility snapshot due to Playwright font-load timeout in this session.
 
 ---
 
 ## Summary
 
-The platform admin view lands solidly against the brief's operational console intent. The schools table is clean and clinical, the modal is structured exactly as designed (two sections, single flow), and the detail sheet is the strongest piece — it reads like a proper admin panel with the stats trio, role-badged users table, and Suspend footer. One data bug was found and fixed during review: the `list-schools` API query omitted `city`, `country`, and `curriculum` columns so those table cells appeared blank.
+The migration is technically sound — ran cleanly, platform admin Curricula tab works, the school-side subscription flow works end-to-end. The main problem is functional: when a school admin selects a subject and grade level, the library shows all 111+ platform curricula completely unfiltered. An admin looking for "English Grade 6" has to scroll past Arabic, Computer Technology, Islamic Education, Maths, Music, PE, Science, and Social Studies to find it. This needs fixing before the feature is usable. The delete-without-confirmation issue is a data-integrity risk.
 
 ---
 
 ## Must Fix
 
-1. **Blank City and Curriculum columns in the schools table** — `list-schools/route.ts` queried only `id, name, is_active, created_at`. City, country, and curriculum columns rendered as empty cells for DSK despite the data being correct in the DB. See `screenshots/review-schools-desktop-1280.png`. **Fixed during review** — query updated to include `city, country, curriculum`.
+### 1. Library is not filtered — school sees all 111 curricula regardless of subject/grade
+
+**File:** `src/components/SchoolSetupView.tsx` — `StandardSetsTab`
+
+`platformSets` is loaded once on mount with no params (`/api/admin/list-standard-sets`), so selecting "English / Grade 6" shows the entire unfiltered list of 111+ sets. The school admin has to manually scroll to find the relevant entry.
+
+Filtering by `subject_label` server-side won't reliably work either because school subject names ("English") don't necessarily match platform labels ("English Language Arts"). The correct fix is client-side text search.
+
+_Fix:_ Add a `filterQuery` state and filter `platformSets` in the render against `set.name + set.subject_label + set.grade_label`. A small search input above the list is enough — no API change needed.
+
+---
+
+### 2. Delete standard set has no confirmation
+
+**File:** `src/components/PlatformAdminView.tsx` — `CurriculaTab`, `handleDeleteSet`
+
+The trash button calls `handleDeleteSet` immediately. Deleting a set cascades to all its standards and silently breaks any `school_curricula` assignments. With 111 sets already in the DB a misclick causes irreversible data loss.
+
+_Fix:_ Use the existing `ConfirmModal` component (already imported in this file) before executing the delete. The school suspension flow is the right model — show what will be deleted and require an explicit confirmation.
 
 ---
 
 ## Should Fix
 
-1. **Sidebar footer missing "Platform" role badge** — The brief specified the footer should show "Platform" as the role badge for `platform_admin`. The AppSidebar role badge logic was updated in code (`role === "platform_admin" ? "Platform"`) but the footer renders initials + username only without the role chip visible in the screenshot. See `screenshots/review-schools-desktop-1280.png` — `zain.platform` shows at the bottom but no coloured role badge. _Fix: Check that the footer role badge conditional renders the chip — may need `platform_admin` added to the badge's role config in `AppSidebar.tsx`._
+### 3. Duplicate description text on Curricula tab
 
-2. **"Last Activity" stat card shows a full date instead of relative text** — The SchoolDetailSheet stats row shows "28 May 2026" for Last Activity where a relative format ("Today" or "3 days ago") would be more scannable for an operator. See `screenshots/review-school-detail-sheet-desktop-1280.png`. _Fix: Apply the same `formatDate()` helper used in the table to the stats card, or use a short month+day format._
+**File:** `src/components/PlatformAdminView.tsx` — `CurriculaTab`
 
-3. **Console errors on sign-in as platform admin** — The browser shows "5 Issues" in the dev tools overlay. Likely caused by hooks that fire for roles that don't apply to platform admin (e.g. `useStandardPipeline`, `useDepartmentPipeline` being called from notifications code). These fire before the `isPlatformAdmin` fast-path short-circuits them. _Fix: In `page.tsx`, gate the notification hooks behind `!isPlatformAdmin` to prevent unnecessary queries._
+PageContainer `description`: *"Platform-managed standard sets available to all schools"*
+Inline paragraph: *"Platform-managed standard sets. Schools choose from this library in their setup."*
+
+These say the same thing twice.
+
+_Fix:_ Remove the inline `<p>` from `CurriculaTab`. The PageContainer description covers it.
+
+---
+
+### 4. Add Standard form uses a native `<select>` for strand
+
+**File:** `src/components/PlatformAdminView.tsx` — `CurriculaTab` inline form
+
+Every other dropdown in the app uses shadcn `Select`. The inline add-standard form uses a native HTML `<select>` — different height, border style, and font rendering to the rest of the UI (visible in `review-curricula-add-standard-form-desktop-1280.png`).
+
+_Fix:_ Replace with shadcn `Select` / `SelectTrigger` / `SelectContent` / `SelectItem`. Five options: `RL`, `RI`, `W`, `SL`, `L`.
+
+---
+
+### 5. No standard count on collapsed curriculum rows
+
+**File:** `src/components/PlatformAdminView.tsx` — `CurriculaTab`
+
+Collapsed rows show name and subject/grade labels only. There is no way to tell at a glance whether a set has 0 or 41 standards without expanding it.
+
+_Fix:_ Add a `standards_count` to the GET `/api/platform/curricula` response using Supabase's aggregation (`.select('*, standards(count)')`), then render it as a muted badge on each row.
+
+---
+
+### 6. "Platform Admin" nav item label still says "Schools"
+
+**File:** `src/components/AppSidebar.tsx`
+
+The sidebar nav item label is "Schools" but the view now contains both Schools and Curricula as sub-tabs. Clicking to the Curricula tab changes the page title but the nav label stays "Schools".
+
+_Fix:_ Rename the sidebar nav item to "Platform" or "Admin Console" to reflect that it's a container for multiple sections, not just school management.
 
 ---
 
 ## Could Improve
 
-1. **Schools table feels sparse with only one row** — The brief acknowledged this is intentional for a fresh install, but the empty vertical space below the single row is stark. _Suggestion: Add a subtle muted tip below the table when `schools.length === 1`: "Add more schools using the New School button above." Removes the "did something break?" feeling._
+### 7. Library list has no subject grouping
 
-2. **No username shown in the sidebar footer** — At the bottom of the sidebar only the avatar `N` and "Platform" label appear. The username `zain.platform` would reassure the operator they're in the right account. _Suggestion: Show the username in the footer as it does for other roles._
+With 111 items in name-alphabetical order, the list is hard to scan. Grouping rows under subject-label headers ("Arabic Language", "English Language Arts", etc.) would make it navigable without a search input.
 
-3. **Create School modal "Create School" button is blue when disabled** — The submit button appears enabled (blue) even though no fields are filled. This is because the default shadcn `Button` with `disabled` prop keeps the same blue color at reduced opacity. The brief's aesthetic calls for a cleaner disabled state. _Suggestion: Add `disabled:opacity-40 disabled:cursor-not-allowed` explicitly or ensure the disabled variant renders as muted._
+### 8. "Use this" button is generic
+
+Every row says "Use this" with no context. "Assign" is a stronger verb, and making the full row clickable (or using a radio-style selection) would feel more deliberate for an action this consequential.
+
+### 9. Empty state on Curricula list lacks an icon
+
+When no curricula exist, the placeholder is plain text. The rest of the app uses icon + text for empty states (e.g. `ClipboardCheck` in HOD Review, `Building2` in Platform Admin schools). A `BookOpen` icon here would be consistent.
 
 ---
 
 ## What Works Well
 
-- **Schools table hits the operational console target exactly** — Dense, information-first, no illustration or empty-state warmth. The Active status chip in emerald is the only color on the page; everything else is monochrome. Brief delivered.
-- **Create School modal is the right amount of form** — Two sections separated by a divider, asterisked required fields, show/hide password toggle, and helper copy below the password field ("Share this with the school admin…"). Exactly the brief's "single flow" requirement.
-- **School Detail sheet is the strongest component** — Stats trio (Users / Plans / Last Activity) as card tiles, avatar-initialled users table with correct role badges, and Suspend School in rose at the footer. The slide-out approach avoids navigation and keeps context.
-- **Desktop-only guard is clean** — Building icon + two-line message at 375px. No broken layout, no wasted space. See `screenshots/review-mobile-guard-375.png`.
-- **Suspend confirmation input pattern is correct** — Requiring the school name to be typed before enabling the button is the right mechanic for a destructive action that locks out real users.
-- **Multi-tenant scoping works end-to-end** — `zain.admin` now only sees DSK users in Manage Users; new users created by school admins inherit `school_id`; `zain.platform` has no `school_id` and bypasses the suspended-school guard.
+- **Tab switcher** is clean — the icon+label button group reads immediately as sub-navigation, and the active state (filled background) is unambiguous.
+- **Expand/collapse per row** with an inline standards table avoids a separate page/modal for what is primarily a list-editing pattern. The chevron toggle is intuitive.
+- **School Setup three-state flow** (loading → assigned with read-only table → unassigned with library) is logically correct. The "Remove" button placement and styling (rose/destructive outline) is appropriately weighted.
+- **Migration** was clean: backfilled labels from existing FK data before dropping the columns, and the `school_curricula` RLS policies are correctly scoped by `school_id`.
+- **Architecture** eliminates the core problem entirely — one source of truth for all standard sets, zero per-school duplication, no AI credits wasted on regenerating the same content.

@@ -33,7 +33,11 @@ Units 1–7 (Terms 1–2 + early T3) are complete. Unit 8 just submitted. Unit 9
 
 ## Staff
 
-### Admin — Zain Glenn
+### Platform Admin — Zain Glenn
+- **Username:** `zain.platform` · **Password:** `Platform123!@@`
+- Platform-level access only: create schools, view all schools, suspend/unsuspend. No curriculum data access.
+
+### Admin — Zain Glenn (DSK school admin)
 - **Username:** `zain.admin` · **Password:** `Admin123!@@`
 - Full access: Manage Users, School Setup, Platform Settings, Curriculum Audit.
 

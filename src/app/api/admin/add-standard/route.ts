@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { makeAdminClient, requireAdmin } from "@/lib/adminClient";
+import { makeAdminClient, requirePlatformAdmin } from "@/lib/adminClient";
 
 const VALID_STRANDS = ["RL", "RI", "W", "SL", "L"];
 
 export async function POST(req: NextRequest) {
   const admin = makeAdminClient();
-  const auth = await requireAdmin(req, admin);
+  const auth = await requirePlatformAdmin(req, admin);
   if (auth instanceof NextResponse) return auth;
 
   const { code, strand, description, standard_set_id } = await req.json();

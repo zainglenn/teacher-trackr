@@ -25,13 +25,20 @@ export interface GradeLevel {
 
 export interface StandardSet {
   id: string;
-  school_id: string | null;
+  name: string;
+  subject_label: string | null;
+  grade_label: string | null;
+  created_at: string;
+}
+
+export interface SchoolCurriculum {
+  id: string;
+  school_id: string;
+  standard_set_id: string;
   subject_id: string;
   grade_level_id: string;
-  name: string;
   created_at: string;
-  subject?: Subject;
-  grade_level?: GradeLevel;
+  standard_set?: StandardSet;
 }
 
 export interface ClassAssignment {
@@ -215,4 +222,170 @@ export interface StudentProgress {
   assessed_date: string | null;
   notes: string | null;
   updated_at: string;
+}
+
+// ── Department Leadership Suite ───────────────────────────────────────────────
+
+export type ObservationFocusArea =
+  | "literacy"
+  | "differentiation"
+  | "assessment"
+  | "classroom_management"
+  | "other";
+
+export type CoachingStep = "observe" | "debrief" | "model" | "reflect";
+
+export type PDType = "conference" | "workshop" | "peer_obs" | "online" | "other";
+
+export type InterventionStatus = "active" | "monitoring" | "concluded";
+
+export type InitiativeStatus = "active" | "completed";
+
+export type CheckInCadence = "weekly" | "fortnightly" | "monthly";
+
+export interface Observation {
+  id: string;
+  hod_id: string;
+  teacher_id: string;
+  school_id: string;
+  date: string;
+  focus_area: ObservationFocusArea;
+  notes: string | null;
+  next_steps: string | null;
+  created_at: string;
+  teacher?: Pick<Profile, "id" | "full_name" | "username">;
+}
+
+export interface CoachingCycle {
+  id: string;
+  hod_id: string;
+  teacher_id: string;
+  school_id: string;
+  steps_completed: CoachingStep[];
+  started_at: string;
+  completed_at: string | null;
+}
+
+export interface MentoringPair {
+  id: string;
+  hod_id: string;
+  mentor_id: string;
+  mentee_id: string;
+  school_id: string;
+  check_in_cadence: CheckInCadence;
+  last_checkin_at: string | null;
+  created_at: string;
+  mentor?: Pick<Profile, "id" | "full_name">;
+  mentee?: Pick<Profile, "id" | "full_name">;
+}
+
+export interface PDEntry {
+  id: string;
+  teacher_id: string;
+  school_id: string;
+  pd_type: PDType;
+  focus_area: string | null;
+  attended_date: string;
+  notes: string | null;
+  created_at: string;
+}
+
+export interface BenchmarkSnapshot {
+  id: string;
+  hod_id: string;
+  school_id: string;
+  subject_id: string | null;
+  grade_level_id: string | null;
+  snapshot_date: string;
+  strand_averages: Record<string, number>; // e.g. { RL: 72.5, RI: 65.0 }
+  created_at: string;
+}
+
+export interface Intervention {
+  id: string;
+  teacher_id: string;
+  school_id: string;
+  strand_codes: string[];
+  student_ids: string[];
+  strategy: string;
+  start_date: string;
+  end_date: string | null;
+  outcome_notes: string | null;
+  status: InterventionStatus;
+  created_at: string;
+  updated_at: string;
+  teacher?: Pick<Profile, "id" | "full_name">;
+  student_names?: string[]; // joined for display
+}
+
+export interface MeetingNote {
+  id: string;
+  hod_id: string;
+  school_id: string;
+  meeting_date: string;
+  agenda: string | null;
+  notes: string | null;
+  attendee_ids: string[];
+  created_at: string;
+  updated_at: string;
+  action_items?: ActionItem[];
+  attendees?: Pick<Profile, "id" | "full_name">[];
+}
+
+export interface ActionItem {
+  id: string;
+  meeting_note_id: string;
+  assignee_id: string;
+  description: string;
+  due_date: string | null;
+  completed_at: string | null;
+  created_at: string;
+  assignee?: Pick<Profile, "id" | "full_name">;
+}
+
+export interface Recognition {
+  id: string;
+  hod_id: string;
+  teacher_id: string;
+  school_id: string;
+  unit_id: string | null;
+  note: string;
+  created_at: string;
+  teacher?: Pick<Profile, "id" | "full_name">;
+  unit?: Pick<LTPUnit, "id" | "title">;
+}
+
+export interface Initiative {
+  id: string;
+  owner_id: string;
+  school_id: string;
+  name: string;
+  description: string | null;
+  subject_ids: string[];
+  grade_level_ids: string[];
+  metric_label: string | null;
+  status: InitiativeStatus;
+  start_date: string | null;
+  end_date: string | null;
+  created_at: string;
+  participants?: InitiativeParticipant[];
+  progress?: InitiativeProgress[];
+}
+
+export interface InitiativeParticipant {
+  id: string;
+  initiative_id: string;
+  teacher_id: string;
+  class_id: string | null;
+  created_at: string;
+  teacher?: Pick<Profile, "id" | "full_name">;
+}
+
+export interface InitiativeProgress {
+  id: string;
+  initiative_id: string;
+  recorded_by: string;
+  recorded_at: string;
+  metric_value: number;
+  notes: string | null;
 }

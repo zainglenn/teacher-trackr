@@ -11,15 +11,16 @@ export function useStandards(standardSetId?: string | null, schoolId?: string | 
   useEffect(() => {
     async function load() {
       let query = supabase.from("standards").select("*").order("code");
+
       if (standardSetId) {
         query = query.eq("standard_set_id", standardSetId);
       } else if (schoolId) {
-        // Scope to standard sets belonging to this school
-        const { data: sets } = await supabase
-          .from("standard_sets")
-          .select("id")
+        // Get standard sets this school has subscribed to via school_curricula
+        const { data: curricula } = await supabase
+          .from("school_curricula")
+          .select("standard_set_id")
           .eq("school_id", schoolId);
-        const setIds = (sets ?? []).map((s) => s.id);
+        const setIds = (curricula ?? []).map((c) => c.standard_set_id);
         if (!setIds.length) {
           setStandards([]);
           setLoading(false);
@@ -27,6 +28,7 @@ export function useStandards(standardSetId?: string | null, schoolId?: string | 
         }
         query = query.in("standard_set_id", setIds);
       }
+
       const { data } = await query;
       setStandards((data ?? []) as Standard[]);
       setLoading(false);

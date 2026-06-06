@@ -100,7 +100,6 @@ export function PlatformAdminView() {
 
   return (
     <>
-      {/* Desktop-only guard */}
       <div className="hidden md:block">
         <PageContainer
           title="Schools"
@@ -111,7 +110,6 @@ export function PlatformAdminView() {
             </Button>
           }
         >
-          {/* Search */}
           <div className="relative w-72">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <Input
@@ -122,7 +120,6 @@ export function PlatformAdminView() {
             />
           </div>
 
-          {/* Table */}
           <div className="border border-border rounded-lg overflow-hidden bg-background">
             <table className="w-full text-sm">
               <thead>
@@ -193,10 +190,8 @@ export function PlatformAdminView() {
                       </td>
                       <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                         <DropdownMenu>
-                          <DropdownMenuTrigger>
-                            <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={(e) => e.stopPropagation()}>
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
+                          <DropdownMenuTrigger className="inline-flex items-center justify-center h-7 w-7 rounded-md border border-transparent text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
+                            <MoreHorizontal className="h-4 w-4" />
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem onClick={() => setDetailSchoolId(school.id)}>
@@ -232,14 +227,12 @@ export function PlatformAdminView() {
         </PageContainer>
       </div>
 
-      {/* Mobile guard */}
       <div className="flex md:hidden flex-col items-center justify-center min-h-[60vh] px-6 text-center">
         <Building2 className="h-10 w-10 text-muted-foreground/30 mb-3" />
         <p className="text-sm font-medium">Platform admin requires a desktop browser.</p>
         <p className="text-xs text-muted-foreground mt-1">Please use a screen wider than 768px.</p>
       </div>
 
-      {/* Modals & sheets */}
       <CreateSchoolModal
         open={createOpen}
         onClose={() => setCreateOpen(false)}

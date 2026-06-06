@@ -27,10 +27,18 @@ import { useActiveContext } from "@/hooks/useActiveContext";
 import { useStandardPipeline } from "@/hooks/useStandardPipeline";
 import { useDepartmentPipeline } from "@/hooks/useDepartmentPipeline";
 import { useTeacherNotifications, useHodNotifications } from "@/hooks/useNotifications";
+import { useLeadershipNotifications } from "@/hooks/useLeadershipNotifications";
 import { PlatformAdminView } from "@/components/PlatformAdminView";
+import { PlatformCurriculaView } from "@/components/PlatformCurriculaView";
 import { SuspendedSchoolMessage } from "@/components/SuspendedSchoolMessage";
+import { DepartmentAnalyticsView } from "@/components/DepartmentAnalyticsView";
+import { CoachingView } from "@/components/CoachingView";
+import { StudentProgressWithTabs } from "@/components/StudentProgressWithTabs";
+import { DepartmentView } from "@/components/DepartmentView";
+import { InitiativesView } from "@/components/InitiativesView";
 import { useSchool } from "@/hooks/useSchool";
 import { Loader2, BookOpen } from "lucide-react";
+
 
 function CurriculumApp({ userId }: { userId: string }) {
   const [view, setView] = useState<AppView>("dashboard");
@@ -85,7 +93,12 @@ function CurriculumApp({ userId }: { userId: string }) {
   );
   const teacherNotifs = useTeacherNotifications(role === "teacher" ? ltps : [], teacherPipelineEntries);
   const hodNotifs = useHodNotifications(isHod ? ltps : [], deptPipelineResults, standards.length);
-  const notifications = isPlatformAdmin ? [] : (isHod ? hodNotifs : teacherNotifs);
+  const leadershipNotifs = useLeadershipNotifications(
+    !isPlatformAdmin ? userId : null,
+    profile?.school_id ?? null,
+    isHod
+  );
+  const notifications = isPlatformAdmin ? [] : (isHod ? [...hodNotifs, ...leadershipNotifs] : [...teacherNotifs, ...leadershipNotifs]);
   const overdueCount = notifications.filter((n) => n.severity === "urgent").length;
 
   // HODs are scoped by subject_id on their profile — they don't need class assignments
@@ -112,7 +125,7 @@ function CurriculumApp({ userId }: { userId: string }) {
             <SidebarTrigger className="h-7 w-7 text-muted-foreground hover:text-foreground md:hidden" />
           </header>
           <main className="flex-1 overflow-y-auto p-4 sm:p-6">
-            <PlatformAdminView />
+            {view === "curricula" ? <PlatformCurriculaView /> : <PlatformAdminView />}
           </main>
         </SidebarInset>
       </SidebarProvider>
@@ -176,7 +189,7 @@ function CurriculumApp({ userId }: { userId: string }) {
             />
           )}
           {view === "student-progress" && (
-            noContextAssigned ? <NoAssignmentState /> : <StudentProgressView teacherId={userId} standards={standards} byStrand={byStrand} isHod={isHod} contextLabel={contextLabel} />
+            noContextAssigned ? <NoAssignmentState /> : <StudentProgressWithTabs teacherId={userId} standards={standards} byStrand={byStrand} isHod={isHod} contextLabel={contextLabel} schoolId={profile?.school_id ?? null} />
           )}
           {view === "delivery-grid" && isHod && (
             <DeliveryGridView
@@ -213,6 +226,25 @@ function CurriculumApp({ userId }: { userId: string }) {
           )}
           {view === "curriculum-audit" && isAdmin && (
             <AdminView userId={userId} tab="audit" schoolId={profile?.school_id ?? null} />
+          )}
+          {view === "analytics" && isHod && (
+            <DepartmentAnalyticsView
+              standards={standards}
+              subjectId={activeContext?.subjectId ?? profileSubjectId ?? null}
+              gradeLevelId={activeContext?.gradeLevelId ?? null}
+              schoolId={profile?.school_id ?? null}
+              hodId={userId}
+              contextLabel={contextLabel}
+            />
+          )}
+          {view === "coaching" && isHod && (
+            <CoachingView schoolId={profile?.school_id ?? null} hodId={userId} />
+          )}
+          {view === "department" && (isHod || role === "teacher") && (
+            <DepartmentView schoolId={profile?.school_id ?? null} userId={userId} isHod={isHod} />
+          )}
+          {view === "initiatives" && (isAdmin || isHod) && (
+            <InitiativesView schoolId={profile?.school_id ?? null} userId={userId} isHod={isHod} isAdmin={isAdmin} />
           )}
         </main>
       </SidebarInset>

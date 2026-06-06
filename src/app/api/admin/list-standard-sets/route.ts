@@ -7,17 +7,17 @@ export async function GET(req: NextRequest) {
   if (auth instanceof NextResponse) return auth;
 
   const url = new URL(req.url);
-  const subject_id = url.searchParams.get("subject_id");
-  const grade_level_id = url.searchParams.get("grade_level_id");
+  const subject_label = url.searchParams.get("subject_label");
+  const grade_label = url.searchParams.get("grade_label");
 
   let query = admin
     .from("standard_sets")
-    .select("*, subject:subjects(*), grade_level:grade_levels(*)")
-    .order("created_at", { ascending: true });
+    .select("*")
+    .order("subject_label", { ascending: true })
+    .order("grade_label", { ascending: true });
 
-  if (auth.schoolId) query = query.eq("school_id", auth.schoolId);
-  if (subject_id) query = query.eq("subject_id", subject_id);
-  if (grade_level_id) query = query.eq("grade_level_id", grade_level_id);
+  if (subject_label) query = query.eq("subject_label", subject_label);
+  if (grade_label) query = query.eq("grade_label", grade_label);
 
   const { data, error } = await query;
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

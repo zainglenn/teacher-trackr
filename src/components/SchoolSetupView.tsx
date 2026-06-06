@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Plus, Trash2, CheckSquare, Square, Sparkles, RefreshCw } from "lucide-react";
+import { Plus, Trash2, CheckSquare, Square } from "lucide-react";
 import { PageContainer } from "@/components/PageContainer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { SubjectBadge } from "@/components/ltp/SubjectBadge";
 import { adminFetch } from "@/lib/authToken";
 import { nextAvailableSlot, SUBJECT_SLOTS, getSlotLabel, getSubjectSlotStyle, type SubjectSlot } from "@/lib/subjectSlot";
-import { Subject, GradeLevel, StandardSet, Standard, ClassAssignment, Profile } from "@/types";
+import { Subject, GradeLevel, StandardSet, Standard, SchoolCurriculum, ClassAssignment, Profile } from "@/types";
 import { useTeachers } from "@/hooks/useTeachers";
 
 type Tab = "subjects" | "grade-levels" | "standard-sets" | "class-assignments";
@@ -264,154 +264,78 @@ function GradeLevelsTab() {
 
 // ── Standard Sets Tab ─────────────────────────────────────────────────────────
 
-interface GeneratedStandard { code: string; strand: string; description: string; }
-
 function StandardSetsTab() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [gradeLevels, setGradeLevels] = useState<GradeLevel[]>([]);
   const [selectedSubjectId, setSelectedSubjectId] = useState<string>("");
   const [selectedGradeId, setSelectedGradeId] = useState<string>("");
-  const [standardSet, setStandardSet] = useState<StandardSet | null>(null);
-  const [standards, setStandards] = useState<Standard[]>([]);
-  const [loadingSet, setLoadingSet] = useState(false);
-  const [creatingSet, setCreatingSet] = useState(false);
-  const [newSetName, setNewSetName] = useState("");
-  const [addingStd, setAddingStd] = useState(false);
-  const [stdCode, setStdCode] = useState("");
-  const [stdStrand, setStdStrand] = useState("");
-  const [stdDesc, setStdDesc] = useState("");
-  const [stdSaving, setStdSaving] = useState(false);
+  const [platformSets, setPlatformSets] = useState<StandardSet[]>([]);
+  const [librarySearch, setLibrarySearch] = useState("");
+  const [assigned, setAssigned] = useState<SchoolCurriculum | null>(null);
+  const [assignedStandards, setAssignedStandards] = useState<Standard[]>([]);
+  const [loadingAssigned, setLoadingAssigned] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  // AI generation state
-  const [generating, setGenerating] = useState(false);
-  const [aiPreview, setAiPreview] = useState<{ setName: string; standards: GeneratedStandard[] } | null>(null);
-  const [aiSetName, setAiSetName] = useState("");
-  const [selectedCodes, setSelectedCodes] = useState<Set<string>>(new Set());
-  const [savingGenerated, setSavingGenerated] = useState(false);
 
   useEffect(() => {
     Promise.all([
       adminFetch("/api/admin/list-subjects").then(r => r.json()),
       adminFetch("/api/admin/list-grade-levels").then(r => r.json()),
-    ]).then(([sj, gl]) => {
+      adminFetch("/api/admin/list-standard-sets").then(r => r.json()),
+    ]).then(([sj, gl, ss]) => {
       setSubjects(sj.subjects ?? []);
       setGradeLevels(gl.grade_levels ?? []);
+      setPlatformSets(ss.standard_sets ?? []);
     });
   }, []);
 
-  const loadSet = useCallback(async (subjectId: string, gradeId: string) => {
+  const loadAssigned = useCallback(async (subjectId: string, gradeId: string) => {
     if (!subjectId || !gradeId) return;
-    setLoadingSet(true);
-    setStandardSet(null);
-    setStandards([]);
-    const res = await adminFetch(`/api/admin/list-standard-sets?subject_id=${subjectId}&grade_level_id=${gradeId}`);
+    setLoadingAssigned(true);
+    setAssigned(null);
+    setAssignedStandards([]);
+    const res = await adminFetch(`/api/admin/school-curricula?subject_id=${subjectId}&grade_level_id=${gradeId}`);
     const json = await res.json();
-    const set: StandardSet | undefined = (json.standard_sets ?? [])[0];
-    setStandardSet(set ?? null);
-    if (set) {
-      const sRes = await adminFetch(`/api/admin/list-subjects`); // reuse supabase for standards
-      // Fetch standards for this set via supabase directly
+    const curr: SchoolCurriculum | undefined = (json.school_curricula ?? [])[0];
+    setAssigned(curr ?? null);
+    if (curr?.standard_set_id) {
       const { supabase } = await import("@/lib/supabase");
       const { data } = await supabase
         .from("standards")
         .select("*")
-        .eq("standard_set_id", set.id)
+        .eq("standard_set_id", curr.standard_set_id)
         .order("code");
-      setStandards((data ?? []) as Standard[]);
-      void sRes; // suppress unused warning
+      setAssignedStandards((data ?? []) as Standard[]);
     }
-    setLoadingSet(false);
+    setLoadingAssigned(false);
   }, []);
 
   useEffect(() => {
-    if (selectedSubjectId && selectedGradeId) {
-      loadSet(selectedSubjectId, selectedGradeId);
-    }
-  }, [selectedSubjectId, selectedGradeId, loadSet]);
+    if (selectedSubjectId && selectedGradeId) loadAssigned(selectedSubjectId, selectedGradeId);
+  }, [selectedSubjectId, selectedGradeId, loadAssigned]);
 
-  async function handleCreateSet() {
-    if (!newSetName.trim()) return;
-    setCreatingSet(true);
-    const res = await adminFetch("/api/admin/create-standard-set", {
+  async function handleAssign(standardSetId: string) {
+    setSaving(true);
+    setError("");
+    const res = await adminFetch("/api/admin/school-curricula", {
       method: "POST",
-      body: JSON.stringify({ name: newSetName.trim(), subject_id: selectedSubjectId, grade_level_id: selectedGradeId }),
+      body: JSON.stringify({ standard_set_id: standardSetId, subject_id: selectedSubjectId, grade_level_id: selectedGradeId }),
     });
     const json = await res.json();
-    if (json.error) { setError(json.error); setCreatingSet(false); return; }
-    setNewSetName("");
-    await loadSet(selectedSubjectId, selectedGradeId);
-    setCreatingSet(false);
+    if (json.error) { setError(json.error); setSaving(false); return; }
+    await loadAssigned(selectedSubjectId, selectedGradeId);
+    setSaving(false);
   }
 
-  async function handleAddStandard() {
-    if (!stdCode.trim() || !stdStrand || !stdDesc.trim() || !standardSet) return;
-    setStdSaving(true);
-    setError("");
-    const res = await adminFetch("/api/admin/add-standard", {
-      method: "POST",
-      body: JSON.stringify({ code: stdCode.trim(), strand: stdStrand, description: stdDesc.trim(), standard_set_id: standardSet.id }),
+  async function handleUnassign() {
+    setSaving(true);
+    await adminFetch("/api/admin/school-curricula", {
+      method: "DELETE",
+      body: JSON.stringify({ subject_id: selectedSubjectId, grade_level_id: selectedGradeId }),
     });
-    const json = await res.json();
-    if (json.error) { setError(json.error); setStdSaving(false); return; }
-    setStdCode(""); setStdStrand(""); setStdDesc(""); setAddingStd(false);
-    await loadSet(selectedSubjectId, selectedGradeId);
-    setStdSaving(false);
-  }
-
-  async function handleDeleteStandard(id: string) {
-    await adminFetch("/api/admin/delete-standard", { method: "DELETE", body: JSON.stringify({ id }) });
-    await loadSet(selectedSubjectId, selectedGradeId);
-  }
-
-  function clearAiPreview() {
-    setAiPreview(null);
-    setAiSetName("");
-    setSelectedCodes(new Set());
-    setError("");
-  }
-
-  async function handleGenerate() {
-    const subject = subjects.find(s => s.id === selectedSubjectId);
-    const grade = gradeLevels.find(g => g.id === selectedGradeId);
-    if (!subject || !grade) return;
-    setGenerating(true);
-    setError("");
-    clearAiPreview();
-    const res = await adminFetch("/api/ai/generate-standards", {
-      method: "POST",
-      body: JSON.stringify({ subject_name: subject.name, grade_level_name: grade.name }),
-    });
-    const json = await res.json();
-    setGenerating(false);
-    if (json.error) { setError(json.error); return; }
-    setAiPreview(json);
-    setAiSetName(json.setName);
-    setSelectedCodes(new Set((json.standards as GeneratedStandard[]).map(s => s.code)));
-  }
-
-  async function handleSaveGenerated() {
-    if (!aiPreview || !aiSetName.trim()) return;
-    setSavingGenerated(true);
-    setError("");
-    // 1. Create the standard set
-    const setRes = await adminFetch("/api/admin/create-standard-set", {
-      method: "POST",
-      body: JSON.stringify({ name: aiSetName.trim(), subject_id: selectedSubjectId, grade_level_id: selectedGradeId }),
-    });
-    const setJson = await setRes.json();
-    if (setJson.error) { setError(setJson.error); setSavingGenerated(false); return; }
-    const setId = setJson.standard_set.id as string;
-    // 2. Bulk insert selected standards
-    const toInsert = aiPreview.standards.filter(s => selectedCodes.has(s.code));
-    const bulkRes = await adminFetch("/api/admin/bulk-add-standards", {
-      method: "POST",
-      body: JSON.stringify({ standard_set_id: setId, standards: toInsert }),
-    });
-    const bulkJson = await bulkRes.json();
-    if (bulkJson.error) { setError(bulkJson.error); setSavingGenerated(false); return; }
-    clearAiPreview();
-    setSavingGenerated(false);
-    await loadSet(selectedSubjectId, selectedGradeId);
+    setAssigned(null);
+    setAssignedStandards([]);
+    setSaving(false);
   }
 
   const showContent = selectedSubjectId && selectedGradeId;
@@ -419,7 +343,7 @@ function StandardSetsTab() {
   return (
     <div className="space-y-5">
       <div className="text-xs text-muted-foreground">
-        Select a subject and grade level to view or create the standard set for that combination.
+        Select a subject and grade level, then choose the platform curriculum that applies.
       </div>
 
       <div className="flex gap-3">
@@ -458,186 +382,92 @@ function StandardSetsTab() {
       {showContent && (
         <>
           <Separator />
-          {loadingSet ? (
+          {loadingAssigned ? (
             <div className="text-sm text-muted-foreground py-4 text-center">Loading…</div>
-          ) : !standardSet ? (
-            <div className="space-y-4">
-              {/* AI generation preview */}
-              {aiPreview ? (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="h-3.5 w-3.5 text-violet-500 shrink-0" />
-                    <span className="text-xs font-medium">AI-generated standard set — review and confirm</span>
-                    <span className="ml-auto text-xs text-muted-foreground">{selectedCodes.size} of {aiPreview.standards.length} selected</span>
-                  </div>
-                  <div className="flex gap-2 items-center">
-                    <Input
-                      value={aiSetName}
-                      onChange={e => setAiSetName(e.target.value)}
-                      placeholder="Standard set name"
-                      className="h-8 text-sm flex-1"
-                    />
-                  </div>
-                  <div className="border border-border rounded-md overflow-hidden">
-                    <div className="grid grid-cols-[20px_80px_100px_1fr] gap-0 px-3 py-1.5 bg-muted/40 text-xs font-medium text-muted-foreground border-b border-border">
-                      <span />
-                      <span>Code</span>
-                      <span>Strand</span>
-                      <span>Description</span>
-                    </div>
-                    <div className="max-h-80 overflow-y-auto">
-                      {aiPreview.standards.map((s, i) => (
-                        <div key={s.code}>
-                          {i > 0 && <Separator />}
-                          <div
-                            className="grid grid-cols-[20px_80px_100px_1fr] gap-0 px-3 py-2 items-start cursor-pointer hover:bg-muted/30"
-                            onClick={() => setSelectedCodes(prev => {
-                              const next = new Set(prev);
-                              next.has(s.code) ? next.delete(s.code) : next.add(s.code);
-                              return next;
-                            })}
-                          >
-                            <div className="pt-0.5">
-                              {selectedCodes.has(s.code)
-                                ? <CheckSquare className="h-3.5 w-3.5 text-primary" />
-                                : <Square className="h-3.5 w-3.5 text-muted-foreground" />}
-                            </div>
-                            <span className="text-xs font-mono text-foreground pt-0.5">{s.code}</span>
-                            <span className="text-xs text-muted-foreground pt-0.5 pr-2">{s.strand}</span>
-                            <span className="text-xs text-foreground leading-relaxed">{s.description}</span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  {error && <p className="text-xs text-destructive">{error}</p>}
-                  <div className="flex gap-2">
-                    <Button size="sm" onClick={handleSaveGenerated} disabled={savingGenerated || selectedCodes.size === 0 || !aiSetName.trim()} className="h-8 text-xs">
-                      {savingGenerated ? "Saving…" : `Save ${selectedCodes.size} Standard${selectedCodes.size !== 1 ? "s" : ""}`}
-                    </Button>
-                    <Button size="sm" variant="outline" onClick={handleGenerate} disabled={generating} className="h-8 text-xs gap-1.5">
-                      <RefreshCw className="h-3 w-3" />
-                      Regenerate
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={clearAiPreview} className="h-8 text-xs ml-auto">
-                      Cancel
-                    </Button>
-                  </div>
+          ) : assigned ? (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">{assigned.standard_set?.name}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {assignedStandards.length} standard{assignedStandards.length !== 1 ? "s" : ""}
+                  </p>
                 </div>
-              ) : (
-                <div className="space-y-3">
-                  <p className="text-sm text-muted-foreground">No standard set for this combination yet.</p>
-                  <Button
-                    size="sm"
-                    onClick={handleGenerate}
-                    disabled={generating}
-                    className="h-8 text-xs gap-1.5 bg-violet-600 hover:bg-violet-700 text-white"
-                  >
-                    <Sparkles className="h-3.5 w-3.5" />
-                    {generating ? "Generating…" : "Generate with AI"}
-                  </Button>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 h-px bg-border" />
-                    <span className="text-xs text-muted-foreground">or create manually</span>
-                    <div className="flex-1 h-px bg-border" />
-                  </div>
-                  <div className="flex gap-2 items-end">
-                    <div className="flex-1">
-                      <Label htmlFor="new-set-name" className="text-xs mb-1.5 block">Standard set name</Label>
-                      <Input
-                        id="new-set-name"
-                        value={newSetName}
-                        onChange={e => setNewSetName(e.target.value)}
-                        placeholder="e.g. NYSED Grade 6 ELA"
-                        className="h-8 text-sm"
-                        onKeyDown={e => { if (e.key === "Enter") handleCreateSet(); }}
-                      />
+                <Button
+                  variant="outline" size="sm"
+                  className="h-7 text-xs text-rose-600 border-rose-200 hover:bg-rose-50"
+                  onClick={handleUnassign} disabled={saving}
+                >
+                  Remove
+                </Button>
+              </div>
+              {assignedStandards.length > 0 && (
+                <div className="border border-border rounded-md overflow-x-auto">
+                  <div className="min-w-[480px]">
+                    <div className="grid grid-cols-[80px_80px_1fr] gap-0 px-3 py-1.5 bg-muted/40 text-xs font-medium text-muted-foreground border-b border-border">
+                      <span>Code</span><span>Strand</span><span>Description</span>
                     </div>
-                    <Button size="sm" onClick={handleCreateSet} disabled={creatingSet || !newSetName.trim()} className="h-8 text-xs">
-                      {creatingSet ? "Creating…" : "Create Set"}
-                    </Button>
+                    {assignedStandards.map((s, i) => (
+                      <div key={s.id}>
+                        {i > 0 && <Separator />}
+                        <div className="grid grid-cols-[80px_80px_1fr] gap-0 px-3 py-2 items-start">
+                          <span className="text-xs font-mono pt-0.5">{s.code}</span>
+                          <span className="text-xs text-muted-foreground pt-0.5">{s.strand}</span>
+                          <span className="text-xs text-foreground leading-relaxed">{s.description}</span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  {error && <p className="text-xs text-destructive">{error}</p>}
                 </div>
               )}
             </div>
           ) : (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">{standardSet.name}</p>
-                  <p className="text-xs text-muted-foreground">{standards.length} standards</p>
-                </div>
-              </div>
-
-              {standards.length > 0 && (
-                <div className="border border-border rounded-md overflow-x-auto">
-                  <div className="min-w-[480px]">
-                  <div className="grid grid-cols-[80px_48px_1fr_32px] gap-0 px-3 py-1.5 bg-muted/40 text-xs font-medium text-muted-foreground border-b border-border">
-                    <span>Code</span>
-                    <span>Strand</span>
-                    <span>Description</span>
-                    <span />
-                  </div>
-                  {standards.map((s, i) => (
-                    <div key={s.id}>
-                      {i > 0 && <Separator />}
-                      <div className="grid grid-cols-[80px_48px_1fr_32px] gap-0 px-3 py-2 items-start">
-                        <span className="text-xs font-mono text-foreground pt-0.5">{s.code}</span>
-                        <span className="text-xs text-muted-foreground pt-0.5">{s.strand}</span>
-                        <span className="text-xs text-foreground leading-relaxed">{s.description}</span>
-                        <button
-                          onClick={() => handleDeleteStandard(s.id)}
-                          className="text-muted-foreground hover:text-destructive transition-colors p-1 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
-                          aria-label={`Delete ${s.code}`}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                  </div>
-                </div>
-              )}
-
-              {addingStd ? (
-                <div className="border border-border rounded-md p-4 space-y-3 bg-muted/30">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <Label htmlFor="std-code" className="text-xs mb-1 block">Code</Label>
-                      <Input id="std-code" value={stdCode} onChange={e => setStdCode(e.target.value)} placeholder="e.g. RL.6.1" className="h-7 text-xs" />
-                    </div>
-                    <div>
-                      <Label htmlFor="std-strand" className="text-xs mb-1 block">Strand</Label>
-                      <Select value={stdStrand} onValueChange={(v) => v && setStdStrand(v)}>
-                        <SelectTrigger id="std-strand" className="h-7 text-xs">
-                          <SelectValue placeholder="Strand…" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {STRANDS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div>
-                    <Label htmlFor="std-desc" className="text-xs mb-1 block">Description</Label>
-                    <Input id="std-desc" value={stdDesc} onChange={e => setStdDesc(e.target.value)} placeholder="Standard description…" className="h-7 text-xs" />
-                  </div>
-                  {error && <p className="text-xs text-destructive">{error}</p>}
-                  <div className="flex gap-2">
-                    <Button size="sm" onClick={handleAddStandard} disabled={stdSaving || !stdCode.trim() || !stdStrand || !stdDesc.trim()} className="h-7 text-xs">
-                      {stdSaving ? "Saving…" : "Add Standard"}
-                    </Button>
-                    <Button size="sm" variant="ghost" onClick={() => { setAddingStd(false); setStdCode(""); setStdStrand(""); setStdDesc(""); setError(""); }} className="h-7 text-xs">
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">No curriculum assigned. Choose from the platform library below.</p>
+              {error && <p className="text-xs text-destructive">{error}</p>}
+              {platformSets.length === 0 ? (
+                <p className="text-xs text-muted-foreground py-4 text-center">
+                  No platform curricula available yet. Contact your platform administrator.
+                </p>
               ) : (
-                <Button size="sm" variant="outline" onClick={() => setAddingStd(true)} className="h-7 text-xs gap-1.5">
-                  <Plus className="h-3.5 w-3.5" />
-                  Add Standard
-                </Button>
+                <>
+                  <Input
+                    value={librarySearch}
+                    onChange={e => setLibrarySearch(e.target.value)}
+                    placeholder="Search curricula…"
+                    className="h-8 text-sm"
+                  />
+                  {(() => {
+                    const q = librarySearch.toLowerCase();
+                    const visible = q
+                      ? platformSets.filter(s =>
+                          [s.name, s.subject_label, s.grade_label].some(v => v?.toLowerCase().includes(q))
+                        )
+                      : platformSets;
+                    return visible.length === 0 ? (
+                      <p className="text-xs text-muted-foreground py-3 text-center">No curricula match "{librarySearch}".</p>
+                    ) : (
+                      <div className="border border-border rounded-md overflow-hidden divide-y divide-border">
+                        {visible.map(set => (
+                          <div key={set.id} className="flex items-center justify-between px-3 py-2.5">
+                            <div>
+                              <p className="text-sm font-medium">{set.name}</p>
+                              {(set.subject_label || set.grade_label) && (
+                                <p className="text-xs text-muted-foreground mt-0.5">
+                                  {[set.subject_label, set.grade_label].filter(Boolean).join(" · ")}
+                                </p>
+                              )}
+                            </div>
+                            <Button size="sm" variant="outline" className="h-7 text-xs"
+                              onClick={() => handleAssign(set.id)} disabled={saving}>
+                              Assign
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                </>
               )}
             </div>
           )}

@@ -25,6 +25,10 @@ import {
   Search,
   ClipboardCheck,
   Building2,
+  BarChart3,
+  GraduationCap,
+  MessageSquare,
+  Rocket,
 } from "lucide-react";
 import { Role } from "@/types";
 import { useAuth } from "@/hooks/useAuth";
@@ -48,30 +52,47 @@ export type AppView =
   | "platform-settings"
   | "curriculum-audit"
   | "school-setup"
-  | "schools";
+  | "schools"
+  | "curricula"
+  | "analytics"
+  | "coaching"
+  | "department"
+  | "initiatives";
+
+type NavGroup = "planning" | "leadership" | "other" | undefined;
 
 type NavItem = {
   key: AppView;
   label: string;
   icon: React.ElementType;
   roles: Role[];
+  group?: NavGroup;
 };
 
 const NAV_ITEMS: NavItem[] = [
-  { key: "dashboard",        label: "Dashboard",          icon: LayoutDashboard, roles: ["hod"] },
-  { key: "my-units",         label: "My Units",           icon: School,          roles: ["teacher"] },
-  { key: "long-term-plan",   label: "Master Plans",       icon: ClipboardList,   roles: ["teacher", "hod"] },
-  { key: "delivery-grid",    label: "Delivery Grid",      icon: Grid3X3,         roles: ["hod"] },
-  { key: "hod-review",       label: "Plan Reviews",       icon: ClipboardCheck,  roles: ["hod"] },
-  { key: "coverage",         label: "Standards Coverage", icon: CheckSquare,     roles: ["teacher", "hod"] },
-  { key: "student-progress", label: "Student Progress",   icon: Users,           roles: ["teacher", "hod"] },
-  { key: "hod-settings",     label: "HOD Settings",       icon: Settings2,       roles: ["hod"] },
-  { key: "manage-users",     label: "Manage Users",       icon: UserCog,         roles: ["admin"] },
-  { key: "school-setup",     label: "School Setup",       icon: Building2,       roles: ["admin"] },
-  { key: "platform-settings",label: "Platform Settings",  icon: ShieldCheck,     roles: ["admin"] },
-  { key: "curriculum-audit", label: "Curriculum Audit",   icon: Search,          roles: ["admin"] },
-  { key: "schools",          label: "Schools",            icon: Building2,       roles: ["platform_admin"] },
+  { key: "dashboard",         label: "Dashboard",          icon: LayoutDashboard, roles: ["hod"],                     group: "planning" },
+  { key: "my-units",          label: "My Units",           icon: School,          roles: ["teacher"] },
+  { key: "long-term-plan",    label: "Master Plans",       icon: ClipboardList,   roles: ["teacher", "hod"],          group: "planning" },
+  { key: "delivery-grid",     label: "Delivery Grid",      icon: Grid3X3,         roles: ["hod"],                     group: "planning" },
+  { key: "hod-review",        label: "Plan Reviews",       icon: ClipboardCheck,  roles: ["hod"],                     group: "planning" },
+  { key: "coverage",          label: "Standards Coverage", icon: CheckSquare,     roles: ["teacher", "hod"],          group: "planning" },
+  { key: "analytics",         label: "Analytics",          icon: BarChart3,       roles: ["hod"],                     group: "leadership" },
+  { key: "coaching",          label: "Coaching",           icon: GraduationCap,   roles: ["hod"],                     group: "leadership" },
+  { key: "department",        label: "Department",         icon: MessageSquare,   roles: ["hod", "teacher"],          group: "leadership" },
+  { key: "student-progress",  label: "Student Progress",   icon: Users,           roles: ["teacher", "hod"],          group: "other" },
+  { key: "hod-settings",      label: "HOD Settings",       icon: Settings2,       roles: ["hod"],                     group: "other" },
+  { key: "manage-users",      label: "Manage Users",       icon: UserCog,         roles: ["admin"] },
+  { key: "school-setup",      label: "School Setup",       icon: Building2,       roles: ["admin"] },
+  { key: "platform-settings", label: "Platform Settings",  icon: ShieldCheck,     roles: ["admin"] },
+  { key: "curriculum-audit",  label: "Curriculum Audit",   icon: Search,          roles: ["admin"] },
+  { key: "initiatives",       label: "Initiatives",        icon: Rocket,          roles: ["admin", "hod"] },
+  { key: "schools",           label: "Schools",            icon: Building2,       roles: ["platform_admin"] },
+  { key: "curricula",         label: "Curricula",          icon: BookOpen,        roles: ["platform_admin"] },
 ];
+
+const SECTION_LABELS: Record<string, string> = {
+  leadership: "Leadership",
+};
 
 interface AppSidebarProps {
   view: AppView;
@@ -89,6 +110,62 @@ export function AppSidebar({ view, onViewChange, role, username, overdueCount = 
   const { signOut } = useAuth();
 
   const items = NAV_ITEMS.filter((item) => item.roles.includes(role));
+  const useGroups = role === "hod";
+
+  const renderItems = () => {
+    if (!useGroups) {
+      return items.map((item) => renderItem(item));
+    }
+
+    const rendered: React.ReactNode[] = [];
+    let lastGroup: NavGroup = undefined;
+
+    items.forEach((item) => {
+      if (item.group !== lastGroup) {
+        if (item.group === "leadership") {
+          rendered.push(
+            <li key="sep-leadership" className="px-3 pt-3 pb-1">
+              <SidebarSeparator className="mb-2" />
+              <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-sidebar-foreground/50 px-0">
+                {SECTION_LABELS.leadership}
+              </span>
+            </li>
+          );
+        } else if (item.group === "other" && lastGroup === "leadership") {
+          rendered.push(<li key="sep-other"><SidebarSeparator className="my-1" /></li>);
+        }
+        lastGroup = item.group;
+      }
+      rendered.push(renderItem(item));
+    });
+
+    return rendered;
+  };
+
+  const renderItem = (item: NavItem) => {
+    const isActive = view === item.key;
+    return (
+      <SidebarMenuItem key={item.key}>
+        <SidebarMenuButton
+          isActive={isActive}
+          onClick={() => onViewChange(item.key)}
+          className={`cursor-pointer h-8 text-sm rounded-none border-l-2 px-3 ${
+            isActive
+              ? "border-l-primary bg-sidebar-accent/60 font-medium text-sidebar-foreground"
+              : "border-l-transparent font-normal text-sidebar-foreground/70 hover:bg-muted/50 hover:text-sidebar-foreground"
+          }`}
+        >
+          <item.icon className="h-3.5 w-3.5 shrink-0" />
+          <span>{item.label}</span>
+          {item.key === "delivery-grid" && overdueCount > 0 && (
+            <span className="ml-auto flex h-4 w-4 items-center justify-center rounded-full bg-[var(--status-overdue-text)] text-[9px] font-bold text-white">
+              {overdueCount > 9 ? "9+" : overdueCount}
+            </span>
+          )}
+        </SidebarMenuButton>
+      </SidebarMenuItem>
+    );
+  };
 
   return (
     <Sidebar collapsible="offcanvas" className="border-r border-sidebar-border w-[220px]">
@@ -116,30 +193,7 @@ export function AppSidebar({ view, onViewChange, role, username, overdueCount = 
       <SidebarContent>
         <SidebarGroup>
           <SidebarMenu>
-            {items.map((item) => {
-              const isActive = view === item.key;
-              return (
-                <SidebarMenuItem key={item.key}>
-                  <SidebarMenuButton
-                    isActive={isActive}
-                    onClick={() => onViewChange(item.key)}
-                    className={`cursor-pointer h-8 text-sm rounded-none border-l-2 px-3 ${
-                      isActive
-                        ? "border-l-primary bg-sidebar-accent/60 font-medium text-sidebar-foreground"
-                        : "border-l-transparent font-normal text-sidebar-foreground/70 hover:bg-muted/50 hover:text-sidebar-foreground"
-                    }`}
-                  >
-                    <item.icon className="h-3.5 w-3.5 shrink-0" />
-                    <span>{item.label}</span>
-                    {item.key === "delivery-grid" && overdueCount > 0 && (
-                      <span className="ml-auto flex h-4 w-4 items-center justify-center rounded-full bg-[var(--status-overdue-text)] text-[9px] font-bold text-white">
-                        {overdueCount > 9 ? "9+" : overdueCount}
-                      </span>
-                    )}
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              );
-            })}
+            {renderItems()}
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>

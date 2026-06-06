@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { makeAdminClient, requireAdmin } from "@/lib/adminClient";
+import { makeAdminClient, requirePlatformAdmin } from "@/lib/adminClient";
 
 interface StandardInput {
   code: string;
@@ -9,7 +9,7 @@ interface StandardInput {
 
 export async function POST(req: NextRequest) {
   const admin = makeAdminClient();
-  const auth = await requireAdmin(req, admin);
+  const auth = await requirePlatformAdmin(req, admin);
   if (auth instanceof NextResponse) return auth;
 
   const { standard_set_id, standards } = await req.json() as {
@@ -20,12 +20,6 @@ export async function POST(req: NextRequest) {
   if (!standard_set_id) return NextResponse.json({ error: "standard_set_id is required" }, { status: 400 });
   if (!Array.isArray(standards) || standards.length === 0) {
     return NextResponse.json({ error: "standards array is required" }, { status: 400 });
-  }
-
-  // Verify the standard set belongs to this admin's school
-  const { data: set } = await admin.from("standard_sets").select("school_id").eq("id", standard_set_id).single();
-  if (set?.school_id !== auth.schoolId) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   const rows = standards

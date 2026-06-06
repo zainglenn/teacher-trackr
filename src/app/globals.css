@@ -327,6 +327,39 @@
   --subject-slot-11-text:   oklch(0.375 0.115 330);   /* pink-800  */
   --subject-slot-11-border: oklch(0.922 0.048 330);   /* pink-200  */
   --subject-slot-11-accent: oklch(0.550 0.175 330);   /* pink-600  */
+
+  /* ── Attainment Level Colors ─────────────────────────────────────────────── */
+  /* Used in: Analytics drill-down sheet (individual student attainment levels) */
+  /* Semantically distinct from --status-* (delivery) even though hue families  */
+  /* overlap. "Exceeding" uses indigo (primary) to signal above-standard.        */
+  --attainment-not-assessed-bg:     oklch(0.970 0 0);         /* neutral-100 */
+  --attainment-not-assessed-text:   oklch(0.556 0 0);         /* neutral-500 */
+  --attainment-not-assessed-border: oklch(0.922 0 0);         /* neutral-200 */
+
+  --attainment-below-bg:            oklch(0.971 0.050 19);    /* red-100     */
+  --attainment-below-text:          oklch(0.444 0.177 19);    /* red-800     */
+  --attainment-below-border:        oklch(0.932 0.105 19);    /* red-200     */
+
+  --attainment-approaching-bg:      oklch(0.972 0.022 75);    /* amber-100   */
+  --attainment-approaching-text:    oklch(0.421 0.123 75);    /* amber-800   */
+  --attainment-approaching-border:  oklch(0.944 0.044 75);    /* amber-200   */
+
+  --attainment-meeting-bg:          oklch(0.962 0.044 155);   /* green-100   */
+  --attainment-meeting-text:        oklch(0.366 0.115 155);   /* green-800   */
+  --attainment-meeting-border:      oklch(0.871 0.100 155);   /* green-200   */
+
+  --attainment-exceeding-bg:        oklch(0.940 0.040 264);   /* indigo-100  */
+  --attainment-exceeding-text:      oklch(0.350 0.150 264);   /* indigo-800  */
+  --attainment-exceeding-border:    oklch(0.900 0.075 264);   /* indigo-200  */
+
+  /* ── Recognition Accent ──────────────────────────────────────────────────── */
+  /* Used in: RecognitionCard background, icon, border.                         */
+  /* Gold at hue 45° — sits between orange (35°) and amber (75°), both          */
+  /* occupied. Reads as celebratory without conflicting with strand/status.     */
+  --recognition-bg:     oklch(0.971 0.065 45);    /* gold-100 */
+  --recognition-text:   oklch(0.418 0.148 45);    /* gold-800 */
+  --recognition-border: oklch(0.940 0.118 45);    /* gold-200 */
+  --recognition-accent: oklch(0.655 0.198 45);    /* gold-600 */
 }
 
 /* ── Dark mode overrides for extended tokens ─────────────────────────────── */
@@ -420,6 +453,33 @@
 
   /* Lane upcoming opacity unchanged — same contrast relationship in dark mode */
 
+  /* Attainment levels — darkened bg, lightened text */
+  --attainment-not-assessed-bg:     oklch(0.220 0 0);
+  --attainment-not-assessed-text:   oklch(0.650 0 0);
+  --attainment-not-assessed-border: oklch(0.310 0 0);
+
+  --attainment-below-bg:            oklch(0.240 0.070 19);
+  --attainment-below-text:          oklch(0.850 0.130 19);
+  --attainment-below-border:        oklch(0.340 0.100 19);
+
+  --attainment-approaching-bg:      oklch(0.240 0.060 75);
+  --attainment-approaching-text:    oklch(0.875 0.118 75);
+  --attainment-approaching-border:  oklch(0.338 0.090 75);
+
+  --attainment-meeting-bg:          oklch(0.230 0.060 155);
+  --attainment-meeting-text:        oklch(0.821 0.100 155);
+  --attainment-meeting-border:      oklch(0.320 0.090 155);
+
+  --attainment-exceeding-bg:        oklch(0.238 0.055 264);
+  --attainment-exceeding-text:      oklch(0.820 0.110 264);
+  --attainment-exceeding-border:    oklch(0.322 0.082 264);
+
+  /* Recognition — warm gold on dark */
+  --recognition-bg:     oklch(0.248 0.075 45);
+  --recognition-text:   oklch(0.878 0.148 45);
+  --recognition-border: oklch(0.345 0.110 45);
+  --recognition-accent: oklch(0.742 0.182 45);
+
   /* Shadows are darker in dark mode */
   --shadow-sm:   0 1px 2px 0 oklch(0 0 0 / 0.3);
   --shadow-md:   0 4px 6px -1px oklch(0 0 0 / 0.4), 0 2px 4px -2px oklch(0 0 0 / 0.3);
@@ -495,6 +555,31 @@
     --subject-slot-6-bg:      oklch(0.235 0.050 210);
     --subject-slot-6-text:    oklch(0.820 0.085 210);
     --subject-slot-6-border:  oklch(0.318 0.070 210);
+
+    --attainment-not-assessed-bg:     oklch(0.220 0 0);
+    --attainment-not-assessed-text:   oklch(0.650 0 0);
+    --attainment-not-assessed-border: oklch(0.310 0 0);
+
+    --attainment-below-bg:            oklch(0.240 0.070 19);
+    --attainment-below-text:          oklch(0.850 0.130 19);
+    --attainment-below-border:        oklch(0.340 0.100 19);
+
+    --attainment-approaching-bg:      oklch(0.240 0.060 75);
+    --attainment-approaching-text:    oklch(0.875 0.118 75);
+    --attainment-approaching-border:  oklch(0.338 0.090 75);
+
+    --attainment-meeting-bg:          oklch(0.230 0.060 155);
+    --attainment-meeting-text:        oklch(0.821 0.100 155);
+    --attainment-meeting-border:      oklch(0.320 0.090 155);
+
+    --attainment-exceeding-bg:        oklch(0.238 0.055 264);
+    --attainment-exceeding-text:      oklch(0.820 0.110 264);
+    --attainment-exceeding-border:    oklch(0.322 0.082 264);
+
+    --recognition-bg:     oklch(0.248 0.075 45);
+    --recognition-text:   oklch(0.878 0.148 45);
+    --recognition-border: oklch(0.345 0.110 45);
+    --recognition-accent: oklch(0.742 0.182 45);
   }
 }
 

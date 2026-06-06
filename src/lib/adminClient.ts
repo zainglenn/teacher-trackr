@@ -33,3 +33,16 @@ export async function requireAdmin(
 
   return { callerId: user.id, schoolId: profile.school_id ?? null };
 }
+
+export async function requirePlatformAdmin(
+  req: NextRequest,
+  admin: SupabaseClient
+): Promise<{ callerId: string } | NextResponse> {
+  const token = req.headers.get("authorization")?.replace(/^[Bb]earer /, "");
+  if (!token) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { data: { user }, error } = await admin.auth.getUser(token);
+  if (error || !user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const { data: profile } = await admin.from("profiles").select("role").eq("id", user.id).single();
+  if (profile?.role !== "platform_admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  return { callerId: user.id };
+}

@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HOD Action Plan — English Grades 5–9 | DSK 2026–2027</title>
+  <style>
+    /* ── Fonts ── */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    /* ── Reset ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Page ── */
+    html { font-size: 10.5pt; }
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      color: #1a1a2e;
+      background: #fff;
+      line-height: 1.6;
+    }
+
+    .page {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 48px 52px;
+    }
+
+    /* ── Header ── */
+    .doc-header {
+      border-bottom: 3px solid #1a1a2e;
+      padding-bottom: 20px;
+      margin-bottom: 32px;
+    }
+    .doc-header h1 {
+      font-size: 19pt;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+      line-height: 1.25;
+      color: #1a1a2e;
+    }
+    .doc-header .subtitle {
+      margin-top: 6px;
+      font-size: 10.5pt;
+      color: #555;
+      font-weight: 500;
+    }
+    .doc-header .candidate {
+      margin-top: 10px;
+      font-size: 10pt;
+      color: #888;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    /* ── Sections ── */
+    section {
+      margin-bottom: 36px;
+    }
+
+    h2 {
+      font-size: 12pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #1a1a2e;
+      border-bottom: 1.5px solid #e2e2e8;
+      padding-bottom: 6px;
+      margin-bottom: 14px;
+    }
+
+    h3 {
+      font-size: 11pt;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin-top: 20px;
+      margin-bottom: 8px;
+    }
+
+    h4 {
+      font-size: 10.5pt;
+      font-weight: 600;
+      color: #333;
+      margin-top: 14px;
+      margin-bottom: 6px;
+    }
+
+    p {
+      margin-bottom: 10px;
+      color: #2d2d3a;
+    }
+
+    ul, ol {
+      padding-left: 20px;
+      margin-bottom: 10px;
+    }
+    li {
+      margin-bottom: 5px;
+      color: #2d2d3a;
+    }
+    li + li { margin-top: 3px; }
+
+    /* ── Priority cards ── */
+    .priorities {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 4px;
+    }
+    .priority-card {
+      border: 1.5px solid #e2e2e8;
+      border-radius: 6px;
+      padding: 14px 16px;
+    }
+    .priority-card .p-number {
+      font-size: 8.5pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: #888;
+      margin-bottom: 4px;
+    }
+    .priority-card .p-title {
+      font-size: 10.5pt;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin-bottom: 6px;
+    }
+    .priority-card p {
+      font-size: 9.5pt;
+      color: #555;
+      margin-bottom: 0;
+      line-height: 1.5;
+    }
+
+    /* ── Term blocks ── */
+    .term-block {
+      border-left: 3px solid #1a1a2e;
+      padding-left: 16px;
+      margin-bottom: 28px;
+    }
+    .term-block h3 {
+      margin-top: 0;
+      font-size: 11.5pt;
+    }
+    .term-block h4 {
+      color: #444;
+    }
+
+    /* ── Tables ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0;
+      font-size: 9.5pt;
+    }
+    thead tr {
+      background: #1a1a2e;
+      color: #fff;
+    }
+    thead th {
+      padding: 8px 12px;
+      text-align: left;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
+    tbody tr:nth-child(even) {
+      background: #f7f7fb;
+    }
+    tbody tr:hover {
+      background: #f0f0f8;
+    }
+    tbody td {
+      padding: 7px 12px;
+      border-bottom: 1px solid #e8e8f0;
+      vertical-align: top;
+    }
+    .table-note {
+      font-size: 9pt;
+      color: #666;
+      margin-top: 6px;
+      font-style: italic;
+    }
+
+    /* ── Development tiers ── */
+    .tiers {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin: 12px 0;
+    }
+    .tier {
+      border-radius: 6px;
+      padding: 12px 14px;
+      border: 1.5px solid;
+    }
+    .tier.leading  { border-color: #16a34a; background: #f0fdf4; }
+    .tier.developing { border-color: #d97706; background: #fffbeb; }
+    .tier.supported { border-color: #dc2626; background: #fef2f2; }
+    .tier .tier-label {
+      font-size: 8.5pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.7px;
+      margin-bottom: 5px;
+    }
+    .tier.leading .tier-label   { color: #15803d; }
+    .tier.developing .tier-label { color: #b45309; }
+    .tier.supported .tier-label  { color: #b91c1c; }
+    .tier p {
+      font-size: 9pt;
+      line-height: 1.45;
+      margin-bottom: 0;
+      color: #333;
+    }
+
+    /* ── Metrics grid ── */
+    .metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .metric-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+      border: 1px solid #e2e2e8;
+      border-radius: 5px;
+      padding: 8px 12px;
+      background: #fafafa;
+    }
+    .metric-item .m-label {
+      font-size: 9pt;
+      color: #444;
+      flex: 1;
+    }
+    .metric-item .m-value {
+      font-size: 9pt;
+      font-weight: 700;
+      color: #1a1a2e;
+      white-space: nowrap;
+    }
+
+    /* ── Commitments ── */
+    .commitments {
+      border: 1.5px solid #e2e2e8;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .commitment-item {
+      display: flex;
+      gap: 12px;
+      padding: 10px 16px;
+      border-bottom: 1px solid #e2e2e8;
+      align-items: flex-start;
+    }
+    .commitment-item:last-child { border-bottom: none; }
+    .commitment-item .c-icon {
+      font-size: 11pt;
+      line-height: 1.6;
+      flex-shrink: 0;
+      color: #1a1a2e;
+    }
+    .commitment-item p {
+      margin: 0;
+      font-size: 9.5pt;
+      line-height: 1.55;
+      color: #2d2d3a;
+    }
+
+    /* ── Tech section ── */
+    .tech-box {
+      background: #f7f7fb;
+      border: 1.5px solid #d0d0e0;
+      border-radius: 6px;
+      padding: 16px 18px;
+    }
+    .tech-box p {
+      font-size: 9.5pt;
+      margin-bottom: 8px;
+    }
+    .tech-box p:last-child { margin-bottom: 0; }
+
+    /* ── Footer ── */
+    .doc-footer {
+      margin-top: 40px;
+      padding-top: 14px;
+      border-top: 1px solid #e2e2e8;
+      font-size: 8.5pt;
+      color: #999;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    /* ── Print ── */
+    @media print {
+      html { font-size: 10pt; }
+      .page { padding: 20px 28px; max-width: 100%; }
+      body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+
+      h2 { page-break-after: avoid; }
+      h3 { page-break-after: avoid; }
+      .term-block { page-break-inside: avoid; }
+      .priorities { page-break-inside: avoid; }
+      .tiers { page-break-inside: avoid; }
+      table { page-break-inside: avoid; }
+      .commitments { page-break-inside: avoid; }
+      .tech-box { page-break-inside: avoid; }
+
+      @page {
+        margin: 18mm 20mm;
+        size: A4;
+      }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+
+  <!-- Header -->
+  <header class="doc-header">
+    <h1>HOD Action Plan<br>English Middle &amp; High School — Grades 5–9</h1>
+    <p class="subtitle">Dubai Schools Al Khawaneej &nbsp;|&nbsp; Academic Year 2026–2027</p>
+    <p class="candidate">Candidate: Zain Glenn</p>
+  </header>
+
+  <!-- Vision -->
+  <section>
+    <h2>Vision</h2>
+    <p>To build a cohesive, standards-driven English department where every student in Grades 5–9 is challenged by a well-sequenced curriculum, every teacher is growing professionally, and every decision is grounded in evidence — not assumption.</p>
+    <p>My approach in the first year is to listen before leading, audit before changing, and build systems that make excellent practice the default rather than the exception.</p>
+  </section>
+
+  <!-- Context -->
+  <section>
+    <h2>Context</h2>
+    <p>Dubai Schools Al Khawaneej is a public-private partnership school following the American Curriculum, anchored in NYSED ELA standards. The Middle and High School English department spans five year groups (Grades 5–9), each taught in parallel classes with a shared long-term plan reviewed and approved by the HOD.</p>
+    <p>Grade 9 sits at a critical transition point. Students entering Grade 10 must be well-prepared for the increased demands of upper secondary ELA. This year group will receive close and deliberate attention throughout the year.</p>
+  </section>
+
+  <!-- Calendar -->
+  <section>
+    <h2>UAE Academic Calendar 2026–2027</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Phase</th>
+          <th>Dates</th>
+          <th>Teaching Weeks</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td><strong>Term 1</strong></td><td>24 Aug – 6 Dec 2026</td><td>13 weeks</td></tr>
+        <tr><td>Mid-term break T1</td><td>12–18 Oct 2026</td><td>—</td></tr>
+        <tr><td>Winter break</td><td>7 Dec 2026 – 3 Jan 2027</td><td>—</td></tr>
+        <tr><td><strong>Term 2</strong></td><td>4 Jan – 14 Mar 2027</td><td>9 weeks</td></tr>
+        <tr><td>Mid-term break T2</td><td>9–13 Feb 2027</td><td>—</td></tr>
+        <tr><td>Spring break</td><td>15–28 Mar 2027</td><td>—</td></tr>
+        <tr><td><strong>Term 3</strong></td><td>29 Mar – 2 Jul 2027</td><td>13 weeks</td></tr>
+        <tr><td>Mid-term break T3</td><td>24–30 May 2027</td><td>—</td></tr>
+        <tr><td>End of year</td><td>2 Jul 2027</td><td>—</td></tr>
+      </tbody>
+    </table>
+    <p class="table-note">35 teaching weeks across three terms.</p>
+  </section>
+
+  <!-- Strategic Priorities -->
+  <section>
+    <h2>Strategic Priorities</h2>
+    <div class="priorities">
+      <div class="priority-card">
+        <div class="p-number">Priority 1</div>
+        <div class="p-title">Curriculum Coherence</div>
+        <p>Every class in every year group has a complete, standards-aligned Long Term Plan reviewed and approved before teaching begins. Curriculum consistency is a minimum standard, not an aspiration.</p>
+      </div>
+      <div class="priority-card">
+        <div class="p-number">Priority 2</div>
+        <div class="p-title">Differentiated Teacher Development</div>
+        <p>Experienced teachers receive challenge and leadership opportunity. Developing teachers receive structured guidance and specific feedback. Everyone is coached to where they are, not where the average is.</p>
+      </div>
+      <div class="priority-card">
+        <div class="p-number">Priority 3</div>
+        <div class="p-title">Data-Informed Decisions</div>
+        <p>Coverage, attainment, and planning quality are tracked across all year groups throughout the year. Decisions about intervention and resource allocation are grounded in evidence — not surfaced in a June report.</p>
+      </div>
+      <div class="priority-card">
+        <div class="p-number">Priority 4</div>
+        <div class="p-title">Transition Readiness at Grade 9</div>
+        <p>Students leaving Grade 9 are prepared for the demands of upper secondary English. Planning, assessment design, and teaching at this level must reflect that expectation explicitly.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Action Plan -->
+  <section>
+    <h2>Term-by-Term Action Plan</h2>
+
+    <!-- Pre-Year -->
+    <div class="term-block">
+      <h3>Pre-Year Preparation &nbsp;·&nbsp; June – August 2026</h3>
+
+      <h4>Know the Department Before Arriving</h4>
+      <ul>
+        <li>Request and review all existing Long Term Plans from 2025–2026 across Grades 5–9. Look for consistency in standards coverage, quality of essential questions, and evidence of standard-to-assessment alignment.</li>
+        <li>Review available student attainment data. Identify year groups or classes with notable gaps before the new cohort arrives.</li>
+        <li>Meet each teacher individually before the year begins. Understand their professional history, their relationship with planning, and what they feel is working or not working. Listen more than talk.</li>
+      </ul>
+
+      <h4>Establish the Planning Framework</h4>
+      <p>Publish the full-year planning calendar in Week 1 of Term 1. Every teacher knows every deadline before the year begins — no mid-term surprises.</p>
+
+      <table>
+        <thead>
+          <tr><th>Milestone</th><th>Deadline</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>T1 Long Term Plans submitted</td><td>7 Sep 2026 (Week 2)</td></tr>
+          <tr><td>T1 Long Term Plans reviewed by HOD</td><td>14 Sep 2026 (Week 3)</td></tr>
+          <tr><td>T2 Long Term Plans submitted</td><td>30 Nov 2026 (end of T1)</td></tr>
+          <tr><td>T2 Long Term Plans reviewed</td><td>11 Jan 2027 (Week 1, T2)</td></tr>
+          <tr><td>T3 Long Term Plans submitted</td><td>10 Mar 2027 (end of T2)</td></tr>
+          <tr><td>T3 Long Term Plans reviewed</td><td>7 Apr 2027 (Week 1, T3)</td></tr>
+        </tbody>
+      </table>
+
+      <ul>
+        <li>Confirm the standard sets in use across all five year groups, including whether Grade 9 uses NYSED Grade 9–10 standards or an alternative framework. Resolve this with SLT in the first week.</li>
+      </ul>
+    </div>
+
+    <!-- Term 1 -->
+    <div class="term-block">
+      <h3>Term 1 — Establish &nbsp;·&nbsp; 24 Aug – 6 Dec 2026</h3>
+
+      <h4>Weeks 1–2: Foundation</h4>
+      <ul>
+        <li>Welcome the department. Share the planning calendar, expectations for plan quality, and the review process. Be explicit: every unit plan is reviewed before it is taught, and feedback will be specific and standard-referenced.</li>
+        <li>Begin getting into classrooms informally. Walk the corridors, drop in briefly, be present. The HOD who only appears in formal observations is not yet a colleague.</li>
+      </ul>
+
+      <h4>Week 3: First Review Cycle</h4>
+      <ul>
+        <li>Review every submitted unit plan against three criteria: (1) the essential question drives genuine inquiry, not just a topic heading; (2) selected standards are linked to the assessment task, not just listed; (3) the plan covers the right standards for this unit in the year's sequence.</li>
+        <li>Approve, request revision, or reject with written feedback. Every decision is documented. Verbal-only feedback is not feedback — it is a conversation that will be forgotten.</li>
+        <li><strong>Target:</strong> every Term 1 unit approved before teaching begins.</li>
+      </ul>
+
+      <h4>Weeks 3–6: Observation Round 1</h4>
+      <ul>
+        <li>Observe every teacher at least once. Focus question: does what is happening in the classroom match the approved plan, and do students know what they are working on?</li>
+        <li>Post-observation conversation within 48 hours — specific, forward-looking, standard-referenced. No general praise, no general criticism.</li>
+      </ul>
+
+      <h4>Mid-Term Break (12–18 Oct): T2 Planning Window</h4>
+      <ul>
+        <li>Teachers begin drafting Term 2 units. HOD available for planning conversations — not mandatory check-ins, but an open door.</li>
+      </ul>
+
+      <h4>Weeks 7–13: Coverage Monitoring</h4>
+      <ul>
+        <li>Conduct a mid-term standards audit for each year group. Which standards are at risk of being missed entirely by Term 3? Flag this in a coaching conversation, not an email.</li>
+        <li>Run a department meeting around one shared professional question — drawn from what observations have surfaced, not a pre-set agenda item.</li>
+      </ul>
+
+      <h4>End of Term 1: Report to SLT</h4>
+      <ul>
+        <li>One-page summary to SLT: coverage position by year group, plan approval rate, and the professional development focus for Term 2.</li>
+        <li>Celebrate publicly what the department has done well. Address what hasn't worked privately.</li>
+      </ul>
+    </div>
+
+    <!-- Term 2 -->
+    <div class="term-block">
+      <h3>Term 2 — Develop &nbsp;·&nbsp; 4 Jan – 14 Mar 2027</h3>
+
+      <h4>Week 1: T2 Review Cycle</h4>
+      <ul>
+        <li>All Term 2 plans were submitted before winter break. Review and approve in the first week back. Any plan not submitted on time is a conversation about what got in the way — not a deadline extension.</li>
+      </ul>
+
+      <h4>Weeks 2–5: Attainment Data</h4>
+      <ul>
+        <li>By Week 5, each teacher should have formal assessment data for at least two standards taught in Term 1.</li>
+        <li>Look for patterns across classes within the same year group. If multiple teachers are seeing attainment dips on the same standard, that is a department-level issue — it belongs in a professional learning conversation, not a private note to each teacher individually.</li>
+      </ul>
+
+      <h4>Professional Learning Focus: Assessment Design</h4>
+      <ul>
+        <li>Run a department-wide PLT session on assessment design: how does the assessment task generate evidence that the target standard has been met — not just completed?</li>
+        <li>Use a real example (anonymised if needed) of a strong and a weak assessment task from within the department. Concrete is always better than abstract.</li>
+      </ul>
+
+      <h4>Weeks 6–8: Observation Round 2</h4>
+      <ul>
+        <li>Second observation for every teacher. Compare to Term 1: has plan-to-classroom alignment improved? Is student language more precise and standard-aware?</li>
+        <li>Teachers who are growing should hear that specifically. Teachers not progressing need a direct, supportive conversation with a clear development focus and a timeline.</li>
+      </ul>
+
+      <h4>Mid-Term Break (9–13 Feb): T3 Planning + Mid-Year Review</h4>
+      <ul>
+        <li>Term 3 plans drafted and submitted before spring break.</li>
+        <li>Compile a mid-year coverage report across all five year groups. Where are the gaps? What needs to change in T3 planning to address them?</li>
+      </ul>
+
+      <h4>End of Term 2: Mid-Year Report to SLT</h4>
+      <ul>
+        <li>Coverage by year group, attainment patterns, teacher development summary, and anything requiring leadership-level support.</li>
+        <li>Flag any teacher significantly behind in planning or whose students show persistent attainment gaps. Agree a support structure with SLT — this is not a unilateral HOD decision.</li>
+      </ul>
+    </div>
+
+    <!-- Term 3 -->
+    <div class="term-block">
+      <h3>Term 3 — Consolidate &nbsp;·&nbsp; 29 Mar – 2 Jul 2027</h3>
+
+      <h4>Week 1: T3 Review Cycle</h4>
+      <ul>
+        <li>Term 3 plans reviewed and approved before mid-term break. No class enters Term 3 without an approved plan.</li>
+      </ul>
+
+      <h4>Weeks 2–6: Standards Completion</h4>
+      <ul>
+        <li>Cross-reference coverage across all year groups. Work with individual teachers to adjust remaining plans — redistribute, consolidate, or revisit where the sequence allows.</li>
+        <li>No year group closes the year below 85% standards coverage. If any class is tracking below this by Week 6, the teacher and HOD co-plan a solution together.</li>
+      </ul>
+
+      <h4>Grade 9 — Transition Readiness Review</h4>
+      <ul>
+        <li>By Week 6, conduct a specific review: are Grade 9 students demonstrating the level of analytical writing, extended reading, and independent inquiry that Grade 10 will demand?</li>
+        <li>If not, work with the Grade 9 teacher to build a focused final assessment that explicitly targets the transition gap.</li>
+      </ul>
+
+      <h4>Weeks 4–8: Individual Development Reviews</h4>
+      <ul>
+        <li>Formal one-to-one with every teacher. Review the full year together using concrete data — plans, attainment records, observations. Make the conversation about evidence, not impressions.</li>
+      </ul>
+
+      <h4>Mid-Term Break (24–30 May): Year-End Preparation</h4>
+      <ul>
+        <li>Begin curriculum audit for 2027–2028. Identify standards consistently undertaught across multiple classes — these become the professional learning focus for next year.</li>
+        <li>Draft the 2027–2028 planning calendar.</li>
+      </ul>
+
+      <h4>Weeks 9–13: End-of-Year Assessment</h4>
+      <ul>
+        <li>Analyse final assessment data by year group and strand: which standards were mastered, which need reteaching at the start of next year?</li>
+        <li>Flag students whose attainment trajectory suggests early intervention in Year 2 — pass this to the incoming class teacher before the year ends.</li>
+      </ul>
+
+      <h4>End of Year: Department Report to SLT</h4>
+      <ul>
+        <li>Full-year coverage data, attainment outcomes by year group and strand, teacher development summary, curriculum gaps identified, and recommendations for 2027–2028.</li>
+        <li>All approved Long Term Plans archived as the baseline for next year's planning.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- Teacher Development Framework -->
+  <section>
+    <h2>Teacher Development Framework</h2>
+    <p>Every teacher is placed in one of three tiers based on track record, experience, and evidence from Term 1 observations and plan quality. This is a working model, not a permanent label — teachers move between tiers as they develop.</p>
+
+    <div class="tiers">
+      <div class="tier leading">
+        <div class="tier-label">Leading</div>
+        <p>Experienced, plans submitted early, strong standard-to-task alignment. Receives autonomy, leadership opportunities — PLT facilitation, peer mentoring, stretch challenges.</p>
+      </div>
+      <div class="tier developing">
+        <div class="tier-label">Developing</div>
+        <p>Capable but inconsistent — may struggle in specific areas (essential questions, assessment design). Receives structured check-ins twice per term and co-planning support on targeted units.</p>
+      </div>
+      <div class="tier supported">
+        <div class="tier-label">Supported</div>
+        <p>New to the school, returning after a gap, or showing consistent planning gaps. Weekly contact, HOD reviews every unit before submission, co-plans at least one unit per term.</p>
+      </div>
+    </div>
+
+    <p style="margin-top: 12px;"><strong>No teacher remains in the Supported tier by design.</strong> The goal is to move every teacher to Developing, and every Developing teacher toward Leading.</p>
+  </section>
+
+  <!-- Success Metrics -->
+  <section>
+    <h2>Success Metrics</h2>
+    <p>By the end of Academic Year 2026–2027:</p>
+    <div class="metrics">
+      <div class="metric-item">
+        <span class="m-label">T1 plans approved before first unit taught</span>
+        <span class="m-value">100%</span>
+      </div>
+      <div class="metric-item">
+        <span class="m-label">Standards coverage per year group, end of year</span>
+        <span class="m-value">≥ 85%</span>
+      </div>
+      <div class="metric-item">
+        <span class="m-label">Formal observations per teacher</span>
+        <span class="m-value">Minimum 2</span>
+      </div>
+      <div class="metric-item">
+        <span class="m-label">Individual development reviews per term</span>
+        <span class="m-value">1 per teacher</span>
+      </div>
+      <div class="metric-item">
+        <span class="m-label">Attainment baseline established</span>
+        <span class="m-value">All year groups by end T1</span>
+      </div>
+      <div class="metric-item">
+        <span class="m-label">SLT curriculum reports delivered</span>
+        <span class="m-value">3 (end of each term)</span>
+      </div>
+      <div class="metric-item">
+        <span class="m-label">Plans submitted on time (no intervention)</span>
+        <span class="m-value">≥ 90% by T3</span>
+      </div>
+      <div class="metric-item">
+        <span class="m-label">Grade 9 transition readiness reviewed</span>
+        <span class="m-value">By T3 Week 6</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Curriculum Technology -->
+  <section>
+    <h2>Curriculum Technology</h2>
+    <div class="tech-box">
+      <p>To support the systems in this plan, I have built a web-based curriculum tracker designed specifically for this school context, live at <strong>curriculum-tracker-five.vercel.app</strong>. The platform gives the HOD a real-time view of standards coverage across all classes and year groups, manages the Long Term Plan submission and approval workflow, and records all HOD feedback against individual unit plans. Every approval and revision request is documented and time-stamped.</p>
+      <p>It is not a replacement for professional judgement. It is infrastructure that makes good practice visible and consistent — turning what is usually a termly guesswork conversation into a factual one: which teachers are below 40% mapped standards in a given strand, and what are we going to do about it.</p>
+      <p>I mention it not to lead with technology, but because building it required me to think through every HOD workflow in this plan — the review process, the feedback loop, the coverage audit — and make each one concrete and repeatable. That is the same thinking behind this action plan.</p>
+    </div>
+  </section>
+
+  <!-- Commitments -->
+  <section>
+    <h2>What I Will Not Do</h2>
+    <div class="commitments">
+      <div class="commitment-item">
+        <span class="c-icon">—</span>
+        <p>Wait until June to find out a year group has significant coverage gaps.</p>
+      </div>
+      <div class="commitment-item">
+        <span class="c-icon">—</span>
+        <p>Give general feedback. If a plan needs work, I will name the specific standard, the specific task, and the specific problem.</p>
+      </div>
+      <div class="commitment-item">
+        <span class="c-icon">—</span>
+        <p>Treat all teachers identically. An experienced, high-performing teacher deserves challenge and autonomy — not the same checklist as someone in their first year at DSK.</p>
+      </div>
+      <div class="commitment-item">
+        <span class="c-icon">—</span>
+        <p>Approve plans verbally. Every approval and revision request is written down. This protects the teacher as much as it protects the process.</p>
+      </div>
+      <div class="commitment-item">
+        <span class="c-icon">—</span>
+        <p>Change everything in Year 1. Sustainable improvement comes from understanding what already works, building on it, and changing what genuinely needs to change — not from arriving with a fixed agenda.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="doc-footer">
+    <span>HOD Interview — English Middle &amp; High School (Grades 5–9)</span>
+    <span>Dubai Schools Al Khawaneej &nbsp;|&nbsp; 2026–2027</span>
+  </footer>
+
+</div>
+</body>
+</html>
