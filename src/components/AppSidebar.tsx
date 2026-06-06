@@ -50,6 +50,7 @@ export type AppView =
   | "platform-settings"
   | "curriculum-audit"
   | "school-setup"
+  | "class-management"
   | "schools"
   | "curricula"
   | "analytics"
@@ -81,6 +82,7 @@ const NAV_ITEMS: NavItem[] = [
   { key: "hod-settings",      label: "HOD Settings",       icon: Settings2,       roles: ["hod"],                     group: "other" },
   { key: "manage-users",      label: "Manage Users",       icon: UserCog,         roles: ["admin"] },
   { key: "school-setup",      label: "School Setup",       icon: Building2,       roles: ["admin"] },
+  { key: "class-management",  label: "Class Management",   icon: Grid3X3,         roles: ["admin"] },
   { key: "curriculum-audit",  label: "Curriculum Audit",   icon: Search,          roles: ["admin"] },
   { key: "initiatives",       label: "Initiatives",        icon: Rocket,          roles: ["admin", "hod"] },
   { key: "schools",           label: "Schools",            icon: Building2,       roles: ["platform_admin"] },

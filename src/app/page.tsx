@@ -27,6 +27,7 @@ import { useActiveContext } from "@/hooks/useActiveContext";
 import { useStandardPipeline } from "@/hooks/useStandardPipeline";
 import { useDepartmentPipeline } from "@/hooks/useDepartmentPipeline";
 import { PlatformAdminView } from "@/components/PlatformAdminView";
+import { ClassManagementView } from "@/components/ClassManagementView";
 import { PlatformCurriculaView } from "@/components/PlatformCurriculaView";
 import { SuspendedSchoolMessage } from "@/components/SuspendedSchoolMessage";
 import { DepartmentAnalyticsView } from "@/components/DepartmentAnalyticsView";
@@ -208,6 +209,9 @@ function CurriculumApp({ userId }: { userId: string }) {
           )}
           {view === "platform-settings" && isAdmin && (
             <AdminView userId={userId} tab="platform" schoolId={profile?.school_id ?? null} />
+          )}
+          {view === "class-management" && isAdmin && (
+            <ClassManagementView />
           )}
           {view === "curriculum-audit" && isAdmin && (
             <AdminView userId={userId} tab="audit" schoolId={profile?.school_id ?? null} />

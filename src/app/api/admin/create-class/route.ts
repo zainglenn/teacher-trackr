@@ -7,25 +7,25 @@ export async function POST(req: NextRequest) {
   if (result instanceof NextResponse) return result;
   const { schoolId } = result;
 
-  const { teacher_id, name, school_year } = await req.json();
-  if (!teacher_id || !name?.trim()) {
-    return NextResponse.json({ error: "teacher_id and name required" }, { status: 400 });
+  const { name, grade_level_id, teacher_id } = await req.json();
+  if (!name?.trim()) {
+    return NextResponse.json({ error: "name required" }, { status: 400 });
   }
 
-  // Verify teacher belongs to this school
-  const { data: teacher } = await admin
-    .from("profiles")
-    .select("school_id, role")
-    .eq("id", teacher_id)
-    .single();
-
-  if (!teacher || teacher.school_id !== schoolId) {
-    return NextResponse.json({ error: "Teacher not found in this school" }, { status: 404 });
+  // Classes must be linked to a grade (new model) or teacher (legacy)
+  if (!grade_level_id && !teacher_id) {
+    return NextResponse.json({ error: "grade_level_id required" }, { status: 400 });
   }
 
   const { data, error } = await admin
     .from("classes")
-    .insert({ teacher_id, name: name.trim(), school_year: school_year ?? "2025-2026" })
+    .insert({
+      name: name.trim(),
+      school_id: schoolId,
+      grade_level_id: grade_level_id ?? null,
+      teacher_id: teacher_id ?? null,
+      school_year: new Date().getFullYear() + "-" + (new Date().getFullYear() + 1),
+    })
     .select()
     .single();
 
