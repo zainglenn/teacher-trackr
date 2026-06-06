@@ -272,7 +272,12 @@ export function ManageUsersView({ currentUserId, overrideSchoolId }: Props) {
                     {/* User column */}
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center text-xs font-semibold text-muted-foreground shrink-0">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-semibold shrink-0 ${
+                          user.role === "hod"            ? "bg-violet-100 text-violet-700" :
+                          user.role === "admin"          ? "bg-rose-100 text-rose-700" :
+                          user.role === "platform_admin" ? "bg-slate-200 text-slate-700" :
+                                                           "bg-blue-100 text-blue-700"
+                        }`}>
                           {userInitials(user.full_name, user.username ?? "")}
                         </div>
                         <div className="min-w-0">

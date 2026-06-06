@@ -196,7 +196,7 @@ export function AdminView({ userId, tab: activeSection = "audit", schoolId }: Ad
                       </td>
                       <td className="px-4 py-3 hidden md:table-cell text-muted-foreground">{plan.school_year}</td>
                       <td className="px-4 py-3">
-                        <span className={`text-xs px-2 py-0.5 rounded-full border font-medium ${statusClass}`}>{statusLabel}</span>
+                        <span className={`text-xs px-2 py-0.5 rounded-full border font-medium whitespace-nowrap ${statusClass}`}>{statusLabel}</span>
                       </td>
                       <td className="px-4 py-3 hidden sm:table-cell text-muted-foreground">{units.length}</td>
                       <td className="px-4 py-3">
@@ -204,7 +204,7 @@ export function AdminView({ userId, tab: activeSection = "audit", schoolId }: Ad
                           variant="ghost"
                           size="sm"
                           onClick={() => setConfirmLtp({ id: plan.id, title: plan.title })}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0"
+                          className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 w-8 p-0"
                           title="Delete LTP"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -223,7 +223,7 @@ export function AdminView({ userId, tab: activeSection = "audit", schoolId }: Ad
                             variant="ghost"
                             size="sm"
                             onClick={() => setConfirmUnit({ id: unit.id, title: unit.title })}
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50 h-7 w-7 p-0"
+                            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-7 w-7 p-0"
                             title="Delete unit"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -273,7 +273,7 @@ export function AdminView({ userId, tab: activeSection = "audit", schoolId }: Ad
                         variant="ghost"
                         size="sm"
                         onClick={() => setConfirmUnit({ id: unit.id, title: unit.title })}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0"
+                        className="text-muted-foreground hover:text-destructive hover:bg-destructive/10 h-8 w-8 p-0"
                         title="Delete unit"
                       >
                         <Trash2 className="h-4 w-4" />
