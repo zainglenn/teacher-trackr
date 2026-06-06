@@ -306,9 +306,9 @@ export function ManageUsersView({ currentUserId, overrideSchoolId }: Props) {
                       </span>
                     </td>
 
-                    {/* Subject — HOD only */}
+                    {/* Subject — HOD and Teacher */}
                     <td className="px-4 py-3 hidden lg:table-cell">
-                      {user.role === "hod" ? (
+                      {(user.role === "hod" || user.role === "teacher") ? (
                         editingSubjectFor === user.id ? (
                           <Select
                             value={user.subject_id ?? "none"}
