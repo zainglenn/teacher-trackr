@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PageContainer } from "@/components/PageContainer";
 import { LTPDetailView } from "@/components/LTPDetailView";
 import { UnitPlanView } from "@/components/ltp/UnitPlanView";
@@ -41,11 +41,48 @@ export function LongTermPlanView({ teacherId, isHod, standards, initialPlanId, i
 
   // New LTP dialog state
   const [newLTPOpen, setNewLTPOpen] = useState(false);
-  const [newTitle, setNewTitle] = useState("");
   const [newYear, setNewYear] = useState(() => schoolYears()[0]);
   const [newUnitCount, setNewUnitCount] = useState("9");
   const [creating, setCreating] = useState(false);
   const [drafting, setDrafting] = useState(false);
+  // Grade+subject selection
+  interface GradeSubjectOption { gsId: string; subjectId: string; gradeId: string; subjectName: string; gradeName: string }
+  const [gradeSubjectOptions, setGradeSubjectOptions] = useState<GradeSubjectOption[]>([]);
+  const [selectedGS, setSelectedGS] = useState<GradeSubjectOption | null>(null);
+  const [existingPlanForSelection, setExistingPlanForSelection] = useState<string | null>(null);
+
+  // Load grade_subjects when modal opens
+  useEffect(() => {
+    if (!newLTPOpen || !isHod) return;
+    supabase
+      .from("grade_subjects")
+      .select("id, subject_id, grade_level_id, subjects:subject_id(id, name), grade_levels:grade_level_id(id, name)")
+      .then(({ data }) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const opts: GradeSubjectOption[] = (data ?? []).map((row: any) => ({
+          gsId: row.id,
+          subjectId: row.subject_id,
+          gradeId: row.grade_level_id,
+          subjectName: row.subjects?.name ?? "Unknown",
+          gradeName: row.grade_levels?.name ?? "Unknown",
+        }));
+        setGradeSubjectOptions(opts);
+        if (opts.length === 1) setSelectedGS(opts[0]);
+      });
+  }, [newLTPOpen, isHod]);
+
+  // Check for duplicate plan when selection or year changes
+  useEffect(() => {
+    if (!selectedGS || !newYear) { setExistingPlanForSelection(null); return; }
+    const dup = plans.find(p =>
+      p.subject_id === selectedGS.subjectId &&
+      p.grade_level_id === selectedGS.gradeId &&
+      p.school_year === newYear
+    );
+    setExistingPlanForSelection(dup?.id ?? null);
+  }, [selectedGS, newYear, plans]);
+
+  const autoTitle = selectedGS ? `${selectedGS.gradeName} ${selectedGS.subjectName} ${newYear}` : "";
 
   // Consume initial selection once plans have loaded
   useState(() => {
@@ -139,20 +176,20 @@ export function LongTermPlanView({ teacherId, isHod, standards, initialPlanId, i
   }
 
   async function handleCreate() {
-    if (!newTitle.trim()) return;
+    if (!autoTitle || !selectedGS) return;
     setCreating(true);
-    const plan = await createLTP(newTitle.trim(), newYear);
+    const plan = await createLTP(autoTitle, newYear, selectedGS.subjectId, selectedGS.gradeId);
     setCreating(false);
     setNewLTPOpen(false);
-    setNewTitle("");
+    setSelectedGS(null);
     if (plan) setSelectedPlanId(plan.id);
   }
 
   async function handleDraftFullYear() {
-    if (!newTitle.trim()) return;
+    if (!autoTitle || !selectedGS) return;
     setDrafting(true);
     try {
-      const plan = await createLTP(newTitle.trim(), newYear);
+      const plan = await createLTP(autoTitle, newYear, selectedGS.subjectId, selectedGS.gradeId);
       if (!plan) return;
       const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch("/api/ai/draft-ltp", {
@@ -171,7 +208,7 @@ export function LongTermPlanView({ teacherId, isHod, standards, initialPlanId, i
     } finally {
       setDrafting(false);
       setNewLTPOpen(false);
-      setNewTitle("");
+      setSelectedGS(null);
     }
   }
 
@@ -293,14 +330,46 @@ export function LongTermPlanView({ teacherId, isHod, standards, initialPlanId, i
         </div>
       )}
 
-      <Modal open={newLTPOpen} onClose={() => setNewLTPOpen(false)} title="New Long Term Plan">
+      <Modal open={newLTPOpen} onClose={() => { setNewLTPOpen(false); setSelectedGS(null); }} title="New Long Term Plan">
         <div className="space-y-3 py-2">
           <div className="space-y-1.5">
-            <Label>Title</Label>
-            <Input placeholder="e.g. Grade 6 English 2025–2026"
-              value={newTitle} onChange={(e) => setNewTitle(e.target.value)}
-              autoFocus onKeyDown={(e) => e.key === "Enter" && handleCreate()} />
+            <Label>Grade & Subject</Label>
+            {gradeSubjectOptions.length === 0 ? (
+              <p className="text-sm text-amber-600">No grade+subject combinations configured yet. Set them up in School Setup first.</p>
+            ) : (
+              <Select
+                value={selectedGS ? `${selectedGS.gradeId}:${selectedGS.subjectId}` : ""}
+                onValueChange={(v) => {
+                  const [gradeId, subjectId] = (v ?? "").split(":");
+                  setSelectedGS(gradeSubjectOptions.find(o => o.gradeId === gradeId && o.subjectId === subjectId) ?? null);
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select grade and subject…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {gradeSubjectOptions.map(o => (
+                    <SelectItem key={o.gsId} value={`${o.gradeId}:${o.subjectId}`}>
+                      {o.gradeName} · {o.subjectName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            {autoTitle && <p className="text-xs text-muted-foreground">Plan title: <strong>{autoTitle}</strong></p>}
           </div>
+          {existingPlanForSelection && (
+            <div className="flex items-start gap-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5">
+              <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-xs font-semibold text-amber-700">Plan already exists for this selection</p>
+                <p className="text-xs text-amber-600 mt-0.5">A plan for {autoTitle} already exists.</p>
+                <button onClick={() => { setSelectedPlanId(existingPlanForSelection); setNewLTPOpen(false); setSelectedGS(null); }} className="text-xs font-medium text-amber-700 underline mt-1">
+                  Open existing plan →
+                </button>
+              </div>
+            </div>
+          )}
           <div className="space-y-1.5">
             <Label>Academic Year</Label>
             <Select value={newYear} onValueChange={(v) => v && setNewYear(v)}>
@@ -325,7 +394,7 @@ export function LongTermPlanView({ teacherId, isHod, standards, initialPlanId, i
               </div>
             </div>
             <Button className="w-full h-8 text-xs bg-violet-600 hover:bg-violet-700 text-white gap-1"
-              onClick={handleDraftFullYear} disabled={drafting || !newTitle.trim()}>
+              onClick={handleDraftFullYear} disabled={drafting || !selectedGS || !!existingPlanForSelection}>
               {drafting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
               {drafting ? `Drafting ${newUnitCount} units...` : "AI Draft Full Year"}
             </Button>
@@ -333,7 +402,7 @@ export function LongTermPlanView({ teacherId, isHod, standards, initialPlanId, i
         </div>
         <ModalFooter>
           <ModalCancel onClick={() => setNewLTPOpen(false)} />
-          <Button onClick={handleCreate} disabled={creating || !newTitle.trim()}>
+          <Button onClick={handleCreate} disabled={creating || !selectedGS || !!existingPlanForSelection}>
             {creating ? "Creating..." : "Create Empty"}
           </Button>
         </ModalFooter>

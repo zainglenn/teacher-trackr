@@ -54,14 +54,43 @@ export function useLongTermPlans(teacherId: string, isHod: boolean, options: Use
 
   useEffect(() => { fetch(); }, [fetch]);
 
-  async function createLTP(title: string, schoolYear: string) {
-    const { data } = await supabase
+  async function createLTP(title: string, schoolYear: string, subjectId?: string | null, gradeLevelId?: string | null) {
+    const { data: plan } = await supabase
       .from("long_term_plans")
-      .insert({ teacher_id: teacherId, title, school_year: schoolYear })
+      .insert({
+        teacher_id: teacherId,
+        title,
+        school_year: schoolYear,
+        school_id: schoolId ?? null,
+        subject_id: subjectId ?? null,
+        grade_level_id: gradeLevelId ?? null,
+      })
       .select()
       .single();
-    if (data) await fetch();
-    return data;
+
+    if (plan) {
+      // Add the creating HOD as lead member
+      await supabase.from("ltp_members").insert({ plan_id: plan.id, teacher_id: teacherId, role: "lead" });
+
+      // Auto-add all teachers assigned to this subject+grade as contributor members
+      if (subjectId && gradeLevelId) {
+        const { data: assignments } = await supabase
+          .from("class_assignments")
+          .select("teacher_id")
+          .eq("subject_id", subjectId)
+          .eq("grade_level_id", gradeLevelId);
+
+        const teacherIds = [...new Set((assignments ?? []).map(a => a.teacher_id as string))].filter(id => id !== teacherId);
+        if (teacherIds.length > 0) {
+          await supabase.from("ltp_members").insert(
+            teacherIds.map(tid => ({ plan_id: plan.id, teacher_id: tid, role: "contributor" }))
+          );
+        }
+      }
+
+      await fetch();
+    }
+    return plan;
   }
 
   async function updateLTP(id: string, updates: { title?: string; school_year?: string }) {
